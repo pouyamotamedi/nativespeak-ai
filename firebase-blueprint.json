@@ -1,0 +1,24 @@
+{
+  "entities": {
+    "UserRecord": {
+      "title": "UserRecord",
+      "description": "User profile, assessment history, personalized scenarios, weaknesses, and learning progress.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The unique Firebase Auth user ID." },
+        "email": { "type": "string", "description": "User email address." },
+        "displayName": { "type": "string", "description": "User display name." },
+        "photoURL": { "type": "string", "description": "User profile avatar." },
+        "cefrLevel": { "type": "string", "description": "Current CEFR level." },
+        "updatedAt": { "type": "string", "description": "ISO timestamp of last update." }
+      },
+      "required": ["uid"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserRecord",
+      "description": "Per-user persistent data container for placement results, custom curriculum, weaknesses, and progress."
+    }
+  }
+}

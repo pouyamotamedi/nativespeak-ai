@@ -1,0 +1,10 @@
+{
+  "name": "Remix NativeSpeak AI - مربی اسپیکینگ آمریکایی",
+  "description": "اپلیکیشن هوشمند تقویت اسپیکینگ و لهجه امریکن برای فارسی‌زبانان، آموزش گرامر، جعبه لایتنر هوش مصنوعی و تصحیح زنده تلفظ",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
