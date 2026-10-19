@@ -773,12 +773,14 @@ export const PracticeScreen: React.FC<Props> = ({
               ACTIVE PRACTICE STUDIO HEADER (هدر یکپارچه، پرارتفاع و برجسته تمرین کلیشه)
              ========================================================================= */}
           {(() => {
-            const activeItem = selectedItem || practiceItems[0] || {
+            const activeItem: PracticeItem = selectedItem || practiceItems[0] || {
               id: 'default-item',
               cliche: 'call it a day',
               persianMeaning: 'پایان دادن به کار امروز و دست کشیدن از کار',
               category: 'work' as const,
               context: 'محیط کار و پایان شیفت',
+              exampleSentence: "We're all exhausted, so let's call it a day.",
+              addedAt: new Date().toISOString(),
               timesPracticed: 0,
               masteryScore: 0,
             };
