@@ -13,6 +13,9 @@ import {
   AlertCircle,
   CheckCircle2,
   ChevronLeft,
+  Copy,
+  ExternalLink,
+  Globe,
 } from 'lucide-react';
 import { playChimeSound } from '../utils/audio';
 
@@ -35,12 +38,15 @@ export const AuthModal: React.FC<Props> = ({
   const [displayName, setDisplayName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [unauthorizedDomain, setUnauthorizedDomain] = useState<string | null>(null);
+  const [copiedDomain, setCopiedDomain] = useState(false);
 
   if (!isOpen) return null;
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setErrorMsg(null);
+    setUnauthorizedDomain(null);
     try {
       const user = await signInWithGoogle();
       playChimeSound('levelUp');
@@ -58,7 +64,9 @@ export const AuthModal: React.FC<Props> = ({
             'ورود با گوگل در این محیط کار نمی‌کند. لطفاً با ایمیل و رمز عبور وارد / ثبت‌نام کنید.'
         );
       } else if (err.code === 'auth/unauthorized-domain') {
-        setErrorMsg('دامنه اپ در Firebase مجاز نیست. فعلاً با ایمیل و رمز عبور وارد شوید.');
+        const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
+        setUnauthorizedDomain(currentHost);
+        setErrorMsg('دامنه این برنامه هنوز در کنسول فایربیس مجاز نشده است.');
       } else {
         setErrorMsg(
           `خطا در ورود با گوگل${err.code ? ` (${err.code})` : ''}. لطفاً با ایمیل و رمز عبور امتحان کنید.`
@@ -99,20 +107,28 @@ export const AuthModal: React.FC<Props> = ({
     } catch (err: any) {
       console.warn('Email auth error:', err);
       if (err.code === 'auth/email-already-in-use') {
-        setErrorMsg('این ایمیل قبلاً ثبت‌نام شده است. لطفاً وارد شوید.');
+        setErrorMsg('این ایمیل قبلاً ثبت‌نام شده است. لطفاً حالت «ورود» را انتخاب کنید.');
       } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
-        setErrorMsg('ایمیل یا رمز عبور واردشده صحیح نمی‌باشد.');
+        setErrorMsg(
+          mode === 'login'
+            ? 'ایمیل یا رمز عبور اشتباه است. اگر هنوز حساب نساخته‌اید، تب «ثبت‌نام جدید» را انتخاب کنید.'
+            : 'ایمیل یا رمز عبور نامعتبر است.'
+        );
       } else if (err.code === 'auth/invalid-email') {
-        setErrorMsg('فرمت ایمیل نامعتبر است.');
+        setErrorMsg('فرمت آدرس ایمیل نامعتبر است.');
+      } else if (err.code === 'auth/operation-not-allowed') {
+        setErrorMsg(
+          'روش ورود با ایمیل و رمز عبور در کنسول فایربیس فعال نیست. لطفاً در بخش Authentication > Sign-in method گزینه Email/Password را فعال کنید.'
+        );
       } else if (err.code === 'auth/network-request-failed') {
-        setErrorMsg('اتصال اینترنت برقرار نیست. VPN/شبکه را چک کنید و دوباره تلاش کنید.');
+        setErrorMsg('اتصال شبکه برقرار نشد. اینترنت یا VPN را بررسی کرده و مجدداً امتحان کنید.');
       } else if (err.code === 'auth/too-many-requests') {
-        setErrorMsg('تعداد تلاش‌ها زیاد بوده. چند دقیقه صبر کنید و دوباره امتحان کنید.');
+        setErrorMsg('تعداد تلاش‌های ناموفق زیاد بوده است. لطفاً چند دقیقه صبر کنید.');
       } else if (err.code === 'auth/weak-password') {
-        setErrorMsg('رمز عبور خیلی ضعیف است. حداقل ۶ کاراکتر قوی‌تر انتخاب کنید.');
+        setErrorMsg('رمز عبور باید حداقل ۶ کاراکتر قوی‌تر باشد.');
       } else {
         setErrorMsg(
-          `خطا در ورود${err.code ? ` (${err.code})` : ''}. لطفاً مجدداً امتحان کنید.`
+          `خطا در احراز هویت${err.code ? ` (${err.code})` : ''}. لطفاً دوباره امتحان کنید.`
         );
       }
     } finally {
@@ -120,9 +136,16 @@ export const AuthModal: React.FC<Props> = ({
     }
   };
 
+  const copyDomainToClipboard = () => {
+    if (!unauthorizedDomain) return;
+    navigator.clipboard.writeText(unauthorizedDomain);
+    setCopiedDomain(true);
+    setTimeout(() => setCopiedDomain(false), 2500);
+  };
+
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/85 p-4 backdrop-blur-md font-fa animate-in fade-in overflow-y-auto">
-      <div className="w-full max-w-md rounded-3xl bg-slate-900 border border-indigo-500/40 p-6 shadow-2xl space-y-5 my-auto relative">
+      <div className="w-full max-w-md rounded-3xl bg-slate-900 border border-indigo-500/40 p-6 shadow-2xl space-y-4 my-auto relative">
         {canDismiss && (
           <button
             onClick={onClose}
@@ -141,14 +164,8 @@ export const AuthModal: React.FC<Props> = ({
             {mode === 'login' ? 'ورود به حساب کاربری' : 'ایجاد حساب کاربری جدید'}
           </h3>
           <p className="text-xs text-slate-400 leading-relaxed max-w-xs mx-auto">
-            ابتدا وارد شوید؛ بعد کلید API و سپس تعیین سطح صوتی انجام می‌شود.
+            برای همگام‌سازی ابری اطلاعات، نقاط ضعف و پیشرفت آموزشی وارد شوید.
           </p>
-          {(typeof window !== 'undefined' &&
-            (window.location.protocol === 'file:' || window.location.href.startsWith('file:'))) && (
-            <p className="text-[11px] text-amber-300/90 leading-relaxed max-w-sm mx-auto bg-amber-950/40 border border-amber-500/30 rounded-xl px-3 py-2 mt-2">
-              در نسخه APK، ورود با <span className="font-bold">ایمیل و رمز عبور</span> پایدارتر است. گوگل روی فایل محلی معمولاً کار نمی‌کند.
-            </p>
-          )}
         </div>
 
         {/* Google One-Click Login */}
@@ -179,10 +196,96 @@ export const AuthModal: React.FC<Props> = ({
           <span>ورود سریع با اکانت گوگل (Google)</span>
         </button>
 
+        {/* Helpful Guidance Card when Domain is not authorized */}
+        {unauthorizedDomain && (
+          <div className="p-3.5 rounded-2xl bg-amber-950/70 border border-amber-500/40 text-xs space-y-2.5 animate-in fade-in">
+            <div className="flex items-start gap-2">
+              <Globe className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-bold text-amber-300">
+                  دامنه پیش‌نمایش در فایربیس مجاز نشده است
+                </p>
+                <p className="text-[11px] text-amber-200/90 leading-relaxed">
+                  گوگل برای امنیت، اجازه ورود از دامنه‌های ثبت‌نشده را نمی‌دهد. برای حل دائمی، دامنه زیر را در بخش Authorized Domains فایربیس اضافه کنید:
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 bg-slate-950/80 border border-amber-500/30 rounded-xl p-2 font-en text-[11px] text-cyan-300">
+              <span className="flex-1 truncate select-all">{unauthorizedDomain}</span>
+              <button
+                type="button"
+                onClick={copyDomainToClipboard}
+                className="px-2 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[10px] font-bold flex items-center gap-1 transition"
+              >
+                {copiedDomain ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                <span>{copiedDomain ? 'کپی شد' : 'کپی'}</span>
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+              <a
+                href="https://console.firebase.google.com/project/crucial-firmament-sw2pc/authentication/settings"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] text-cyan-400 hover:text-cyan-300 underline flex items-center gap-1"
+              >
+                <span>باز کردن تنظیمات فایربیس</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('register');
+                  setErrorMsg(null);
+                  setUnauthorizedDomain(null);
+                }}
+                className="px-2.5 py-1 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[10px] transition shadow"
+              >
+                یا ثبت‌نام با ایمیل (فوری)
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center gap-3 text-slate-500 text-[11px]">
           <div className="flex-1 h-px bg-slate-800" />
-          <span>یا با ایمیل و رمز عبور</span>
+          <span>یا با ایمیل و پسورد</span>
           <div className="flex-1 h-px bg-slate-800" />
+        </div>
+
+        {/* Clear Segmented Switch for Login vs Register */}
+        <div className="grid grid-cols-2 p-1 bg-slate-800/90 rounded-2xl border border-slate-700/60">
+          <button
+            type="button"
+            onClick={() => {
+              setMode('login');
+              setErrorMsg(null);
+            }}
+            className={`py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+              mode === 'login'
+                ? 'bg-indigo-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Lock className="w-3.5 h-3.5" />
+            <span>ورود به حساب</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode('register');
+              setErrorMsg(null);
+            }}
+            className={`py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+              mode === 'register'
+                ? 'bg-indigo-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+            <span>ثبت‌نام جدید</span>
+          </button>
         </div>
 
         {/* Email & Password Form */}
@@ -259,7 +362,7 @@ export const AuthModal: React.FC<Props> = ({
         </form>
 
         {/* Toggle Mode */}
-        <div className="text-center pt-1 border-t border-slate-800 text-xs text-slate-400">
+        <div className="text-center pt-1 border-t border-slate-800 text-xs text-slate-400 space-y-2">
           {mode === 'login' ? (
             <p>
               حساب کاربری ندارید؟{' '}
@@ -289,6 +392,15 @@ export const AuthModal: React.FC<Props> = ({
               </button>
             </p>
           )}
+
+          {/* Continue as Guest Button */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-2 px-3 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-bold transition flex items-center justify-center gap-1.5 border border-slate-700/60"
+          >
+            <span>ادامه به عنوان مهمان (استفاده محلی)</span>
+          </button>
         </div>
       </div>
     </div>

@@ -82,6 +82,25 @@ function getOpenAiApiKey(req?: express.Request): string {
   return (process.env.OPENAI_API_KEY || '').trim();
 }
 
+/** Strict sanitizer to ensure raw audio base64 or binary data NEVER leaks into transcript fields */
+function sanitizeTranscriptText(raw: any, fallback = ''): string {
+  if (typeof raw !== 'string') return fallback;
+  const trimmed = raw.trim();
+  if (!trimmed) return fallback;
+  if (
+    trimmed.startsWith('data:') ||
+    trimmed.startsWith('blob:') ||
+    trimmed.includes('GkXfo') ||
+    trimmed.includes('AAAA') ||
+    trimmed.includes('base64') ||
+    (trimmed.length > 50 && !trimmed.includes(' ')) ||
+    /^[A-Za-z0-9+/=_\-\s]{60,}$/.test(trimmed)
+  ) {
+    return fallback;
+  }
+  return trimmed;
+}
+
 /** Shared STT: Whisper (OpenAI) → Gemini multimodal. Used by /api/transcribe and placement. */
 async function transcribeAudioBuffer(
   req: express.Request,
@@ -118,7 +137,7 @@ async function transcribeAudioBuffer(
       });
       if (whisperRes.ok) {
         const data = await whisperRes.json();
-        const text = (data.text || '').trim();
+        const text = sanitizeTranscriptText(data.text);
         if (text) return { text, engine: 'whisper-1' };
       } else {
         const errText = await whisperRes.text().catch(() => '');
@@ -144,7 +163,8 @@ async function transcribeAudioBuffer(
           ],
           config: { temperature: 0.1 },
         });
-        const text = (response.text || '').trim().replace(/^["']|["']$/g, '');
+        const rawText = (response.text || '').trim().replace(/^["']|["']$/g, '');
+        const text = sanitizeTranscriptText(rawText);
         if (text) return { text, engine: `gemini:${modelName}` };
       } catch (e) {
         console.warn(`Gemini STT ${modelName} failed:`, e);
@@ -742,7 +762,7 @@ Return ONLY a valid JSON object matching this structure:
 {
   "reply": "English reply as ${aiRole}",
   "persianTranslation": "ترجمه فارسی روان پاسخ",
-  "transcribedUserText": "${messageToAnalyze}",
+  "transcribedUserText": "${messageToAnalyze ? messageToAnalyze.replace(/"/g, '\\"') : 'Spoken English words transcribed from audio (DO NOT output base64)'}",
   "analysis": {
     "overallScore": 85,
     "grammarScore": 88,
@@ -751,7 +771,7 @@ Return ONLY a valid JSON object matching this structure:
     "communicationScore": 84,
     "pronunciationScore": 84,
     "fluencyScore": 78,
-    "userSpokenTranscript": "${messageToAnalyze}",
+    "userSpokenTranscript": "${messageToAnalyze ? messageToAnalyze.replace(/"/g, '\\"') : 'Spoken English words (DO NOT output base64)'}",
     "strengths": ["نقطه قوت مشخص در جمله کاربر"],
     "categorizedIssues": [
       {
@@ -863,6 +883,16 @@ Return ONLY a valid JSON object matching this structure:
 
           const parsed = safeJsonParse(response.text);
           if (parsed.reply && parsed.analysis) {
+            // Guarantee no binary base64 or garbage strings ever pollute transcribedUserText
+            parsed.transcribedUserText = sanitizeTranscriptText(
+              parsed.transcribedUserText,
+              messageToAnalyze || 'صدای ضبط‌شده شما'
+            );
+            parsed.analysis.userSpokenTranscript = sanitizeTranscriptText(
+              parsed.analysis.userSpokenTranscript,
+              parsed.transcribedUserText
+            );
+
             parsed.analysis.isEstimatedOfflineAnalysis = false;
             parsed.analysis.analysisEngineSource = userAudioBase64 ? 'gemini_multimodal_audio' : 'gemini_text_only';
             parsed.analysis = enforcePhoneticsStrictness(parsed.analysis, {
@@ -1351,6 +1381,75 @@ Return ONLY valid JSON:
   }
 });
 
+function calibrateCefrAssessment(rawParsed: any, enrichedAnswers: any[]): any {
+  const answerTexts = (enrichedAnswers || []).map((a: any) => String(a.responseText || '').trim());
+  const wordsPerAnswer = answerTexts.map((txt: string) => (txt ? txt.split(/\s+/).filter(Boolean).length : 0));
+  const totalWords = wordsPerAnswer.reduce((acc: number, w: number) => acc + w, 0);
+  const avgWords = wordsPerAnswer.length > 0 ? totalWords / wordsPerAnswer.length : 0;
+
+  // Extract pure CEFR level
+  let level = String(rawParsed.cefrLevel || rawParsed.level || rawParsed.cefr || '').toUpperCase().trim();
+  const match = level.match(/\b(A1|A2|B1|B2|C1|C2)\b/i);
+  level = match ? match[1].toUpperCase() : 'B1';
+
+  // Scientific CEFR calibration rules based on empirical discourse output:
+  // 1. A1 Level: Very short, single basic sentence or fragment (< 25 words total, < 7 words avg)
+  if (totalWords < 25 || avgWords < 7) {
+    level = 'A1';
+    rawParsed.grammarScore = Math.min(rawParsed.grammarScore || 52, 58);
+    rawParsed.fluencyScore = Math.min(rawParsed.fluencyScore || 48, 52);
+    rawParsed.pronunciationScore = Math.min(rawParsed.pronunciationScore || 54, 58);
+    rawParsed.vocabularyScore = Math.min(rawParsed.vocabularyScore || 50, 56);
+    rawParsed.accentScore = Math.min(rawParsed.accentScore || 46, 54);
+    rawParsed.wpm = Math.min(rawParsed.wpm || 70, 75);
+    rawParsed.levelDescriptionFa =
+      'سطح مقدماتی (A1): پاسخ‌ها در حد جملات بسیار کوتاه یا ساختارهای پایه زمان حال ساده هستند. اولویت آموزشی: یادگیری ساختارهای اساسی معرفی، گسترش جمله‌سازی مستقیم و شکستن سد مکالمه.';
+  }
+  // 2. A2 Level: Simple elementary sentences (< 50 words total, < 13 words avg)
+  else if (totalWords < 50 || avgWords < 13) {
+    level = 'A2';
+    rawParsed.grammarScore = Math.min(rawParsed.grammarScore || 64, 68);
+    rawParsed.fluencyScore = Math.min(rawParsed.fluencyScore || 62, 66);
+    rawParsed.pronunciationScore = Math.min(rawParsed.pronunciationScore || 65, 69);
+    rawParsed.vocabularyScore = Math.min(rawParsed.vocabularyScore || 62, 67);
+    rawParsed.accentScore = Math.min(rawParsed.accentScore || 60, 65);
+    rawParsed.wpm = Math.min(rawParsed.wpm || 90, 95);
+    rawParsed.levelDescriptionFa =
+      'سطح پیش‌متوسط (A2): توانایی بیان مفاهیم و نیازهای روزمره با جملات کوتاه، اما تکیه بر ساختارهای سرراست است و استدلال‌های عمیق هنوز شکل نگرفته است. اولویت: تسلط بر زمان‌های گذشته، افعال تفریحی و حروف اضافه صحیح.';
+  }
+  // 3. B1 Level: Connected text but lacking complex argumentation or idioms (< 95 words total, < 24 words avg)
+  else if (totalWords < 95 || avgWords < 24) {
+    if (['C1', 'C2', 'B2'].includes(level)) {
+      level = totalWords > 70 ? 'B1' : 'A2';
+    }
+    rawParsed.grammarScore = Math.min(rawParsed.grammarScore || 74, 78);
+    rawParsed.fluencyScore = Math.min(rawParsed.fluencyScore || 72, 76);
+    rawParsed.pronunciationScore = Math.min(rawParsed.pronunciationScore || 72, 78);
+    rawParsed.vocabularyScore = Math.min(rawParsed.vocabularyScore || 73, 78);
+    rawParsed.accentScore = Math.min(rawParsed.accentScore || 68, 74);
+    rawParsed.wpm = Math.min(rawParsed.wpm || 110, 120);
+    rawParsed.levelDescriptionFa =
+      'سطح متوسط استاندارد (B1): انتقال موفق پیام در موضوعات آشنا، اما با تداخل جزئی دستور زبان مادری و احتیاط در صحبت. اولویت: درونی‌سازی کلیشه‌های نیتیو، حذف ترجمه تحت‌اللفظی و تقویت Flap T امریکن.';
+  }
+  // 4. B2 Level: Extended sentences with reasoning (< 150 words total)
+  else if (totalWords < 150 || avgWords < 38) {
+    if (level === 'C2') {
+      level = 'B2';
+    }
+    if (level === 'C1' && totalWords < 125) {
+      level = 'B2';
+    }
+  }
+
+  // 5. C2 Level: Requires mastery, rich collocations, and at least 160 words
+  if (level === 'C2' && totalWords < 160) {
+    level = 'C1';
+  }
+
+  rawParsed.cefrLevel = level;
+  return rawParsed;
+}
+
 // API: Initial Assessment (Comprehensive Multimodal Audio & Linguistic Diagnostic + C2 Curriculum Roadmap)
 app.post('/api/initial-assessment', async (req, res) => {
   try {
@@ -1410,8 +1509,17 @@ There are 4 progressive assessment tasks evaluated:
 ${hasAudio ? 'CRITICAL: REAL SPOKEN AUDIO is attached for one or more tasks. You MUST listen to every audio clip, map weaknesses to what you hear (not generic Persian-learner tropes), and ground CEFR scores in this sample only.' : ''}
 Verified transcripts per task are included — use them with the audio.
 
-CRITICAL ASSESSMENT CRITERIA:
-1. Accurate CEFR Placement: Assess accurately from A1, A2, B1, B2, C1, up to C2.
+CRITICAL ASSESSMENT CRITERIA & CEFR CALIBRATION:
+1. Honest, Strict, and Accurate CEFR Placement (A1, A2, B1, B2, C1, C2):
+   - CRITICAL: DO NOT INFLATE SCORES OR LEVELS! Evaluate the candidate strictly on what is observed in their actual words.
+   - If the learner gives very short, elementary 1-sentence answers (e.g. 5-10 words per answer), they are demonstrating A1 or A2 level! Mark them as A1 or A2.
+   - A1 (Breakthrough): 1 isolated short sentence, very simple words, present simple, no complex connectors (< 25 words total across 4 tasks). Scores: 45-56.
+   - A2 (Waystage): Simple sentences with elementary connectors (and, because), everyday routine, limited vocabulary (< 50 words total). Scores: 58-68.
+   - B1 (Threshold): Moderate length, can narrate past events, noticeable Persian transfer errors, lack of idiomatic chunks (< 95 words total). Scores: 68-78.
+   - B2 (Vantage): Detailed multi-sentence responses, good vocabulary, discussing trade-offs, some minor errors (95-150 words). Scores: 78-86.
+   - C1 (Effective Proficiency): Extended discourse, complex syntax, conditionals, natural American idioms (120+ words). Scores: 87-93.
+   - C2 (Mastery): Near-native American fluency, subtle stylistic control, effortless rhythm and idioms (160+ words). Scores: 94-100.
+   - NEVER give C1 or C2 to short, elementary, or safe 1-sentence responses!
 2. Detailed Sub-scores (0-100):
    - grammarScore: Syntactic accuracy, complex structures, elimination of Persian transfer errors.
    - fluencyScore: Smoothness, speech rate (WPM), cadence, pausing, lack of hesitation.
@@ -1551,25 +1659,12 @@ Return ONLY valid JSON matching this schema:
 
             const parsed = safeJsonParse(response.text);
             if (parsed && (parsed.cefrLevel || parsed.level || parsed.cefr) && parsed.calendarScenarios && parsed.calendarScenarios.length > 0) {
-              const desc = (parsed.levelDescriptionFa || '').toUpperCase();
-              let detectedLevel = (parsed.cefrLevel || parsed.level || parsed.cefr || '').toUpperCase().trim();
-              const match = detectedLevel.match(/\b(A1|A2|B1|B2|C1|C2)\b/i);
-              if (match) {
-                detectedLevel = match[1].toUpperCase();
-              }
-              if (desc.includes('B2') && detectedLevel === 'B1') {
-                detectedLevel = 'B2';
-              } else if (desc.includes('C1')) {
-                detectedLevel = 'C1';
-              } else if (desc.includes('C2')) {
-                detectedLevel = 'C2';
-              }
-              parsed.cefrLevel = detectedLevel || 'B2';
-              parsed.usedFallback = false;
-              parsed.analyzedFromAudio = hasAudio;
+              const calibrated = calibrateCefrAssessment(parsed, enrichedAnswers);
+              calibrated.usedFallback = false;
+              calibrated.analyzedFromAudio = hasAudio;
 
               // Filter out any accidental airport customs scenarios and ensure targetLevel is explicitly stamped
-              parsed.calendarScenarios = (parsed.calendarScenarios || [])
+              calibrated.calendarScenarios = (calibrated.calendarScenarios || [])
                 .filter((sc: any) =>
                   sc &&
                   sc.id !== 'airport-customs' &&
@@ -1579,9 +1674,9 @@ Return ONLY valid JSON matching this schema:
                 .map((sc: any, idx: number) => ({
                   ...sc,
                   dayIndex: sc.dayIndex || idx + 1,
-                  targetLevel: sc.targetLevel || parsed.cefrLevel || 'B2',
+                  targetLevel: sc.targetLevel || calibrated.cefrLevel || 'B2',
                 }));
-              return res.json(parsed);
+              return res.json(calibrated);
             }
           } catch (modelErr: any) {
             console.warn(`Model ${model} assessment attempt failed:`, modelErr.message);
@@ -1601,35 +1696,47 @@ Return ONLY valid JSON matching this schema:
       });
     }
 
-    // Text-only fallback (no audio) — curriculum scaffold only
-    const totalWords = combinedText.split(/\s+/).filter(Boolean).length;
+    // Text-only fallback (no audio) — calibrated to demonstrated volume and vocabulary
+    const totalWords = enrichedAnswers.reduce(
+      (sum: number, a: any) => sum + String(a.responseText || '').trim().split(/\s+/).filter(Boolean).length,
+      0
+    );
     let cefrLevel: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2' = 'B1';
     let levelDesc = 'سطح متوسط استاندارد (B1): قادر به انتقال مفهوم و بیان کلی، اما نیازمند تسلط بر پیوستگی آوایی، حذف ترجمه تحت‌اللفظی فارسی و درونی‌سازی کلیشه‌های نیتیو آمریکایی.';
-    let grammarScore = 74;
+    let grammarScore = 72;
     let fluencyScore = 70;
     let pronunciationScore = 71;
-    let vocabularyScore = 73;
+    let vocabularyScore = 72;
     let accentScore = 67;
     let wpm = 110;
 
-    if (totalWords > 120 || hasAudio) {
-      cefrLevel = 'B2';
-      levelDesc = 'سطح متوسط رو به بالا (B2): اعتمادبه‌نفس خوب و تسلط بر واژگان؛ اولویت اصلی ارتقا، ظرافت‌های لحن حرفه‌ای/دوستانه، تلفظ Flap T و روان‌سازی ریتم گفتار برای رسیدن به سطوح پیشرفته C1 و C2 است.';
-      grammarScore = 82;
-      fluencyScore = 80;
-      pronunciationScore = 78;
-      vocabularyScore = 83;
-      accentScore = 76;
-      wpm = 135;
-    } else if (totalWords < 40 && !hasAudio) {
+    if (totalWords < 25) {
+      cefrLevel = 'A1';
+      levelDesc = 'سطح مقدماتی (A1): پاسخ‌ها بسیار کوتاه و در حد کلمات و جملات بسیار ساده اولیه هستند. اولویت: الگوهای پایه مکالمه، معرفی خود و شروع جمله‌سازی فعال.';
+      grammarScore = 52;
+      fluencyScore = 48;
+      pronunciationScore = 54;
+      vocabularyScore = 50;
+      accentScore = 46;
+      wpm = 70;
+    } else if (totalWords < 55) {
       cefrLevel = 'A2';
-      levelDesc = 'سطح پیش‌متوسط (A2): ساختارهای پایه شکل گرفته اما مکث‌ها و تکیه بر دستور زبان فارسی قابل توجه است؛ نیازمند بسته‌های گفتاری آماده، کلیشه‌های روزمره و تمرین‌های تلفظی جهت صعود به B1.';
+      levelDesc = 'سطح پیش‌متوسط (A2): ساختارهای پایه شکل گرفته اما جملات کوتاه هستند و استدلال‌های عمیق هنوز شکل نگرفته است؛ نیازمند کلیشه‌های روزمره و تمرین‌های تلفظی جهت صعود به B1.';
       grammarScore = 64;
       fluencyScore = 61;
       pronunciationScore = 63;
       vocabularyScore = 62;
       accentScore = 60;
       wpm = 85;
+    } else if (totalWords > 130) {
+      cefrLevel = 'B2';
+      levelDesc = 'سطح متوسط رو به بالا (B2): اعتمادبه‌نفس خوب و تسلط بر واژگان و استدلال‌های چندجمله‌ای؛ اولویت اصلی ارتقا، ظرافت‌های لحن حرفه‌ای/دوستانه، تلفظ Flap T و روان‌سازی ریتم گفتار برای تسلط بیشتر است.';
+      grammarScore = 82;
+      fluencyScore = 80;
+      pronunciationScore = 78;
+      vocabularyScore = 83;
+      accentScore = 76;
+      wpm = 135;
     }
 
     const defaultWeaknesses = [
@@ -2228,24 +2335,107 @@ app.post('/api/tts', async (req, res) => {
 
 app.post('/api/lookup-word', async (req, res) => {
   try {
-    const { word = '' } = req.body;
-    const clean = word.trim().toLowerCase();
+    const { word = '', context = '' } = req.body;
+    const clean = String(word || '').trim();
+    if (!clean) {
+      return res.status(400).json({ error: 'word is required' });
+    }
 
-    res.json({
+    const ai = getAiClient(req);
+    if (ai) {
+      try {
+        const prompt = `You are a bilingual lexicographer and elite American English coach for Persian speakers.
+Analyze this English word or expression to create an accurate Leitner flashcard:
+Term to analyze: "${clean}"
+${context ? `DIALOGUE CONTEXT WHERE THIS WORD WAS ENCOUNTERED: "${context}"` : ''}
+
+${
+  context
+    ? `CRITICAL CONTEXTUAL MEANING RULE:
+The word "${clean}" has multiple distinct definitions in English. You MUST translate and explain ONLY the specific meaning intended in the provided dialogue context above!
+DO NOT list unrelated generic dictionary meanings!
+For example:
+- If "${clean}" is "spring" and the dialogue context is about drinking clean water or natural resources, the meaning MUST be "چشمه / سرچشمه آب" and NEVER "بهار" or "فنر".
+- If "${clean}" is "plant" and the context is an industrial facility, the meaning MUST be "کارخانه / واحد تولیدی" and NEVER "گیاه".
+- If "${clean}" is "bank" and the context is near water, the meaning MUST be "ساحل رودخانه" and NEVER "بانک مالی".
+The "persianMeaning" and "sampleSentences" must strictly adhere to this exact contextual meaning.`
+    : ''
+}
+
+Provide an accurate, idiomatic Persian translation, American phonetic pronunciation (IPA), and an authentic, natural American example sentence with Persian translation.
+
+Respond with ONLY a JSON object (no markdown, no backticks):
+{
+  "word": "${clean}",
+  "phonetic": "/IPA transcription/",
+  "partOfSpeech": "exact part of speech in this context (e.g. noun, verb, idiom, phrasal verb)",
+  "persianMeaning": "معنی دقیق و روان این واژه در همین بافت جمله به فارسی (نه معانی بی‌ربط دیگر)",
+  "persianNuance": "توضیح کوتاه کاربرد و تفاوت ظریف معنایی در این کاربرد خاص",
+  "americanUsageNote": "نکته کاربردی نحوه استفاده توسط گویشوران آمریکایی",
+  "collocations": ["collocation 1", "collocation 2"],
+  "sampleSentences": [
+    {
+      "english": "Authentic natural American sentence using the word with this exact contextual meaning.",
+      "persian": "ترجمه روان و طبیعی این جمله به فارسی"
+    }
+  ],
+  "pronunciationTipFa": "نکته تلفظ آمریکایی یا وصل حروف به فارسی"
+}`;
+
+        for (const modelName of CANDIDATE_GEMINI_MODELS) {
+          try {
+            const resp = await ai.models.generateContent({
+              model: modelName,
+              contents: [{ text: prompt }],
+              config: {
+                temperature: 0.2,
+                responseMimeType: 'application/json',
+              },
+            });
+            const text = (resp.text || '').trim();
+            const cleanJson = text.replace(/^```json/i, '').replace(/```$/i, '').trim();
+            const parsed = JSON.parse(cleanJson);
+            if (parsed && (parsed.persianMeaning || parsed.sampleSentences)) {
+              return res.json({
+                word: parsed.word || clean,
+                phonetic: parsed.phonetic || `/${clean}/`,
+                partOfSpeech: parsed.partOfSpeech || 'expression',
+                persianMeaning: parsed.persianMeaning || clean,
+                persianNuance: parsed.persianNuance || '',
+                americanUsageNote: parsed.americanUsageNote || '',
+                collocations: Array.isArray(parsed.collocations) ? parsed.collocations : [],
+                sampleSentences: Array.isArray(parsed.sampleSentences) && parsed.sampleSentences.length > 0
+                  ? parsed.sampleSentences
+                  : [{ english: context || `I usually use "${clean}" in conversation.`, persian: `مثال کاربردی برای ${clean}` }],
+                pronunciationTipFa: parsed.pronunciationTipFa || 'تلفظ با استرس طبیعی کلمات',
+              });
+            }
+          } catch (modelErr) {
+            console.warn(`Model ${modelName} failed for lookup-word:`, modelErr);
+          }
+        }
+      } catch (geminiErr) {
+        console.warn('Gemini lookup failed, falling back to linguistic engine:', geminiErr);
+      }
+    }
+
+    // High quality fallback if AI is not reached
+    const fallbackSentence = context || `I usually ${clean} whenever I get the chance.`;
+    return res.json({
       word: clean,
-      phonetic: '/US IPA/',
-      partOfSpeech: 'idiom / expression',
+      phonetic: `/${clean}/`,
+      partOfSpeech: 'expression',
       persianMeaning: `اصطلاح کاربردی: ${clean}`,
-      persianNuance: 'یکی از اصطلاحات متداول و روزمره گویشوران آمریکایی',
-      americanUsageNote: 'بسیار پرکاربرد در مکالمات روزانه و غیررسمی',
-      collocations: [`Let's ${clean}`, `Have to ${clean}`],
+      persianNuance: 'اصطلاح رایج در مکالمات محاوره‌ای روزمره آمریکایی',
+      americanUsageNote: 'کاربرد بسیار متداول در محیط‌های کاری و دوستانه نیتیو',
+      collocations: [`use ${clean}`, `always ${clean}`],
       sampleSentences: [
         {
-          english: `I usually ${clean} when I want to save time.`,
-          persian: `من معمولاً وقتی می‌خوام در وقت صرفه‌جویی کنم از این روش استفاده می‌کنم.`,
+          english: fallbackSentence,
+          persian: `مثال کاربردی برای عبارت "${clean}" در مکالمه`,
         },
       ],
-      pronunciationTipFa: 'تلفظ با ریتم پیوسته بدون مکث میان کلمات',
+      pronunciationTipFa: 'تلفظ با ریتم پیوسته بدون مکث بین کلمات',
     });
   } catch (err: any) {
     res.status(500).json({ error: 'Lookup failed', details: err.message });

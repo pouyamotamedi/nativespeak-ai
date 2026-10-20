@@ -442,20 +442,37 @@ export const InitialAssessmentModal: React.FC<Props> = ({
             'آنالیز واقعی ویس انجام نشد و نتیجه عمومی برنگشت. لطفاً دوباره امتحان کنید و کلید Gemini را بررسی کنید.'
           );
         }
-        const desc = (data.levelDescriptionFa || '').toUpperCase();
-        let detectedLevel = (data.cefrLevel || data.level || data.cefr || '').toUpperCase().trim();
+
+        // Strictly extract CEFR level from evaluator response without erroneous substring matches
+        let detectedLevel = String(data.cefrLevel || data.level || data.cefr || '').toUpperCase().trim();
         const match = detectedLevel.match(/\b(A1|A2|B1|B2|C1|C2)\b/i);
-        if (match) {
-          detectedLevel = match[1].toUpperCase();
-        }
-        if (desc.includes('B2') && detectedLevel === 'B1') {
-          detectedLevel = 'B2';
-        } else if (desc.includes('C1')) {
-          detectedLevel = 'C1';
-        } else if (desc.includes('C2')) {
-          detectedLevel = 'C2';
-        } else if (!detectedLevel) {
-          detectedLevel = 'B2';
+        detectedLevel = match ? match[1].toUpperCase() : 'B1';
+
+        // Scientific CEFR Calibration Guardrail:
+        // If the learner gave short/elementary answers (e.g. 1 short sentence per task), calibrate realistically
+        const totalUserWords = newAnswers.reduce((sum, a) => {
+          const txt = String(a.responseText || '').trim();
+          return sum + (txt ? txt.split(/\s+/).filter(Boolean).length : 0);
+        }, 0);
+        const avgWords = newAnswers.length > 0 ? totalUserWords / newAnswers.length : 0;
+
+        if (totalUserWords < 25 || avgWords < 7) {
+          detectedLevel = 'A1';
+        } else if (totalUserWords < 50 || avgWords < 13) {
+          // Elementary 1-sentence answers cannot be B2, C1, or C2
+          if (['B2', 'C1', 'C2'].includes(detectedLevel)) {
+            detectedLevel = 'A2';
+          }
+        } else if (totalUserWords < 95 || avgWords < 24) {
+          // Cannot be C1 or C2 with under 95 words total
+          if (['C1', 'C2'].includes(detectedLevel)) {
+            detectedLevel = totalUserWords > 70 ? 'B1' : 'A2';
+          }
+        } else if (totalUserWords < 150) {
+          // C2 requires deep extended discourse (at least 150+ words across the 4 tasks)
+          if (detectedLevel === 'C2') {
+            detectedLevel = 'B2';
+          }
         }
 
         const result: AssessmentResult = {

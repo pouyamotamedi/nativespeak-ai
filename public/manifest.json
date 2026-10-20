@@ -1,0 +1,41 @@
+{
+  "id": "/",
+  "name": "NativeSpeak AI - مربی اسپیکینگ آمریکایی",
+  "short_name": "NativeSpeak",
+  "description": "اپلیکیشن هوشمند تقویت اسپیکینگ و لهجه امریکن برای فارسی‌زبانان، آموزش گرامر، جعبه لایتنر هوش مصنوعی و تصحیح زنده تلفظ",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#020617",
+  "theme_color": "#4f46e5",
+  "categories": ["education", "productivity"],
+  "lang": "fa",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

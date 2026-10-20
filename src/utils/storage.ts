@@ -75,47 +75,122 @@ export const DEFAULT_PROGRESS: UserProgress = {
   averageFluencyScore: 0,
 };
 
+// Legacy pre-seeded demo items that should be removed if present
+export const DEMO_LEITNER_IDS = new Set([
+  'word-1',
+  'word-2',
+  'word-3',
+  'word-4',
+  'word-5',
+  'demo-1',
+  'demo-2',
+  'demo-3',
+  'demo-4',
+  'demo-5',
+  'default-item',
+]);
+
+export const DEMO_PRACTICE_IDS = new Set([
+  'practice-1',
+  'practice-2',
+  'practice-3',
+  'practice-4',
+  'practice-5',
+  'demo-1',
+  'demo-2',
+  'demo-3',
+  'demo-4',
+  'demo-5',
+  'default-item',
+]);
+
+export const KNOWN_DEMO_PHRASES = new Set([
+  'cut to the chase',
+  'under the weather',
+  'hit the nail on the head',
+  'bite the bullet',
+  'touch base',
+  'play it by ear',
+  'call it a day',
+]);
+
+export function isDemoLeitnerWord(w: any): boolean {
+  if (!w || typeof w !== 'object') return true;
+  if (w.id && DEMO_LEITNER_IDS.has(w.id)) return true;
+  if (w.id && (w.id === 'default-item' || String(w.id).startsWith('demo-'))) return true;
+  const wordClean = (w.word || '').toLowerCase().trim();
+  if (KNOWN_DEMO_PHRASES.has(wordClean)) {
+    const isTimestampId = w.id && /^word-\d{12,}$/.test(String(w.id));
+    if (!isTimestampId) return true;
+  }
+  return false;
+}
+
+export function isDemoPracticeItem(p: any): boolean {
+  if (!p || typeof p !== 'object') return true;
+  if (p.id && DEMO_PRACTICE_IDS.has(p.id)) return true;
+  if (p.id && (p.id === 'default-item' || String(p.id).startsWith('demo-'))) return true;
+  const clicheClean = (p.cliche || '').toLowerCase().trim();
+  if (KNOWN_DEMO_PHRASES.has(clicheClean)) {
+    const isTimestampId = p.id && /^practice-\d{12,}$/.test(String(p.id));
+    if (!isTimestampId) return true;
+  }
+  return false;
+}
+
 // Leitner Words
 export function getStoredLeitnerWords(): LeitnerWord[] {
-  if (typeof window === 'undefined') return INITIAL_LEITNER_WORDS;
+  if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.LEITNER_WORDS);
     if (!raw) {
-      localStorage.setItem(STORAGE_KEYS.LEITNER_WORDS, JSON.stringify(INITIAL_LEITNER_WORDS));
-      return INITIAL_LEITNER_WORDS;
+      return [];
     }
-    return JSON.parse(raw);
+    const parsed: LeitnerWord[] = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    const userWords = parsed.filter((w) => !isDemoLeitnerWord(w));
+    if (userWords.length !== parsed.length) {
+      localStorage.setItem(STORAGE_KEYS.LEITNER_WORDS, JSON.stringify(userWords));
+    }
+    return userWords;
   } catch (e) {
-    return INITIAL_LEITNER_WORDS;
+    return [];
   }
 }
 
 export function saveStoredLeitnerWords(words: LeitnerWord[]) {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_KEYS.LEITNER_WORDS, JSON.stringify(words));
+    const cleaned = words.filter((w) => !isDemoLeitnerWord(w));
+    localStorage.setItem(STORAGE_KEYS.LEITNER_WORDS, JSON.stringify(cleaned));
   } catch (e) {}
 }
 
 // Practice Items (Clichés saved from Speaking with + button or text selection)
 export function getStoredPracticeItems(): PracticeItem[] {
-  if (typeof window === 'undefined') return INITIAL_PRACTICE_ITEMS;
+  if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.PRACTICE_ITEMS);
     if (!raw) {
-      localStorage.setItem(STORAGE_KEYS.PRACTICE_ITEMS, JSON.stringify(INITIAL_PRACTICE_ITEMS));
-      return INITIAL_PRACTICE_ITEMS;
+      return [];
     }
-    return JSON.parse(raw);
+    const parsed: PracticeItem[] = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    const userItems = parsed.filter((p) => !isDemoPracticeItem(p));
+    if (userItems.length !== parsed.length) {
+      localStorage.setItem(STORAGE_KEYS.PRACTICE_ITEMS, JSON.stringify(userItems));
+    }
+    return userItems;
   } catch (e) {
-    return INITIAL_PRACTICE_ITEMS;
+    return [];
   }
 }
 
 export function saveStoredPracticeItems(items: PracticeItem[]) {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_KEYS.PRACTICE_ITEMS, JSON.stringify(items));
+    const cleaned = items.filter((p) => !isDemoPracticeItem(p));
+    localStorage.setItem(STORAGE_KEYS.PRACTICE_ITEMS, JSON.stringify(cleaned));
   } catch (e) {}
 }
 
@@ -424,5 +499,17 @@ export function generateSmartExampleSentence(cliche: string, meaningFa?: string)
 
   // Grammatically flexible natural contextual framing
   return `Native speakers often say, "${clean}", in situations like this.`;
+}
+
+export function getStoredActiveScenarioId(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('nativespeak_active_scenario_id_v2');
+}
+
+export function saveStoredActiveScenarioId(id: string) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem('nativespeak_active_scenario_id_v2', id);
+  } catch (e) {}
 }
 

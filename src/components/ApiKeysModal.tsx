@@ -174,31 +174,29 @@ export const ApiKeysModal: React.FC<Props> = ({
               <KeyRound className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-black text-white">کلیدهای API شما</h3>
+              <h3 className="text-sm font-black text-white">تنظیمات کلیدهای API (اختیاری)</h3>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                مرحله ۲ از ۳ — اتصال واقعی به API قبل از تعیین سطح بررسی می‌شود
+                هوش مصنوعی سرور فعال است؛ در صورت تمایل می‌توانید کلید اختصاصی خود را تنظیم کنید.
               </p>
             </div>
           </div>
-          {canDismiss || hasRequiredApiKeys() ? (
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          ) : null}
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            title="بستن پنجره"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 text-[11px] text-slate-300 leading-relaxed space-y-1.5">
           <div className="flex items-center gap-1.5 text-emerald-300 font-bold">
             <Shield className="w-3.5 h-3.5" />
-            <span>کلیدها فقط روی همین دستگاه ذخیره می‌شوند</span>
+            <span>اتصال خودکار به سرور هوش مصنوعی برقرار است</span>
           </div>
           <p>
-            با زدن دکمه پایین، یک درخواست تست واقعی به Gemini و (در صورت وارد کردن) OpenAI
-            فرستاده می‌شود. فقط اگر اتصال موفق باشد اجازه ادامه دارید.
+            برای استفاده عادی از اپلیکیشن نیازی به وارد کردن کلید ندارید. اما اگر می‌خواهید از سهمیه اختصاصی Google Gemini یا OpenAI خود استفاده کنید، کلید خود را اینجا وارد کنید.
           </p>
         </div>
 
@@ -328,24 +326,34 @@ export const ApiKeysModal: React.FC<Props> = ({
           </div>
         )}
 
-        <button
-          type="button"
-          onClick={handleVerifyAndSave}
-          disabled={isChecking}
-          className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-xs font-black transition flex items-center justify-center gap-2 disabled:opacity-60"
-        >
-          {isChecking ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              در حال تست اتصال به API…
-            </>
-          ) : (
-            <>
-              <Wifi className="w-4 h-4" />
-              بررسی اتصال و ادامه به تعیین سطح
-            </>
-          )}
-        </button>
+        <div className="space-y-2 pt-1">
+          <button
+            type="button"
+            onClick={handleVerifyAndSave}
+            disabled={isChecking}
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-xs font-black transition flex items-center justify-center gap-2 disabled:opacity-60 shadow-lg active:scale-98"
+          >
+            {isChecking ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                در حال تست اتصال به API…
+              </>
+            ) : (
+              <>
+                <Wifi className="w-4 h-4" />
+                ذخیره کلیدهای اختصاصی
+              </>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition text-center"
+          >
+            بستن و استفاده از هوش مصنوعی سرور
+          </button>
+        </div>
       </div>
     </div>
   );

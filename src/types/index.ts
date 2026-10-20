@@ -211,6 +211,8 @@ export interface Scenario {
   cycleNumber?: number;
 }
 
+export type TabType = 'speaking' | 'leitner' | 'practice' | 'progress';
+
 export interface AcousticPronunciationFeedback {
   wordOrSound: string;
   phoneticTarget: string;

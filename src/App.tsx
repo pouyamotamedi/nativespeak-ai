@@ -31,6 +31,10 @@ import {
   getStoredC2ChecklistState,
   saveStoredC2ChecklistState,
   generateSmartExampleSentence,
+  isDemoLeitnerWord,
+  isDemoPracticeItem,
+  getStoredActiveScenarioId,
+  saveStoredActiveScenarioId,
 } from './utils/storage';
 import {
   getNextUntickedC2Cohort,
@@ -44,6 +48,9 @@ import {
   loadUserCloudData,
   saveUserCloudData,
   completeGoogleRedirectIfAny,
+  getCachedAuthUser,
+  saveCachedAuthUser,
+  clearCachedAuthUser,
 } from './utils/firebase';
 import { User } from 'firebase/auth';
 import { checkDailyReminder } from './utils/notifications';
@@ -56,6 +63,7 @@ import { InitialAssessmentModal } from './components/InitialAssessmentModal';
 import { AuthModal } from './components/AuthModal';
 import { ApiKeysModal } from './components/ApiKeysModal';
 import { PWAInstallButton } from './components/PWAInstallButton';
+import { MobileMenuDrawer } from './components/MobileMenuDrawer';
 import {
   Mic,
   Brain,
@@ -69,8 +77,12 @@ import {
   User as UserIcon,
   LogOut,
   ChevronDown,
+  ChevronUp,
   KeyRound,
+  Menu,
+  X,
 } from 'lucide-react';
+import { apiFetch } from './utils/userApiKeys';
 import { playChimeSound } from './utils/audio';
 import { convertCalendarToScenario, generateAdaptiveScenarioFromWeaknesses } from './utils/linguisticEngine';
 import { applyProgressActivity, reconcileProgressCalendar } from './utils/progressTracking';
@@ -103,8 +115,8 @@ export default function App() {
   const [persona, setPersona] = useState<AIPersona>(getStoredActivePersona());
   const [isPersonaModalOpen, setIsPersonaModalOpen] = useState(false);
 
-  // Authentication State — onboarding: Login → API keys → Placement
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // Authentication State — initialized from local session cache so it never flashes logged out
+  const [currentUser, setCurrentUser] = useState<User | any>(() => getCachedAuthUser());
   const [authReady, setAuthReady] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
@@ -124,13 +136,19 @@ export default function App() {
   });
   const [c2ChecklistState, setC2ChecklistState] = useState<UserC2ChecklistState>(getStoredC2ChecklistState());
 
-  // Active scenario is strictly derived from the user's generated calendar
+  // Active scenario is strictly derived from the user's generated calendar and persisted across app closes
   const [activeScenario, setActiveScenario] = useState<Scenario>(() => {
     const storedAssessment = getStoredAssessment();
     const storedCal = getStoredCalendar();
-    return storedAssessment.completed && storedCal && storedCal.length > 0
-      ? convertCalendarToScenario(storedCal[0])
-      : DEFAULT_ORIENTATION_SCENARIO;
+    const savedScenarioId = getStoredActiveScenarioId();
+    if (storedAssessment.completed && storedCal && storedCal.length > 0) {
+      if (savedScenarioId) {
+        const found = storedCal.find((c) => c.id === savedScenarioId);
+        if (found) return convertCalendarToScenario(found);
+      }
+      return convertCalendarToScenario(storedCal[0]);
+    }
+    return DEFAULT_ORIENTATION_SCENARIO;
   });
 
   const [isApiKeysOpen, setIsApiKeysOpen] = useState(false);
@@ -139,22 +157,15 @@ export default function App() {
   const [isCycleReassessment, setIsCycleReassessment] = useState(false);
   const [isMobileFrame, setIsMobileFrame] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isBannerDismissed, setIsBannerDismissed] = useState(false);
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(true);
 
-  /** Strict gate: Auth → API keys → Placement (never reverse). */
+  /** Onboarding & sync: Close auth modal, and if placement isn't done yet, invite to placement. */
   const continueOnboardingAfterAuth = (user: User | null, assCompleted?: boolean) => {
-    if (!user) {
-      setIsApiKeysOpen(false);
-      setIsAssessmentOpen(false);
-      setIsAuthModalOpen(true);
-      return;
-    }
     setIsAuthModalOpen(false);
-    if (!hasRequiredApiKeys()) {
-      setIsAssessmentOpen(false);
-      setIsApiKeysOpen(true);
-      return;
-    }
     setIsApiKeysOpen(false);
+    if (!user) return;
     const done = assCompleted ?? getStoredAssessment().completed;
     if (!done || isCycleReassessment) {
       setIsAssessmentOpen(true);
@@ -162,23 +173,11 @@ export default function App() {
   };
 
   const openAssessmentFlow = () => {
-    if (!currentUser) {
-      setIsAuthModalOpen(true);
-      return;
-    }
-    if (!hasRequiredApiKeys()) {
-      setIsApiKeysOpen(true);
-      return;
-    }
     setIsAssessmentOpen(true);
   };
 
   const handleApiKeysSaved = () => {
     setIsApiKeysOpen(false);
-    const storedAssessment = getStoredAssessment();
-    if (!storedAssessment.completed || isCycleReassessment) {
-      setIsAssessmentOpen(true);
-    }
   };
 
   // Helper to sync to Firestore for current user
@@ -193,12 +192,25 @@ export default function App() {
     let cancelled = false;
 
     (async () => {
-      await completeGoogleRedirectIfAny();
+      try {
+        const redirectUser = await completeGoogleRedirectIfAny();
+        if (redirectUser && !cancelled) {
+          setCurrentUser(redirectUser);
+        }
+      } catch (e) {
+        console.warn('Redirect check error:', e);
+      }
     })();
 
     const unsubscribe = subscribeToAuth(async (user) => {
       if (cancelled) return;
-      setCurrentUser(user);
+      if (user) {
+        setCurrentUser(user);
+        saveCachedAuthUser(user);
+      } else {
+        setCurrentUser(null);
+        clearCachedAuthUser();
+      }
       setAuthReady(true);
 
       if (!user) {
@@ -229,7 +241,15 @@ export default function App() {
             setCalendar(cleanedCalendar);
             saveStoredCalendar(cleanedCalendar);
             if (cleanedCalendar.length > 0) {
-              setActiveScenario(convertCalendarToScenario(cleanedCalendar[0]));
+              const savedScenarioId = getStoredActiveScenarioId();
+              const matchedScenario = savedScenarioId
+                ? cleanedCalendar.find((c: any) => c.id === savedScenarioId)
+                : null;
+              if (matchedScenario) {
+                setActiveScenario(convertCalendarToScenario(matchedScenario));
+              } else if (!savedScenarioId) {
+                setActiveScenario(convertCalendarToScenario(cleanedCalendar[0]));
+              }
             }
           } else if (!isAssCompleted) {
             setCalendar([]);
@@ -241,12 +261,30 @@ export default function App() {
             saveStoredWeaknesses(cloudData.weaknesses);
           }
           if (cloudData.leitnerWords) {
-            setLeitnerWords(cloudData.leitnerWords);
-            saveStoredLeitnerWords(cloudData.leitnerWords);
+            const filteredWords = (cloudData.leitnerWords as LeitnerWord[]).filter(
+              (w) => !isDemoLeitnerWord(w)
+            );
+            setLeitnerWords(filteredWords);
+            saveStoredLeitnerWords(filteredWords);
+            if (filteredWords.length !== cloudData.leitnerWords.length) {
+              saveUserCloudData(user.uid, { leitnerWords: filteredWords });
+            }
+          } else {
+            setLeitnerWords([]);
+            saveStoredLeitnerWords([]);
           }
           if (cloudData.practiceItems) {
-            setPracticeItems(cloudData.practiceItems);
-            saveStoredPracticeItems(cloudData.practiceItems);
+            const filteredItems = (cloudData.practiceItems as PracticeItem[]).filter(
+              (p) => !isDemoPracticeItem(p)
+            );
+            setPracticeItems(filteredItems);
+            saveStoredPracticeItems(filteredItems);
+            if (filteredItems.length !== cloudData.practiceItems.length) {
+              saveUserCloudData(user.uid, { practiceItems: filteredItems });
+            }
+          } else {
+            setPracticeItems([]);
+            saveStoredPracticeItems([]);
           }
           if (cloudData.progress) {
             setProgress(cloudData.progress);
@@ -268,8 +306,8 @@ export default function App() {
             calendar,
             weaknesses,
             c2ChecklistState,
-            leitnerWords,
-            practiceItems,
+            leitnerWords: leitnerWords.filter((w) => !isDemoLeitnerWord(w)),
+            practiceItems: practiceItems.filter((p) => !isDemoPracticeItem(p)),
             progress,
           });
           continueOnboardingAfterAuth(user, assessment.completed);
@@ -308,6 +346,14 @@ export default function App() {
     return () => clearInterval(interval);
   }, [goals.reminderTime, goals.reminderEnabled]);
 
+  // Persist active scenario ID locally and to cloud whenever user switches scenario
+  useEffect(() => {
+    if (activeScenario?.id) {
+      saveStoredActiveScenarioId(activeScenario.id);
+      syncToCloud({ activeScenarioId: activeScenario.id });
+    }
+  }, [activeScenario?.id]);
+
   // Handlers
   const handleSelectPersona = (selected: AIPersona) => {
     setPersona(selected);
@@ -327,20 +373,31 @@ export default function App() {
     syncToCloud({ practiceItems: updated });
   };
 
-  // Add word to Leitner
-  const handleAddWordToLeitner = (wordText: string) => {
-    const term = wordText.trim().toLowerCase();
-    const exists = leitnerWords.some((w) => w.word.toLowerCase() === term);
+  // Add word to Leitner with real Persian translation and authentic sample sentences
+  const handleAddWordToLeitner = async (
+    wordText: string,
+    contextSentence?: string,
+    customMeaning?: string
+  ) => {
+    const term = wordText.trim();
+    if (!term) return;
+    const termKey = term.toLowerCase();
+    const exists = leitnerWords.some((w) => w.word.toLowerCase() === termKey);
     if (exists) return;
 
+    const wordId = `word-${Date.now()}`;
+    const initialSentences = contextSentence
+      ? [{ english: contextSentence, persian: customMeaning || `مثال کاربردی برای ${term}` }]
+      : [];
+
     const newWord: LeitnerWord = {
-      id: `word-${Date.now()}`,
+      id: wordId,
       word: term,
       phonetic: '',
       partOfSpeech: 'expression',
-      persianMeaning: 'اضافه شده از مکالمه',
+      persianMeaning: customMeaning || 'در حال دریافت معنی و مثال...',
       collocations: [],
-      sampleSentences: [],
+      sampleSentences: initialSentences,
       box: 1,
       nextReviewDue: new Date().toISOString(),
       timesReviewed: 0,
@@ -359,6 +416,65 @@ export default function App() {
     saveStoredProgress(updatedProgress);
     syncToCloud({ leitnerWords: updated, progress: updatedProgress });
     playChimeSound('success');
+
+    // Asynchronously enrich with real dictionary / AI lookup
+    try {
+      const resp = await apiFetch('/api/lookup-word', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ word: term, context: contextSentence }),
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        setLeitnerWords((prev) => {
+          const mapped = prev.map((item) => {
+            if (item.id === wordId) {
+              return {
+                ...item,
+                word: data.word || item.word,
+                phonetic: data.phonetic || item.phonetic,
+                partOfSpeech: data.partOfSpeech || item.partOfSpeech,
+                persianMeaning: data.persianMeaning || customMeaning || item.persianMeaning,
+                persianNuance: data.persianNuance || item.persianNuance,
+                americanUsageNote: data.americanUsageNote || item.americanUsageNote,
+                collocations: Array.isArray(data.collocations) && data.collocations.length > 0 ? data.collocations : item.collocations,
+                sampleSentences: Array.isArray(data.sampleSentences) && data.sampleSentences.length > 0
+                  ? data.sampleSentences
+                  : item.sampleSentences.length > 0
+                  ? item.sampleSentences
+                  : [{ english: contextSentence || `I use "${term}" in conversations.`, persian: `مثال کاربردی برای ${term}` }],
+                pronunciationTipFa: data.pronunciationTipFa || item.pronunciationTipFa,
+              };
+            }
+            return item;
+          });
+          saveStoredLeitnerWords(mapped);
+          syncToCloud({ leitnerWords: mapped });
+          return mapped;
+        });
+      }
+    } catch (e) {
+      console.warn('Lookup word failed:', e);
+      setLeitnerWords((prev) => {
+        const mapped = prev.map((item) => {
+          if (item.id === wordId && item.persianMeaning === 'در حال دریافت معنی و مثال...') {
+            return {
+              ...item,
+              persianMeaning: customMeaning || `اصطلاح کاربردی: ${term}`,
+              sampleSentences: item.sampleSentences.length > 0 ? item.sampleSentences : [
+                {
+                  english: contextSentence || `I use "${term}" in conversations.`,
+                  persian: `مثال کاربردی برای ${term}`,
+                },
+              ],
+            };
+          }
+          return item;
+        });
+        saveStoredLeitnerWords(mapped);
+        return mapped;
+      });
+    }
   };
 
   // Add cliché to Practice with authentic context sentence
@@ -384,9 +500,9 @@ export default function App() {
     playChimeSound('success');
   };
 
-  const handleAddWordToBoth = (wordText: string) => {
-    handleAddWordToLeitner(wordText);
-    handleAddClicheToPractice(wordText, 'عبارت ذخیره‌شده از مکالمه');
+  const handleAddWordToBoth = (wordText: string, contextSentence?: string, customMeaning?: string) => {
+    handleAddWordToLeitner(wordText, contextSentence, customMeaning);
+    handleAddClicheToPractice(wordText, customMeaning || 'اصطلاح محاوره‌ای نیتیو', contextSentence);
   };
 
   const handleUpdateGoals = (newGoals: PracticeGoals) => {
@@ -718,29 +834,35 @@ export default function App() {
             : 'max-w-xl mx-auto'
         }`}
       >
-        {/* Top Header */}
-        <header className="px-3 py-2 sm:px-4 sm:py-2.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between shrink-0 gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-cyan-500 flex items-center justify-center shadow-md shrink-0">
-              <span className="text-base font-black text-white">N</span>
+        {/* Top Header & Banner (Collapsible via Bottom Navigation Toggle Arrow) */}
+        <div
+          className={`transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${
+            isHeaderCollapsed ? 'max-h-0 opacity-0 pointer-events-none' : 'max-h-96 opacity-100'
+          }`}
+        >
+          <header className="px-3 py-2 sm:px-5 sm:py-2.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between shrink-0 gap-2">
+          {/* Brand & CEFR Level Badge */}
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-cyan-500 flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0">
+              <Mic className="w-4 h-4 text-white" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
-                <h1 className="text-xs sm:text-sm font-black text-white tracking-tight truncate">NativeSpeak</h1>
-                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-en hidden sm:inline">
+                <h1 className="text-sm font-black text-white tracking-tight truncate">NativeSpeak</h1>
+                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-en hidden md:inline">
                   AI Coach
                 </span>
               </div>
             </div>
 
-            {/* Level & Placement Test Badge */}
+            {/* Level & Placement Test Badge (Quick Access) */}
             <button
               onClick={openAssessmentFlow}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-200 text-xs font-bold transition shrink-0 active:scale-95"
-              title="مشاهده نتایج یا تکرار تعیین سطح هوشمند"
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-full bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-200 text-xs font-bold transition shrink-0 active:scale-95"
+              title="مشاهده یا تکرار تعیین سطح هوشمند صوتی"
             >
               <Award className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span className="font-en font-black text-xs text-white">
+              <span className="font-en font-black text-[11px] sm:text-xs text-white">
                 {assessment.completed
                   ? `Level ${assessment.cefrLevel}`
                   : progress.cefrLevel && progress.cefrLevel !== 'B1'
@@ -750,145 +872,106 @@ export default function App() {
             </button>
           </div>
 
-          {/* Right Header Controls */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              type="button"
-              onClick={() => setIsApiKeysOpen(true)}
-              className={`p-1.5 rounded-full border transition active:scale-95 ${
-                hasRequiredApiKeys()
-                  ? 'bg-emerald-600/15 border-emerald-500/30 text-emerald-300 hover:bg-emerald-600/25'
-                  : 'bg-amber-600/20 border-amber-500/40 text-amber-300 hover:bg-amber-600/30 animate-pulse'
-              }`}
-              title="تنظیم کلیدهای API (Gemini / OpenAI)"
-            >
-              <KeyRound className="w-4 h-4" />
-            </button>
-            {/* User Account / Login Pill */}
-            <div className="relative">
-              {currentUser ? (
-                <button
-                  onClick={() => setShowUserDropdown(!showUserDropdown)}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-200 text-xs font-bold transition active:scale-95"
-                  title="حساب کاربری ابری متصل"
-                >
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
-                  <span className="max-w-[70px] truncate text-[11px]">
-                    {currentUser.displayName || currentUser.email?.split('@')[0] || 'حساب من'}
-                  </span>
-                  <ChevronDown className="w-3 h-3 text-slate-400" />
-                </button>
-              ) : (
-                <button
-                  onClick={() => setIsAuthModalOpen(true)}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:opacity-95 text-slate-950 text-xs font-black transition shadow-md shadow-emerald-500/20 active:scale-95"
-                  title="ورود برای فعال‌سازی دیتابیس اختصاصی ابری"
-                >
-                  <UserIcon className="w-3.5 h-3.5" />
-                  <span className="text-[11px]">ورود / ثبت‌نام</span>
-                </button>
-              )}
-
-              {/* User Dropdown */}
-              {showUserDropdown && currentUser && (
-                <div className="absolute top-full left-0 mt-2 w-56 rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl p-2.5 z-50 space-y-2 text-xs">
-                  <div className="border-b border-slate-800 pb-2">
-                    <div className="font-bold text-white truncate">{currentUser.displayName || 'کاربر گرامی'}</div>
-                    <div className="text-[10px] text-slate-400 truncate font-en">{currentUser.email}</div>
-                    <div className="text-[10px] text-emerald-400 mt-1 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                      <span>دیتابیس ابری متصل است</span>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={async () => {
-                      setShowUserDropdown(false);
-                      await logOut();
-                      playChimeSound('ding');
-                    }}
-                    className="w-full text-right p-2 rounded-xl text-red-400 hover:bg-red-500/10 flex items-center gap-2 transition"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span>خروج از حساب</span>
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Active Persona Pill (Compact) */}
+          {/* Right Header Controls — Clean, spacious, unified with Hamburger Menu */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Quick Persona Pill */}
             <button
               onClick={() => setIsPersonaModalOpen(true)}
               className="flex items-center gap-1 p-1 sm:px-2 sm:py-1 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-white transition active:scale-95"
-              title="تغییر مربی هوش مصنوعی"
+              title={`مربی فعال: ${persona.name} (کلیک برای تغییر)`}
             >
               <span className="text-sm">{persona.avatar}</span>
-              <span className="text-xs font-bold truncate max-w-[55px] hidden sm:inline">{persona.name}</span>
+              <span className="text-[11px] font-bold hidden md:inline">{persona.name}</span>
             </button>
 
             {/* Streak Indicator */}
             <div
-              className="flex items-center gap-1 px-1.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-bold"
+              className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-bold"
               title="روزهای متوالی تمرین"
             >
               <Flame className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-              <span className="font-en text-[10px]">{progress.streakDays}</span>
+              <span className="font-en text-[11px]">{progress.streakDays}</span>
             </div>
 
-            {/* PWA & Frame View on sm+ */}
-            <div className="hidden sm:flex items-center gap-1">
+            {/* PWA Button (sm+ screens) */}
+            <div className="hidden md:block">
               <PWAInstallButton />
-              <button
-                onClick={() => setIsMobileFrame(!isMobileFrame)}
-                className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition"
-                title={isMobileFrame ? 'نمای تمام‌صفحه' : 'نمای گوشی اندروید'}
-              >
-                {isMobileFrame ? (
-                  <Maximize2 className="w-3.5 h-3.5" />
-                ) : (
-                  <Smartphone className="w-3.5 h-3.5" />
-                )}
-              </button>
             </div>
+
+            {/* Frame View Toggle (desktop only) */}
+            <button
+              onClick={() => setIsMobileFrame(!isMobileFrame)}
+              className="hidden sm:inline-flex p-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition"
+              title={isMobileFrame ? 'نمای تمام‌صفحه' : 'نمای گوشی اندروید'}
+            >
+              {isMobileFrame ? (
+                <Maximize2 className="w-3.5 h-3.5" />
+              ) : (
+                <Smartphone className="w-3.5 h-3.5" />
+              )}
+            </button>
+
+            {/* HAMBURGER MENU BUTTON — ALWAYS VISIBLE ON ALL SCREENS */}
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="flex items-center gap-1.5 py-1 px-2.5 sm:px-3 sm:py-1.5 rounded-xl bg-gradient-to-r from-indigo-600/30 to-cyan-600/20 hover:from-indigo-600/40 hover:to-cyan-600/30 border border-indigo-500/40 text-white font-bold text-xs transition active:scale-95 shadow-sm"
+              title="منوی اصلی و تنظیمات حساب"
+              aria-label="منوی اصلی و تنظیمات حساب"
+            >
+              <Menu className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-300 shrink-0" />
+              <span className="text-[11px] font-fa text-slate-100 font-bold">منو</span>
+            </button>
           </div>
         </header>
 
-        {/* Auth prompt banner if not logged in */}
-        {!currentUser && (
-          <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-950 border-b border-emerald-500/30 px-3.5 py-2 flex items-center justify-between text-xs gap-2 shrink-0 animate-in fade-in">
+        {/* Responsive, Dismissible Notice Banner (Only 1 sleek banner max) */}
+        {!isBannerDismissed && (!assessment.completed || !currentUser) && (
+          <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 border-b border-indigo-500/30 px-3 py-1.5 flex items-center justify-between text-xs gap-2 shrink-0 animate-in fade-in">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0"></span>
-              <span className="text-slate-200 text-[11px] truncate">
-                برای ذخیره دائمی تعیین سطح و دیتابیس نقاط ضعف، وارد حساب شوید.
-              </span>
+              {!assessment.completed ? (
+                <>
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-pulse" />
+                  <span className="text-slate-200 text-[11px] truncate">
+                    هنوز تعیین سطح صوتی نداده‌اید!
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
+                  <span className="text-slate-200 text-[11px] truncate">
+                    برای ذخیره دائمی ابری پیشرفت، وارد حساب شوید.
+                  </span>
+                </>
+              )}
             </div>
-            <button
-              onClick={() => setIsAuthModalOpen(true)}
-              className="px-2.5 py-1 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-[11px] shrink-0 transition"
-            >
-              ورود با گوگل / ایمیل
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {!assessment.completed ? (
+                <button
+                  onClick={openAssessmentFlow}
+                  className="px-2.5 py-1 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-[11px] transition shadow-sm active:scale-95"
+                >
+                  شروع آزمون 🎙️
+                </button>
+              ) : (
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="px-2.5 py-1 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-[11px] transition"
+                >
+                  ورود به حساب
+                </button>
+              )}
+              <button
+                onClick={() => setIsBannerDismissed(true)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white transition"
+                title="بستن پیام"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         )}
-
-        {/* Onboarding Placement Test Alert Banner if Not Completed */}
-        {!assessment.completed && (
-          <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 border-b border-indigo-500/40 px-3.5 py-2 flex items-center justify-between text-xs gap-2 shrink-0 animate-in fade-in">
-            <div className="flex items-center gap-2 min-w-0">
-              <Sparkles className="w-4 h-4 text-amber-400 shrink-0 animate-pulse" />
-              <div className="truncate">
-                <span className="font-bold text-white text-[11px]">تعیین سطح صوتی انجام نشده است!</span>
-                <span className="text-slate-300 text-[10px] mr-1 hidden sm:inline">برای طراحی سناریوهای اختصاصی تا سطح C2</span>
-              </div>
-            </div>
-            <button
-              onClick={openAssessmentFlow}
-              className="px-2.5 py-1 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-[11px] shrink-0 transition shadow-sm active:scale-95"
-            >
-              شروع تعیین سطح صوتی 🎙️
-            </button>
-          </div>
-        )}
+        </div>
 
         {/* Tab Content Display Area */}
         <main className="flex-1 overflow-hidden relative">
@@ -914,6 +997,7 @@ export default function App() {
               cefrLevel={assessment.completed ? assessment.cefrLevel : progress.cefrLevel}
               isAssessmentCompleted={Boolean(assessment.completed)}
               onOpenAssessment={openAssessmentFlow}
+              isHeaderCollapsed={isHeaderCollapsed}
             />
           )}
 
@@ -1017,17 +1101,68 @@ export default function App() {
             <TrendingUp className={`w-5 h-5 ${activeTab === 'progress' ? 'stroke-[2.5]' : ''}`} />
             <span className="text-[10px]">پیشرفت</span>
           </button>
+
+          {/* 5. Header Slide-Down / Slide-Up Toggle Arrow */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsHeaderCollapsed(!isHeaderCollapsed);
+              playChimeSound('ding');
+            }}
+            className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-2xl transition active:scale-95 ${
+              !isHeaderCollapsed
+                ? 'text-cyan-400 bg-cyan-500/10'
+                : 'text-slate-400 hover:text-cyan-300'
+            }`}
+            title={
+              isHeaderCollapsed
+                ? 'نمایش هدر و اطلاعات سناریو (کشویی رو به پایین)'
+                : 'مخفی‌سازی هدر برای باز شدن کامل فضا (کشویی رو به بالا)'
+            }
+            aria-label="تغییر وضعیت هدر"
+          >
+            {isHeaderCollapsed ? (
+              <ChevronDown className="w-5 h-5 text-cyan-400" />
+            ) : (
+              <ChevronUp className="w-5 h-5 text-slate-300" />
+            )}
+            <span className="text-[10px] font-bold">
+              {isHeaderCollapsed ? 'هدر' : 'بستن'}
+            </span>
+          </button>
         </nav>
       </div>
 
-      {/* Step 1: Login / Register (blocks everything until done) */}
-      <AuthModal
-        isOpen={authReady && isAuthModalOpen}
-        canDismiss={Boolean(currentUser)}
-        onClose={() => {
-          if (!currentUser) return;
-          setIsAuthModalOpen(false);
+      {/* Mobile Hamburger Slide-Over Drawer */}
+      <MobileMenuDrawer
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        currentUser={currentUser}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+        onLogout={async () => {
+          await logOut();
+          playChimeSound('ding');
         }}
+        assessment={assessment}
+        progress={progress}
+        onOpenAssessment={openAssessmentFlow}
+        persona={persona}
+        onOpenPersona={() => setIsPersonaModalOpen(true)}
+        onOpenApiKeys={() => setIsApiKeysOpen(true)}
+        onOpenPWA={() => {
+          const pwaBtn = document.querySelector('[data-pwa-button]') as HTMLButtonElement | null;
+          pwaBtn?.click();
+        }}
+        isOnline={isOnline}
+        activeTab={activeTab}
+        onSelectTab={(tab) => setActiveTab(tab)}
+      />
+
+      {/* Login / Register Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        canDismiss={true}
+        onClose={() => setIsAuthModalOpen(false)}
         onSuccess={(user) => {
           setCurrentUser(user);
           continueOnboardingAfterAuth(user, getStoredAssessment().completed);
@@ -1042,29 +1177,19 @@ export default function App() {
         onSelectPersona={handleSelectPersona}
       />
 
-      {/* Step 2: API Keys — only after login */}
+      {/* API Keys Modal (Optional Custom Keys) */}
       <ApiKeysModal
-        isOpen={Boolean(currentUser) && isApiKeysOpen}
-        canDismiss={hasRequiredApiKeys()}
-        onClose={() => {
-          if (!hasRequiredApiKeys()) return;
-          setIsApiKeysOpen(false);
-        }}
+        isOpen={isApiKeysOpen}
+        canDismiss={true}
+        onClose={() => setIsApiKeysOpen(false)}
         onSaved={handleApiKeysSaved}
       />
 
-      {/* Step 3: Placement — only after login + keys */}
+      {/* Placement Diagnostic Modal */}
       <InitialAssessmentModal
-        isOpen={
-          Boolean(currentUser) &&
-          hasRequiredApiKeys() &&
-          isAssessmentOpen &&
-          !isApiKeysOpen &&
-          !isAuthModalOpen
-        }
+        isOpen={isAssessmentOpen && !isAuthModalOpen}
         isCycleReassessment={isCycleReassessment}
         onClose={() => {
-          if (isCycleReassessment) return;
           setIsAssessmentOpen(false);
         }}
         onAssessmentCompleted={handleAssessmentCompleted}

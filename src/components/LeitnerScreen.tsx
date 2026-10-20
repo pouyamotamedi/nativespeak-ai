@@ -454,11 +454,27 @@ export const LeitnerScreen: React.FC<Props> = ({ words, onUpdateWords, onWordMas
             </div>
           ))}
 
-          {filteredWords.length === 0 && (
+          {words.length === 0 ? (
+            <div className="p-10 text-center rounded-3xl bg-slate-900/80 border border-dashed border-slate-800 space-y-3.5 my-auto">
+              <div className="w-14 h-14 rounded-3xl bg-indigo-600/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto shadow-inner">
+                <Brain className="w-7 h-7 text-indigo-400" />
+              </div>
+              <h4 className="text-sm font-bold text-white">جعبه لایتنر شما در حال حاضر خالی است</h4>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
+                در طول مکالمه در بخش اسپیکینگ با کلیک روی هر کلمه جدید یا از طریق دکمه «افزودن لغت»، واژگان دلخواهتان را برای مرور منظم و سناریوسازی به لایتنر اضافه کنید.
+              </p>
+              <button
+                onClick={() => setIsAddingWord(true)}
+                className="px-5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow-lg shadow-indigo-600/20 active:scale-95"
+              >
+                افزودن اولین لغت ✍️
+              </button>
+            </div>
+          ) : filteredWords.length === 0 ? (
             <div className="p-8 text-center text-slate-500 text-xs rounded-2xl border border-dashed border-slate-800">
               هیچ لغتی در این خانه وجود ندارد. از دکمه «افزودن لغت» استفاده کنید.
             </div>
-          )}
+          ) : null}
         </div>
       )}
 

@@ -132,6 +132,8 @@ export const PracticeScreen: React.FC<Props> = ({
   useEffect(() => {
     if (!selectedItem && practiceItems.length > 0) {
       setSelectedItem(practiceItems[0]);
+    } else if (practiceItems.length === 0 && selectedItem) {
+      setSelectedItem(null);
     }
   }, [practiceItems, selectedItem]);
 
@@ -722,6 +724,22 @@ export const PracticeScreen: React.FC<Props> = ({
                 );
               })}
             </div>
+          ) : practiceItems.length === 0 ? (
+            <div className="p-10 text-center rounded-3xl bg-slate-900/80 border border-dashed border-slate-800 space-y-3.5 my-auto">
+              <div className="w-14 h-14 rounded-3xl bg-indigo-600/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto shadow-inner">
+                <Sparkles className="w-7 h-7 text-indigo-400" />
+              </div>
+              <h4 className="text-sm font-bold text-white">هنوز کلیشه‌ای به بخش تمرین اضافه نشده است</h4>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
+                در حین مکالمه در بخش اسپیکینگ با زدن دکمه «+» روی اصطلاحات نیتیو یا از طریق دکمه «افزودن کلیشه»، عبارات دلخواهتان را برای سناریوسازی به این بخش اضافه کنید.
+              </p>
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="px-5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow-lg shadow-indigo-600/20 active:scale-95"
+              >
+                افزودن اولین کلیشه ✍️
+              </button>
+            </div>
           ) : (
             <div className="p-10 text-center rounded-3xl bg-slate-900 border border-dashed border-slate-800 space-y-3">
               <Search className="w-8 h-8 text-slate-600 mx-auto" />
@@ -764,6 +782,22 @@ export const PracticeScreen: React.FC<Props> = ({
             </div>
           </div>
         </div>
+      ) : practiceItems.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-3.5 my-auto">
+          <div className="w-14 h-14 rounded-3xl bg-indigo-600/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto">
+            <Sparkles className="w-7 h-7 text-indigo-400" />
+          </div>
+          <h3 className="text-sm font-bold text-white">کلیشه‌ای برای تمرین انتخاب نشده است</h3>
+          <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
+            ابتدا از بخش کاتالوگ یا در طول مکالمه اسپیکینگ، کلیشه‌های هدف را اضافه کنید.
+          </p>
+          <button
+            onClick={() => setViewMode('catalog')}
+            className="px-4 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow-md"
+          >
+            مشاهده کاتالوگ و افزودن کلیشه
+          </button>
+        </div>
       ) : (
         /* =========================================================================
             VIEW MODE 2: ACTIVE PRACTICE STUDIO (میزکار تمرین فعال و اختصاصی)
@@ -773,17 +807,8 @@ export const PracticeScreen: React.FC<Props> = ({
               ACTIVE PRACTICE STUDIO HEADER (هدر یکپارچه، پرارتفاع و برجسته تمرین کلیشه)
              ========================================================================= */}
           {(() => {
-            const activeItem: PracticeItem = selectedItem || practiceItems[0] || {
-              id: 'default-item',
-              cliche: 'call it a day',
-              persianMeaning: 'پایان دادن به کار امروز و دست کشیدن از کار',
-              category: 'work' as const,
-              context: 'محیط کار و پایان شیفت',
-              exampleSentence: "We're all exhausted, so let's call it a day.",
-              addedAt: new Date().toISOString(),
-              timesPracticed: 0,
-              masteryScore: 0,
-            };
+            const activeItem: PracticeItem = selectedItem || practiceItems[0];
+            if (!activeItem) return null;
 
             const isMastered = activeItem.masteryScore >= 70;
 

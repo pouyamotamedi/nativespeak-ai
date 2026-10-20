@@ -19,6 +19,7 @@ import {
   Info,
   Plus,
   ChevronDown,
+  ChevronUp,
   ChevronLeft,
   ChevronRight,
   X,
@@ -64,6 +65,28 @@ import { apiFetch } from '../utils/userApiKeys';
 import { ScenarioSummaryModal } from './ScenarioSummaryModal';
 import { ScenarioCalendarModal } from './ScenarioCalendarModal';
 
+/**
+ * Strict sanitizer to make sure base64 binary chunks or audio data strings
+ * never render inside user message speech bubbles as glitchy noise.
+ */
+export function sanitizeUserTranscript(raw: any, fallback = ''): string {
+  if (typeof raw !== 'string') return fallback;
+  const trimmed = raw.trim();
+  if (!trimmed) return fallback;
+  if (
+    trimmed.startsWith('data:') ||
+    trimmed.startsWith('blob:') ||
+    trimmed.includes('GkXfo') ||
+    trimmed.includes('AAAA') ||
+    trimmed.includes('base64') ||
+    (trimmed.length > 50 && !trimmed.includes(' ')) ||
+    /^[A-Za-z0-9+/=_\-\s]{60,}$/.test(trimmed)
+  ) {
+    return fallback;
+  }
+  return trimmed;
+}
+
 interface Props {
   persona: AIPersona;
   activeScenario: Scenario;
@@ -71,9 +94,9 @@ interface Props {
   onSelectCalendarScenario?: (scenario: CalendarScenario) => void;
   leitnerWords: LeitnerWord[];
   practiceItems: PracticeItem[];
-  onAddWordToLeitner: (word: string) => void;
-  onAddClicheToPractice: (cliche: string, meaningFa: string) => void;
-  onAddWordToBoth: (word: string) => void;
+  onAddWordToLeitner: (word: string, contextSentence?: string, customMeaning?: string) => void;
+  onAddClicheToPractice: (cliche: string, meaningFa: string, contextSentence?: string) => void;
+  onAddWordToBoth: (word: string, contextSentence?: string, customMeaning?: string) => void;
   onSessionMinuteLogged: (minutes: number) => void;
   onScenarioCompleted: () => void;
   onUpdateMetrics: (
@@ -89,6 +112,7 @@ interface Props {
   isAssessmentCompleted?: boolean;
   onOpenCalendar?: () => void;
   onOpenAssessment?: () => void;
+  isHeaderCollapsed?: boolean;
 }
 
 export const SpeakingScreen: React.FC<Props> = ({
@@ -112,6 +136,7 @@ export const SpeakingScreen: React.FC<Props> = ({
   isAssessmentCompleted = true,
   onOpenCalendar,
   onOpenAssessment,
+  isHeaderCollapsed = false,
 }) => {
   const [messages, setMessages] = useState<SpeakingMessage[]>([]);
   const [inputVal, setInputVal] = useState('');
@@ -127,6 +152,7 @@ export const SpeakingScreen: React.FC<Props> = ({
 
   // Selected Text Toolbar
   const [selectedText, setSelectedText] = useState<string | null>(null);
+  const [selectedTextContext, setSelectedTextContext] = useState<string>('');
   const [textToolbarFeedback, setTextToolbarFeedback] = useState<string | null>(null);
 
   // End of scenario summary
@@ -216,7 +242,11 @@ export const SpeakingScreen: React.FC<Props> = ({
     try {
       const draft = getStoredScenarioDraft(activeScenario.id);
       if (draft && Array.isArray(draft.messages) && draft.messages.length > 0) {
-        setMessages(draft.messages);
+        const cleanDraftMessages = draft.messages.map((m: SpeakingMessage) => ({
+          ...m,
+          text: sanitizeUserTranscript(m.text, m.role === 'user' ? 'صدای ضبط‌شده شما' : m.text) || (m.role === 'user' ? 'صدای ضبط‌شده شما' : m.text),
+        }));
+        setMessages(cleanDraftMessages);
         if (typeof draft.progressPercent === 'number') {
           setAiLessonProgress({
             progressPercent: draft.progressPercent,
@@ -240,7 +270,11 @@ export const SpeakingScreen: React.FC<Props> = ({
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setMessages(parsed);
+          const cleanSavedMessages = parsed.map((m: SpeakingMessage) => ({
+            ...m,
+            text: sanitizeUserTranscript(m.text, m.role === 'user' ? 'صدای ضبط‌شده شما' : m.text) || (m.role === 'user' ? 'صدای ضبط‌شده شما' : m.text),
+          }));
+          setMessages(cleanSavedMessages);
           setMasteryEvidence(EMPTY_MASTERY_EVIDENCE);
           setSelectedInfoAnalysis(null);
           return;
@@ -268,9 +302,19 @@ export const SpeakingScreen: React.FC<Props> = ({
     if (messages.length > 0 && typeof window !== 'undefined') {
       try {
         localStorage.setItem(chatStorageKey, JSON.stringify(messages));
+        // Keep scenario draft synchronized if user has messages
+        if (messages.some((m) => m.role === 'user')) {
+          const existingDraft = getStoredScenarioDraft(activeScenario.id);
+          saveStoredScenarioDraft(activeScenario.id, {
+            messages,
+            progressPercent: existingDraft?.progressPercent ?? aiLessonProgress?.progressPercent ?? 0,
+            isGoalSatisfied: existingDraft?.isGoalSatisfied ?? aiLessonProgress?.isGoalSatisfied ?? false,
+            masteryEvidence: existingDraft?.masteryEvidence ?? masteryEvidence,
+          });
+        }
       } catch (e) {}
     }
-  }, [messages, chatStorageKey]);
+  }, [messages, chatStorageKey, activeScenario.id, aiLessonProgress, masteryEvidence]);
 
   // Handler to reset/restart current scenario conversation
   const handleResetCurrentScenario = () => {
@@ -307,7 +351,7 @@ export const SpeakingScreen: React.FC<Props> = ({
     };
   }, []);
 
-  // Selection / Highlight listener
+  // Selection / Highlight listener with enclosing sentence context capture
   useEffect(() => {
     const handleSelectionChange = () => {
       const selection = window.getSelection();
@@ -315,8 +359,27 @@ export const SpeakingScreen: React.FC<Props> = ({
         return;
       }
       const text = selection.toString().trim();
-      if (text.length > 1 && text.length < 80) {
+      if (text.length > 1 && text.length < 100) {
+        let sentenceContext = '';
+        try {
+          const anchor = selection.anchorNode;
+          if (anchor) {
+            const container = anchor.parentElement?.closest('p, div, li') || anchor.parentElement;
+            if (container && container.textContent) {
+              sentenceContext = container.textContent.trim();
+            }
+          }
+        } catch (e) {}
+
+        if (!sentenceContext || !sentenceContext.includes(text)) {
+          const matched = [...messages].reverse().find((m) => m.text && m.text.includes(text));
+          if (matched) {
+            sentenceContext = matched.text;
+          }
+        }
+
         setSelectedText(text);
+        setSelectedTextContext(sentenceContext);
       }
     };
 
@@ -324,7 +387,34 @@ export const SpeakingScreen: React.FC<Props> = ({
     return () => {
       document.removeEventListener('selectionchange', handleSelectionChange);
     };
-  }, []);
+  }, [messages]);
+
+  // Cancel voice recording and discard audio without sending
+  const cancelRecording = () => {
+    setIsRecording(false);
+    if (volumeIntervalRef.current) clearInterval(volumeIntervalRef.current);
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    setRecordingSeconds(0);
+    setAudioVolume(0);
+    setInputVal('');
+
+    try {
+      if (speechRecognizerRef.current) {
+        if (typeof (speechRecognizerRef.current as any).abort === 'function') {
+          (speechRecognizerRef.current as any).abort();
+        } else {
+          speechRecognizerRef.current.stop();
+        }
+      }
+      if (audioRecorderRef.current) {
+        audioRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
+        audioRecorderRef.current = null;
+      }
+    } catch (e: any) {
+      console.warn('Error cancelling recording:', e);
+    }
+    playChimeSound('ding');
+  };
 
   // Voice recording toggle with actual audio capture for genuine acoustic evaluation
   const toggleRecording = async () => {
@@ -414,18 +504,22 @@ export const SpeakingScreen: React.FC<Props> = ({
     if (audioBase64) {
       try {
         const stt = await transcribeAudioBase64(audioBase64, audioMimeType || 'audio/webm', 'en');
-        if (stt.text) {
-          messageText = stt.text;
+        const cleanStt = sanitizeUserTranscript(stt.text);
+        if (cleanStt) {
+          messageText = cleanStt;
         }
       } catch (sttErr) {
         console.warn('Dedicated STT failed, continuing with live caption / audio:', sttErr);
       }
     }
 
+    const cleanInitialUserText =
+      sanitizeUserTranscript(messageText) || (userAudioUrl ? 'صدای ضبط‌شده شما' : 'پیام متنی');
+
     const userMsg: SpeakingMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
-      text: messageText || 'صدای ضبط‌شده شما',
+      text: cleanInitialUserText,
       audioUrl: userAudioUrl,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
@@ -489,19 +583,20 @@ export const SpeakingScreen: React.FC<Props> = ({
         };
       }
 
-      const finalUserText =
-        data.transcribedUserText ||
-        (messageText && messageText !== 'صدای ضبط‌شده شما'
-          ? messageText
-          : data.analysis?.userSpokenTranscript || userMsg.text);
+      const candidateUserText =
+        sanitizeUserTranscript(data.transcribedUserText) ||
+        (messageText && messageText !== 'صدای ضبط‌شده شما' ? sanitizeUserTranscript(messageText) : '') ||
+        sanitizeUserTranscript(data.analysis?.userSpokenTranscript) ||
+        (userAudioUrl ? 'صدای ضبط‌شده شما' : userMsg.text);
 
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === userMsg.id
-            ? { ...m, text: finalUserText, analysis: data.analysis }
-            : m
-        )
-      );
+      const finalUserText =
+        sanitizeUserTranscript(candidateUserText) || (userAudioUrl ? 'صدای ضبط‌شده شما' : 'پیام متنی');
+
+      const updatedUserMsg: SpeakingMessage = {
+        ...userMsg,
+        text: finalUserText,
+        analysis: data.analysis,
+      };
 
       const modelMsg: SpeakingMessage = {
         id: `model-${Date.now()}`,
@@ -511,7 +606,15 @@ export const SpeakingScreen: React.FC<Props> = ({
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
 
-      setMessages((prev) => [...prev, modelMsg]);
+      // Construct fresh, complete message list containing all prior messages + updated userMsg + modelMsg
+      const previousMessages = messages.filter((m) => m.id !== userMsg.id);
+      const fullMessages: SpeakingMessage[] = [
+        ...previousMessages,
+        updatedUserMsg,
+        modelMsg,
+      ];
+
+      setMessages(fullMessages);
 
       if (data.analysis) {
         onUpdateMetrics(
@@ -568,29 +671,25 @@ export const SpeakingScreen: React.FC<Props> = ({
 
       onSessionMinuteLogged(1);
 
-      const draftMessages = [
-        ...messages.map((m) =>
-          m.id === userMsg.id
-            ? { ...m, text: finalUserText, analysis: data.analysis }
-            : m
-        ),
-        modelMsg,
-      ];
+      // Persist full dialogue with user messages, analysis, and native formulations
       saveStoredScenarioDraft(activeScenario.id, {
-        messages: draftMessages,
+        messages: fullMessages,
         progressPercent: freshEval.progressPercent,
         isGoalSatisfied: freshEval.isGoalSatisfied,
         masteryEvidence: nextEvidence,
       });
+
+      try {
+        localStorage.setItem(chatStorageKey, JSON.stringify(fullMessages));
+      } catch (e) {}
     } catch (err: any) {
       console.warn('Network issue in chat, falling back to local engine:', err);
       const local = evaluateSpeakingTextLocally(messageText, activeScenario, persona);
 
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === userMsg.id ? { ...m, analysis: local.analysis } : m
-        )
-      );
+      const updatedUserMsg: SpeakingMessage = {
+        ...userMsg,
+        analysis: local.analysis,
+      };
 
       const fallbackMsg: SpeakingMessage = {
         id: `model-fb-${Date.now()}`,
@@ -599,7 +698,15 @@ export const SpeakingScreen: React.FC<Props> = ({
         persianTranslation: local.persianTranslation,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
-      setMessages((prev) => [...prev, fallbackMsg]);
+
+      const previousMessages = messages.filter((m) => m.id !== userMsg.id);
+      const fullFallbackMessages: SpeakingMessage[] = [
+        ...previousMessages,
+        updatedUserMsg,
+        fallbackMsg,
+      ];
+
+      setMessages(fullFallbackMessages);
 
       const nextEvidence = mergeMasteryEvidence(masteryEvidence, {
         overallScore: local.analysis?.overallScore || 0,
@@ -626,6 +733,18 @@ export const SpeakingScreen: React.FC<Props> = ({
         phoneticsHintsFromAnalysis(local.analysis)
       );
       onSessionMinuteLogged(1);
+
+      // Persist fallback draft
+      saveStoredScenarioDraft(activeScenario.id, {
+        messages: fullFallbackMessages,
+        progressPercent: freshEval.progressPercent,
+        isGoalSatisfied: freshEval.isGoalSatisfied,
+        masteryEvidence: nextEvidence,
+      });
+
+      try {
+        localStorage.setItem(chatStorageKey, JSON.stringify(fullFallbackMessages));
+      } catch (e) {}
 
       void playAudioText(local.reply, {
         lang: 'en-US',
@@ -683,7 +802,7 @@ export const SpeakingScreen: React.FC<Props> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-950 font-fa select-text">
+    <div className="relative flex flex-col h-full bg-slate-950 font-fa select-text overflow-hidden">
       {/* FLOATING TOP TOOLBAR ON TEXT SELECTION */}
       {selectedText && (
         <div className="sticky top-0 z-40 bg-gradient-to-r from-indigo-900 to-slate-900 border-b border-indigo-500/50 p-2 shadow-2xl flex items-center justify-between text-xs animate-in slide-in-from-top-2">
@@ -695,10 +814,11 @@ export const SpeakingScreen: React.FC<Props> = ({
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => {
-                onAddWordToLeitner(selectedText);
+                onAddWordToLeitner(selectedText, selectedTextContext);
                 setTextToolbarFeedback('به لایتنر افزوده شد ✓');
                 setTimeout(() => {
                   setSelectedText(null);
+                  setSelectedTextContext('');
                   setTextToolbarFeedback(null);
                 }, 1500);
               }}
@@ -708,10 +828,11 @@ export const SpeakingScreen: React.FC<Props> = ({
             </button>
             <button
               onClick={() => {
-                onAddClicheToPractice(selectedText, 'ذخیره شده از مکالمه');
+                onAddClicheToPractice(selectedText, 'ذخیره شده از بافت مکالمه', selectedTextContext);
                 setTextToolbarFeedback('به تمرینات افزوده شد ✓');
                 setTimeout(() => {
                   setSelectedText(null);
+                  setSelectedTextContext('');
                   setTextToolbarFeedback(null);
                 }, 1500);
               }}
@@ -720,7 +841,10 @@ export const SpeakingScreen: React.FC<Props> = ({
               افزودن به تمرینات
             </button>
             <button
-              onClick={() => setSelectedText(null)}
+              onClick={() => {
+                setSelectedText(null);
+                setSelectedTextContext('');
+              }}
               className="p-1 text-slate-400 hover:text-white"
             >
               <X className="w-4 h-4" />
@@ -755,8 +879,13 @@ export const SpeakingScreen: React.FC<Props> = ({
         </div>
       ) : (
         <>
-          {/* SCENARIO SELECTION STRUCTURE & 10-LESSON SELECTOR */}
-          <div className="px-3 py-2 bg-slate-900 border-b border-slate-800 shrink-0 space-y-2">
+          {/* SCENARIO SELECTION STRUCTURE & 10-LESSON SELECTOR (COLLAPSIBLE) */}
+          <div
+            className={`transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${
+              isHeaderCollapsed ? 'max-h-0 opacity-0 pointer-events-none' : 'max-h-[600px] opacity-100'
+            }`}
+          >
+            <div className="px-3 py-2 bg-slate-900 border-b border-slate-800 space-y-2">
             {/* Top row: Prev/Next buttons + Current Scenario Title + End Lesson/Progress */}
             <div className="flex items-center justify-between gap-2">
               {/* Prev / Next Quick Step Buttons */}
@@ -1008,9 +1137,10 @@ export const SpeakingScreen: React.FC<Props> = ({
               )}
             </div>
           </div>
+        </div>
 
           {/* Messages Scroll Area */}
-          <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3.5">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4 pb-28 space-y-3.5">
             {messages.map((msg) => {
               const isUser = msg.role === 'user';
               const analysis = msg.analysis;
@@ -1053,8 +1183,9 @@ export const SpeakingScreen: React.FC<Props> = ({
                       </div>
 
                       {/* Text */}
-                      <p className="font-en text-xs sm:text-sm leading-relaxed tracking-wide select-text">
-                        {msg.text}
+                      <p className="font-en text-xs sm:text-sm leading-relaxed tracking-wide select-text break-words">
+                        {sanitizeUserTranscript(msg.text, isUser && msg.audioUrl ? 'صدای ضبط‌شده شما 🎙️' : msg.text) ||
+                          (isUser ? 'صدای ضبط‌شده شما 🎙️' : msg.text)}
                       </p>
 
                       {/* User Audio Replay & Quick Analysis Trigger */}
@@ -1104,32 +1235,62 @@ export const SpeakingScreen: React.FC<Props> = ({
                   </div>
 
                   {/* =========================================================================
-                      NATIVE AMERICAN CONCEPT & CLICHÉ REFORMULATION CARD (اگر یک آمریکایی بود...)
+                      NATIVE AMERICAN CONCEPT & CLICHÉ REFORMULATION CARD (اگه یه نیتیو بود...)
                      ========================================================================= */}
                   {isUser && analysis && (analysis.nativeAlternative || analysis.nativeCliche) && (
-                    <div className="mr-1 max-w-[95%] sm:max-w-[92%] ml-auto my-2 rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950/40 to-slate-900 border border-cyan-500/40 shadow-xl p-3 sm:p-4 space-y-3 font-fa text-right animate-in fade-in">
-                      {/* Card Header: Prominent Banner & Quick Action Buttons */}
+                    <div className="mr-1 max-w-[95%] sm:max-w-[92%] ml-auto my-2 rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950/40 to-slate-900 border border-cyan-500/40 shadow-xl p-3 sm:p-3.5 space-y-2.5 font-fa text-right animate-in fade-in">
+                      {/* Card Header: Title, Sound button, and Action Buttons */}
                       <div className="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-slate-800/90">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="px-2.5 py-1 rounded-xl bg-gradient-to-r from-cyan-500/20 to-indigo-500/20 text-cyan-300 border border-cyan-500/40 text-xs font-black flex items-center gap-1.5 shadow-sm">
                             <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-                            <span>اگه یه امریکن نیتیو بود دقیقاً چی می‌گفت؟ (بازنویسی مفهومی)</span>
+                            <span>اگه یه نیتیو بود:</span>
                           </span>
-                        </div>
 
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {/* Audio Play Button */}
                           <button
                             type="button"
                             onClick={() => playAudioText(analysis.nativeAlternative || analysis.nativeCliche || '')}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 text-[10.5px] font-bold transition shadow-sm border border-slate-700 active:scale-95"
+                            className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 transition shadow-sm border border-slate-700 active:scale-95"
                             title="شنیدن تلفظ با لهجه استاندارد آمریکایی"
                           >
-                            <Volume2 className="w-3.5 h-3.5 text-cyan-400" />
-                            <span>تلفظ نیتیو 🔊</span>
+                            <Volume2 className="w-4 h-4 text-cyan-400" />
                           </button>
+                        </div>
 
-                          {/* Add Cliché to Practice Button with prominent styling */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {onAddWordToLeitner && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const phrase =
+                                  analysis.nativeCliche ||
+                                  analysis.nativeAlternative.split(' ').slice(0, 3).join(' ');
+                                onAddWordToLeitner(
+                                  phrase,
+                                  analysis.nativeAlternative,
+                                  analysis.nativeClicheMeaningFa || analysis.nativeAlternativeFa
+                                );
+                                setAddedLeitnerPhrases((prev) => ({ ...prev, [msg.id]: true }));
+                                playChimeSound('ding');
+                              }}
+                              className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10.5px] font-bold transition shadow-sm active:scale-95 ${
+                                addedLeitnerPhrases[msg.id]
+                                  ? 'bg-purple-600/30 text-purple-300 border border-purple-500/40'
+                                  : 'bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/30'
+                              }`}
+                              title="افزودن به جعبه لایتنر با معنی و مثال هوشمند"
+                            >
+                              {addedLeitnerPhrases[msg.id] ? (
+                                <>
+                                  <Check className="w-3 h-3 text-purple-400" />
+                                  <span>به لایتنر رفت ✓</span>
+                                </>
+                              ) : (
+                                <span>🗃️ لایتنر</span>
+                              )}
+                            </button>
+                          )}
+
                           {onAddClicheToPractice && (
                             <button
                               type="button"
@@ -1139,64 +1300,28 @@ export const SpeakingScreen: React.FC<Props> = ({
                                   analysis.nativeClicheMeaningFa ||
                                   analysis.nativeAlternativeFa ||
                                   'اصطلاح و فرمول کاربردی نیتیو';
-                                onAddClicheToPractice(clicheToAdd, meaningToAdd);
+                                onAddClicheToPractice(clicheToAdd, meaningToAdd, analysis.nativeAlternative);
                                 setAddedCliches((prev) => ({ ...prev, [msg.id]: true }));
                                 playChimeSound('success');
                               }}
-                              className={`flex items-center gap-1 px-3 py-1 rounded-xl text-[11px] font-black transition shadow-md active:scale-95 ${
+                              className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10.5px] font-bold transition shadow-sm active:scale-95 ${
                                 addedCliches[msg.id]
                                   ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/40'
-                                  : 'bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-slate-950 font-black shadow-amber-500/20'
+                                  : 'bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30'
                               }`}
-                              title="افزودن این کلیشه به منوی تمرین جهت پرسش و پاسخ‌های مکرر تا تسلط کامل"
+                              title="افزودن به منوی تمرین"
                             >
                               {addedCliches[msg.id] ? (
                                 <>
-                                  <Check className="w-3.5 h-3.5 text-emerald-400" />
-                                  <span>به منوی تمرین رفت ✓</span>
+                                  <Check className="w-3 h-3 text-emerald-400" />
+                                  <span>به تمرین رفت ✓</span>
                                 </>
                               ) : (
-                                <>
-                                  <Plus className="w-3.5 h-3.5 text-slate-950 stroke-[3]" />
-                                  <span>+ افزودن به منوی تمرین</span>
-                                </>
+                                <span>+ تمرین</span>
                               )}
                             </button>
                           )}
 
-                          {/* Add Phrase to Leitner Button */}
-                          {onAddWordToLeitner && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const phrase =
-                                  analysis.nativeCliche ||
-                                  analysis.nativeAlternative.split(' ').slice(0, 3).join(' ');
-                                onAddWordToLeitner(phrase);
-                                setAddedLeitnerPhrases((prev) => ({ ...prev, [msg.id]: true }));
-                                playChimeSound('ding');
-                              }}
-                              className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10.5px] font-bold transition shadow-sm active:scale-95 ${
-                                addedLeitnerPhrases[msg.id]
-                                  ? 'bg-purple-600/30 text-purple-300 border border-purple-500/40'
-                                  : 'bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/30'
-                              }`}
-                              title="افزودن این عبارت به جعبه لایتنر ۵ مرحله‌ای"
-                            >
-                              {addedLeitnerPhrases[msg.id] ? (
-                                <>
-                                  <Check className="w-3.5 h-3.5 text-purple-400" />
-                                  <span>به لایتنر رفت ✓</span>
-                                </>
-                              ) : (
-                                <>
-                                  <span>🗃️ لایتنر</span>
-                                </>
-                              )}
-                            </button>
-                          )}
-
-                          {/* Full Deep-Dive Analysis Info Button */}
                           <button
                             type="button"
                             onClick={() => setSelectedInfoAnalysis(analysis)}
@@ -1210,14 +1335,6 @@ export const SpeakingScreen: React.FC<Props> = ({
 
                       {/* Main English Reformulation Sentence */}
                       <div className="p-3 rounded-xl bg-slate-950/80 border border-cyan-500/20 space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-cyan-400 font-bold font-en uppercase tracking-wider">
-                            Natural American Phrasing:
-                          </span>
-                          <span className="text-[10px] font-en font-black text-emerald-300 px-2 py-0.5 rounded-md bg-emerald-950 border border-emerald-500/30">
-                            Native Authenticity: {analysis.nativeScore}%
-                          </span>
-                        </div>
                         <p className="font-en text-xs sm:text-sm font-bold text-white tracking-wide dir-ltr text-left select-text leading-relaxed">
                           "{analysis.nativeAlternative}"
                         </p>
@@ -1244,108 +1361,6 @@ export const SpeakingScreen: React.FC<Props> = ({
                         </div>
                       )}
 
-                      {/* Interactive Native Repetition Challenge Action */}
-                      <div className="p-3 rounded-xl bg-gradient-to-r from-indigo-950/70 via-slate-900 to-indigo-950/70 border border-indigo-500/40 space-y-2">
-                        <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <div className="flex items-center gap-1.5 text-xs text-amber-300 font-bold">
-                            <Repeat className="w-3.5 h-3.5 text-amber-400" />
-                            <span>چالش تکرار نیتیو (جهت باز شدن زبان):</span>
-                          </div>
-                          <span className="text-[10px] text-slate-400 font-fa">تکرار جمله برای ادامه روان گفتگو</span>
-                        </div>
-                        <p className="text-[11px] text-slate-300 leading-relaxed font-fa">
-                          {analysis.repetitionChallengePromptFa ||
-                            'حالا یک بار با صدای خودت همین جمله یا کلیشه نیتیو را تکرار کن تا زبانت به الگوی طبیعی آمریکایی عادت کند و مکالمه ادامه یابد:'}
-                        </p>
-                        <div className="flex items-center gap-2 pt-1 flex-wrap">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setInputVal(analysis.nativeAlternative || analysis.nativeCliche || '');
-                              if (inputRef.current) {
-                                inputRef.current.focus();
-                              }
-                              playChimeSound('ding');
-                            }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs transition shadow-md shadow-amber-500/20 active:scale-95"
-                          >
-                            <Mic className="w-3.5 h-3.5 text-slate-950" />
-                            <span>تکرار این کلیشه با صدای من 🎙️</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => playAudioText(analysis.nativeAlternative || analysis.nativeCliche || '')}
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-xs font-bold transition"
-                          >
-                            <Volume2 className="w-3.5 h-3.5 text-cyan-400" />
-                            <span>شنیدن تلفظ مجدد 🔊</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* AI Coach Probing Next Question */}
-                      {analysis.inCharacterChallenge && analysis.inCharacterChallenge.probingQuestionEn && (
-                        <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs space-y-1">
-                          <div className="flex items-center gap-1.5 text-indigo-300 font-bold text-[11px]">
-                            <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
-                            <span>پرسش بعدی مربی برای ادامه گفتگو:</span>
-                          </div>
-                          <p className="font-en text-xs text-white font-medium dir-ltr text-left">
-                            "{analysis.inCharacterChallenge.probingQuestionEn}"
-                          </p>
-                          {analysis.inCharacterChallenge.probingQuestionFa && (
-                            <p className="font-fa text-[11px] text-slate-400">
-                              {analysis.inCharacterChallenge.probingQuestionFa}
-                            </p>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Stylistic Alternatives (Natural, Casual, High-Impact) if available */}
-                      {analysis.nativeAlternativesList && analysis.nativeAlternativesList.length > 1 && (
-                        <div className="space-y-1.5 pt-0.5">
-                          <span className="text-[10.5px] font-bold text-slate-400 block">
-                            سایر روش‌های بیان این مفهوم توسط نیتیوها:
-                          </span>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                            {analysis.nativeAlternativesList.slice(1, 3).map((alt, altIdx) => (
-                              <div key={altIdx} className="p-2 rounded-xl bg-slate-900/90 border border-slate-800 text-xs space-y-0.5">
-                                <div className="flex items-center justify-between text-[10px]">
-                                  <span className="text-indigo-300 font-bold">{alt.labelFa || 'لحن دیگر'}</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => playAudioText(alt.english)}
-                                    className="text-slate-400 hover:text-cyan-300 p-0.5"
-                                    title="پخش صوت"
-                                  >
-                                    <Volume2 className="w-3 h-3" />
-                                  </button>
-                                </div>
-                                <p className="font-en text-[11px] text-white font-medium dir-ltr text-left select-text">
-                                  "{alt.english}"
-                                </p>
-                                <p className="font-fa text-[10px] text-slate-400">
-                                  {alt.persian}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Persian Transfer Pitfall Warning (if any) */}
-                      {analysis.persianTransferPitfall && (
-                        <div className="p-2.5 rounded-xl bg-amber-950/60 border border-amber-500/40 text-xs text-amber-200 flex items-start gap-2">
-                          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                          <div>
-                            <strong className="text-amber-300 block mb-0.5">تله تداخل ترجمه مستقیم فارسی:</strong>
-                            <p className="text-[11px] text-amber-100/90 leading-relaxed font-fa">
-                              {analysis.persianTransferPitfall}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
                       {/* Pedagogical Corrections Preview (if grammar issues identified) */}
                       {analysis.categorizedIssues && analysis.categorizedIssues.length > 0 && (
                         <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs space-y-1.5">
@@ -1354,7 +1369,7 @@ export const SpeakingScreen: React.FC<Props> = ({
                             <button
                               type="button"
                               onClick={() => setSelectedInfoAnalysis(analysis)}
-                              className="text-[10px] text-cyan-400 hover:underline"
+                              className="text-[10px] text-cyan-400 hover:underline font-bold"
                             >
                               مشاهده عارضه‌یابی کامل ➔
                             </button>
@@ -1572,10 +1587,10 @@ export const SpeakingScreen: React.FC<Props> = ({
         </div>
       )}
 
-      {/* CLEAN & COMPACT BOTTOM CONTROLS (NO CLUTTER) */}
-      <div className="p-3 bg-slate-900 border-t border-slate-800 shrink-0 space-y-2">
+      {/* FLOATING VOICE CONTROLS — TEXT INPUT REMOVED, ALL SPACE MERGED INTO CONVERSATION */}
+      <div className="absolute bottom-4 left-0 right-0 z-30 pointer-events-none flex flex-col items-center justify-end px-3">
         {micErrorMessage && (
-          <div className="p-2 rounded-xl bg-red-950/70 border border-red-500/50 flex items-center justify-between text-xs text-red-200">
+          <div className="pointer-events-auto mb-2 p-2 rounded-xl bg-red-950/85 border border-red-500/50 flex items-center justify-between text-xs text-red-200 max-w-sm w-full shadow-xl">
             <span>{micErrorMessage}</span>
             <button onClick={() => setMicErrorMessage(null)}>
               <X className="w-3.5 h-3.5" />
@@ -1583,60 +1598,58 @@ export const SpeakingScreen: React.FC<Props> = ({
           </div>
         )}
 
-        {/* Live Audio Wave Bar when Recording */}
+        {/* Live Audio Wave Bar when Recording with CANCEL button */}
         {isRecording && (
-          <div className="p-2.5 rounded-2xl bg-indigo-950/90 border border-indigo-500/50 flex items-center justify-between gap-3 animate-in fade-in">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
-              <span className="text-xs font-bold text-white">
-                در حال ضبط ({String(recordingSeconds)}s)
-              </span>
+          <div className="pointer-events-auto mb-3 max-w-sm w-full p-2.5 rounded-2xl bg-slate-900/95 border border-indigo-500/50 shadow-2xl backdrop-blur-md flex items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-2">
+            <div className="flex items-center gap-2.5">
+              <span className="w-3 h-3 rounded-full bg-red-500 animate-ping shrink-0" />
+              <div className="flex flex-col text-right">
+                <span className="text-xs font-bold text-white font-fa">
+                  در حال ضبط ({String(recordingSeconds)} ثانیه)
+                </span>
+                <span className="text-[10px] text-cyan-300">
+                  {audioVolume > 15 ? 'صدا دریافت می‌شود 🎙️' : 'صحبت کنید...'}
+                </span>
+              </div>
             </div>
 
+            {/* Cancel Button (جایگزین دکمه ارسال ویس سابق) */}
             <button
-              onClick={toggleRecording}
-              className="px-3 py-1 rounded-xl bg-red-600 hover:bg-red-500 text-white text-[11px] font-bold transition"
+              type="button"
+              onClick={cancelRecording}
+              className="px-3 py-1.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 text-xs font-bold transition flex items-center gap-1 active:scale-95 shadow-sm"
+              title="انصراف و لغو ضبط ویس"
             >
-              ارسال ویس ⏹️
+              <X className="w-3.5 h-3.5 text-red-400" />
+              <span>انصراف</span>
             </button>
           </div>
         )}
 
-        <div className="flex items-center gap-2">
-          {/* Main Voice Mic Button */}
-          <button
-            onClick={toggleRecording}
-            className={`p-3 rounded-2xl flex items-center justify-center transition-all shadow-lg active:scale-95 ${
-              isRecording
-                ? 'bg-red-500 text-white animate-pulse ring-4 ring-red-500/30'
-                : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/20'
-            }`}
-            title={isRecording ? 'توقف و ارسال' : 'شروع مکالمه صوتی'}
-          >
-            {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-          </button>
-
-          {/* Text Input */}
-          <div className="flex-1 relative">
-            <input
-              ref={inputRef}
-              type="text"
-              value={inputVal}
-              onChange={(e) => setInputVal(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder="پاسخ خود را انگلیسی تایپ کنید یا صحبت کنید..."
-              className="w-full py-2.5 px-3.5 rounded-2xl bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-500 text-xs font-en focus:outline-none focus:border-indigo-500 transition"
-            />
-          </div>
-
-          {/* Send Button */}
-          <button
-            onClick={() => handleSendMessage()}
-            disabled={!inputVal.trim() || isProcessing}
-            className="p-2.5 rounded-2xl bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:bg-indigo-600 hover:border-indigo-500 transition disabled:opacity-40 disabled:pointer-events-none active:scale-95"
-          >
-            <Send className="w-4 h-4 rotate-180" />
-          </button>
+        {/* Floating Mic Button — when recording, transforms into SEND button (نه آیکون خط خورده قرمز!) */}
+        <div className="pointer-events-auto">
+          {isRecording ? (
+            <button
+              type="button"
+              onClick={toggleRecording}
+              className="px-6 py-3.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-black text-xs flex items-center gap-2 shadow-2xl shadow-emerald-500/50 ring-4 ring-emerald-500/30 animate-pulse active:scale-95 transition-all"
+              title="پایان ضبط و ارسال ویس به مربی"
+            >
+              <Send className="w-5 h-5 -rotate-45" />
+              <span>ارسال ویس 🚀</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={toggleRecording}
+              disabled={isProcessing}
+              className="p-4 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white shadow-2xl shadow-indigo-600/40 border border-indigo-400/40 active:scale-90 transition-all flex items-center justify-center group disabled:opacity-40"
+              title="برای شروع صحبت با مربی لمس کنید"
+              aria-label="شروع صحبت با مربی"
+            >
+              <Mic className="w-6 h-6 group-hover:scale-110 transition-transform" />
+            </button>
+          )}
         </div>
       </div>
 
