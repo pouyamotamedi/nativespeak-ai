@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   AIPersona,
   Scenario,
@@ -18,6 +18,7 @@ import {
   Sparkles,
   Info,
   Plus,
+  Minus,
   ChevronDown,
   ChevronUp,
   ChevronLeft,
@@ -87,6 +88,78 @@ export function sanitizeUserTranscript(raw: any, fallback = ''): string {
   return trimmed;
 }
 
+export interface TextToken {
+  word: string;
+  isPunctuation: boolean;
+}
+
+export function tokenizeSentence(text: string): TextToken[] {
+  if (!text) return [];
+  const regex = /([a-zA-Z0-9'-]+)|([^a-zA-Z0-9'-]+)/g;
+  const tokens: TextToken[] = [];
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    if (match[1]) {
+      tokens.push({ word: match[1], isPunctuation: false });
+    } else if (match[2]) {
+      tokens.push({ word: match[2], isPunctuation: true });
+    }
+  }
+  return tokens;
+}
+
+export const InteractiveEnglishText: React.FC<{
+  text: string;
+  selectedText: string | null;
+  selectedTokensContext: {
+    fullText: string;
+    tokens: TextToken[];
+    span: [number, number];
+  } | null;
+  onWordClick: (word: string, sentenceText: string, tokenIndex: number, tokens: TextToken[]) => void;
+  className?: string;
+}> = ({ text, selectedText, selectedTokensContext, onWordClick, className = '' }) => {
+  const tokens = useMemo(() => tokenizeSentence(text), [text]);
+
+  const isCurrentSentenceSelected = selectedTokensContext?.fullText === text;
+  const activeSpan = isCurrentSentenceSelected ? selectedTokensContext?.span : null;
+
+  return (
+    <span className={`select-text ${className}`}>
+      {tokens.map((token, idx) => {
+        if (token.isPunctuation) {
+          return <span key={idx}>{token.word}</span>;
+        }
+
+        const isTokenInSpan = activeSpan && idx >= activeSpan[0] && idx <= activeSpan[1];
+        const isMatchedWord =
+          !activeSpan &&
+          selectedText &&
+          selectedText.toLowerCase() === token.word.toLowerCase();
+        const isHighlighted = isTokenInSpan || isMatchedWord;
+
+        return (
+          <span
+            key={idx}
+            onClick={(e) => {
+              e.stopPropagation();
+              onWordClick(token.word, text, idx, tokens);
+            }}
+            className={`cursor-pointer transition-all duration-150 inline-block px-0.5 rounded ${
+              isHighlighted
+                ? 'bg-cyan-500/35 text-cyan-200 ring-1 ring-cyan-400 font-bold shadow-sm'
+                : 'hover:bg-cyan-500/25 hover:text-cyan-200 active:scale-95'
+            }`}
+            title="ضربه برای انتخاب کلمه و افزودن به لایتنر یا تمرین"
+          >
+            {token.word}
+          </span>
+        );
+      })}
+    </span>
+  );
+};
+
 interface Props {
   persona: AIPersona;
   activeScenario: Scenario;
@@ -113,6 +186,8 @@ interface Props {
   onOpenCalendar?: () => void;
   onOpenAssessment?: () => void;
   isHeaderCollapsed?: boolean;
+  onSaveScenarioDraft?: (scenarioId: string, draft: any) => void;
+  isCloudLoading?: boolean;
 }
 
 export const SpeakingScreen: React.FC<Props> = ({
@@ -137,6 +212,8 @@ export const SpeakingScreen: React.FC<Props> = ({
   onOpenCalendar,
   onOpenAssessment,
   isHeaderCollapsed = false,
+  onSaveScenarioDraft,
+  isCloudLoading = false,
 }) => {
   const [messages, setMessages] = useState<SpeakingMessage[]>([]);
   const [inputVal, setInputVal] = useState('');
@@ -150,9 +227,14 @@ export const SpeakingScreen: React.FC<Props> = ({
   // Active Information (i) Tooltip/Sheet modal
   const [selectedInfoAnalysis, setSelectedInfoAnalysis] = useState<SpeakingAnalysis | null>(null);
 
-  // Selected Text Toolbar
+  // Selected Text Toolbar & Interactive Token Selection
   const [selectedText, setSelectedText] = useState<string | null>(null);
   const [selectedTextContext, setSelectedTextContext] = useState<string>('');
+  const [selectedTokensContext, setSelectedTokensContext] = useState<{
+    fullText: string;
+    tokens: TextToken[];
+    span: [number, number];
+  } | null>(null);
   const [textToolbarFeedback, setTextToolbarFeedback] = useState<string | null>(null);
 
   // End of scenario summary
@@ -305,16 +387,21 @@ export const SpeakingScreen: React.FC<Props> = ({
         // Keep scenario draft synchronized if user has messages
         if (messages.some((m) => m.role === 'user')) {
           const existingDraft = getStoredScenarioDraft(activeScenario.id);
-          saveStoredScenarioDraft(activeScenario.id, {
+          const draftPayload = {
             messages,
             progressPercent: existingDraft?.progressPercent ?? aiLessonProgress?.progressPercent ?? 0,
             isGoalSatisfied: existingDraft?.isGoalSatisfied ?? aiLessonProgress?.isGoalSatisfied ?? false,
             masteryEvidence: existingDraft?.masteryEvidence ?? masteryEvidence,
-          });
+            lastUpdated: new Date().toISOString(),
+          };
+          saveStoredScenarioDraft(activeScenario.id, draftPayload);
+          if (onSaveScenarioDraft) {
+            onSaveScenarioDraft(activeScenario.id, draftPayload);
+          }
         }
       } catch (e) {}
     }
-  }, [messages, chatStorageKey, activeScenario.id, aiLessonProgress, masteryEvidence]);
+  }, [messages, chatStorageKey, activeScenario.id, aiLessonProgress, masteryEvidence, onSaveScenarioDraft]);
 
   // Handler to reset/restart current scenario conversation
   const handleResetCurrentScenario = () => {
@@ -389,6 +476,73 @@ export const SpeakingScreen: React.FC<Props> = ({
     };
   }, [messages]);
 
+  // Click handler for 1-tap word token selection
+  const handleWordTokenClick = (
+    word: string,
+    sentenceText: string,
+    tokenIndex: number,
+    tokens: TextToken[]
+  ) => {
+    setSelectedTokensContext({
+      fullText: sentenceText,
+      tokens,
+      span: [tokenIndex, tokenIndex],
+    });
+    setSelectedText(word);
+    setSelectedTextContext(sentenceText);
+    setTextToolbarFeedback(null);
+  };
+
+  // Expand selection to include the next word (effortless multi-word idiom selection)
+  const handleExpandSelection = () => {
+    if (!selectedTokensContext) return;
+    const { tokens, span } = selectedTokensContext;
+    const currentEnd = span[1];
+    let nextIdx = -1;
+    for (let i = currentEnd + 1; i < tokens.length; i++) {
+      if (!tokens[i].isPunctuation) {
+        nextIdx = i;
+        break;
+      }
+    }
+    if (nextIdx !== -1) {
+      const newSpan: [number, number] = [span[0], nextIdx];
+      const sliceText = tokens.slice(newSpan[0], newSpan[1] + 1).map((t) => t.word).join('');
+      setSelectedTokensContext({ ...selectedTokensContext, span: newSpan });
+      setSelectedText(sliceText.trim());
+      setTextToolbarFeedback(null);
+    }
+  };
+
+  // Shrink selection by one word
+  const handleShrinkSelection = () => {
+    if (!selectedTokensContext) return;
+    const { tokens, span } = selectedTokensContext;
+    if (span[1] <= span[0]) return;
+    let prevIdx = -1;
+    for (let i = span[1] - 1; i >= span[0]; i--) {
+      if (!tokens[i].isPunctuation) {
+        prevIdx = i;
+        break;
+      }
+    }
+    if (prevIdx !== -1 && prevIdx >= span[0]) {
+      const newSpan: [number, number] = [span[0], prevIdx];
+      const sliceText = tokens.slice(newSpan[0], newSpan[1] + 1).map((t) => t.word).join('');
+      setSelectedTokensContext({ ...selectedTokensContext, span: newSpan });
+      setSelectedText(sliceText.trim());
+      setTextToolbarFeedback(null);
+    }
+  };
+
+  // Clear current active selection
+  const handleClearSelection = () => {
+    setSelectedText(null);
+    setSelectedTextContext('');
+    setSelectedTokensContext(null);
+    setTextToolbarFeedback(null);
+  };
+
   // Cancel voice recording and discard audio without sending
   const cancelRecording = () => {
     setIsRecording(false);
@@ -434,10 +588,12 @@ export const SpeakingScreen: React.FC<Props> = ({
         }
 
         if (audioRecorderRef.current) {
+          setIsProcessing(true);
           const audioResult = await audioRecorderRef.current.stop();
           audioRecorderRef.current = null;
           handleSendMessage(inputVal, audioResult.base64, audioResult.mimeType, audioResult.audioUrl);
         } else {
+          setIsProcessing(true);
           handleSendMessage(inputVal);
         }
       } catch (e: any) {
@@ -500,24 +656,16 @@ export const SpeakingScreen: React.FC<Props> = ({
       } catch (e) {}
     }
 
-    // Dedicated STT (Whisper → Gemini) when we have audio
-    if (audioBase64) {
-      try {
-        const stt = await transcribeAudioBase64(audioBase64, audioMimeType || 'audio/webm', 'en');
-        const cleanStt = sanitizeUserTranscript(stt.text);
-        if (cleanStt) {
-          messageText = cleanStt;
-        }
-      } catch (sttErr) {
-        console.warn('Dedicated STT failed, continuing with live caption / audio:', sttErr);
-      }
-    }
+    // 1. INSTANTLY SET PROCESSING & SHOW USER MESSAGE BUBBLE ON SCREEN
+    setIsProcessing(true);
+    setInputVal('');
 
     const cleanInitialUserText =
-      sanitizeUserTranscript(messageText) || (userAudioUrl ? 'صدای ضبط‌شده شما' : 'پیام متنی');
+      sanitizeUserTranscript(messageText) || (userAudioUrl || audioBase64 ? 'صدای ضبط‌شده شما 🎙️' : 'پیام متنی');
 
+    const userMsgId = `user-${Date.now()}`;
     const userMsg: SpeakingMessage = {
-      id: `user-${Date.now()}`,
+      id: userMsgId,
       role: 'user',
       text: cleanInitialUserText,
       audioUrl: userAudioUrl,
@@ -525,8 +673,26 @@ export const SpeakingScreen: React.FC<Props> = ({
     };
 
     setMessages((prev) => [...prev, userMsg]);
-    setInputVal('');
-    setIsProcessing(true);
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 50);
+
+    // 2. Dedicated STT (Whisper → Gemini) when we have audio
+    if (audioBase64) {
+      try {
+        const stt = await transcribeAudioBase64(audioBase64, audioMimeType || 'audio/webm', 'en');
+        const cleanStt = sanitizeUserTranscript(stt.text);
+        if (cleanStt) {
+          messageText = cleanStt;
+          // Dynamically update the user bubble with the transcribed text
+          setMessages((prev) =>
+            prev.map((m) => (m.id === userMsgId ? { ...m, text: cleanStt } : m))
+          );
+        }
+      } catch (sttErr) {
+        console.warn('Dedicated STT failed, continuing with live caption / audio:', sttErr);
+      }
+    }
 
     try {
       const chatHistory = messages.slice(-6).map((m) => ({
@@ -803,49 +969,97 @@ export const SpeakingScreen: React.FC<Props> = ({
 
   return (
     <div className="relative flex flex-col h-full bg-slate-950 font-fa select-text overflow-hidden">
-      {/* FLOATING TOP TOOLBAR ON TEXT SELECTION */}
+      {/* FLOATING UPGRADED TOOLBAR ON TEXT SELECTION */}
       {selectedText && (
-        <div className="sticky top-0 z-40 bg-gradient-to-r from-indigo-900 to-slate-900 border-b border-indigo-500/50 p-2 shadow-2xl flex items-center justify-between text-xs animate-in slide-in-from-top-2">
-          <div className="flex items-center gap-1.5 truncate max-w-[160px] sm:max-w-[200px]">
-            <span className="text-[10px] text-slate-400">متن:</span>
-            <span className="font-en font-bold text-cyan-300 truncate">"{selectedText}"</span>
+        <div className="sticky top-0 z-40 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-b border-cyan-500/40 p-2 sm:p-2.5 shadow-2xl flex flex-wrap items-center justify-between gap-2 text-xs animate-in slide-in-from-top-2 backdrop-blur-md">
+          {/* Selected Text Badge & Audio preview */}
+          <div className="flex items-center gap-1.5 max-w-full sm:max-w-md">
+            <span className="text-[10px] text-slate-400 font-bold shrink-0">انتخاب:</span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900/90 border border-cyan-500/50 shadow-inner">
+              <span className="font-en font-black text-cyan-300 text-xs sm:text-sm tracking-wide">
+                "{selectedText}"
+              </span>
+              <button
+                type="button"
+                onClick={() => playAudioText(selectedText)}
+                className="p-1 rounded-lg text-slate-400 hover:text-cyan-300 hover:bg-slate-800 transition"
+                title="شنیدن تلفظ نیتیو این عبارت"
+              >
+                <Volume2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Expand / Shrink buttons for easy multi-word selection */}
+            {selectedTokensContext && (
+              <div className="flex items-center gap-1 bg-slate-800/80 p-0.5 rounded-xl border border-slate-700/80">
+                <button
+                  type="button"
+                  onClick={handleExpandSelection}
+                  className="px-2 py-1 rounded-lg bg-indigo-600/40 hover:bg-indigo-600 text-indigo-200 hover:text-white text-[10px] font-bold transition flex items-center gap-1"
+                  title="اضافه کردن کلمه بعدی برای انتخاب اصطلاحات و عبارات چندکلمه‌ای"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>بعد</span>
+                </button>
+                {selectedTokensContext.span[1] > selectedTokensContext.span[0] && (
+                  <button
+                    type="button"
+                    onClick={handleShrinkSelection}
+                    className="p-1 rounded-lg hover:bg-slate-700 text-slate-300 transition"
+                    title="حذف آخرین کلمه انتخاب‌شده"
+                  >
+                    <Minus className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
-          <div className="flex items-center gap-1.5">
+          {/* Action buttons & feedback */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {textToolbarFeedback ? (
+              <span className="text-emerald-300 font-bold text-xs px-2.5 py-1 rounded-xl bg-emerald-950/80 border border-emerald-500/40 animate-in fade-in">
+                {textToolbarFeedback}
+              </span>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onAddWordToLeitner(selectedText, selectedTextContext);
+                    setTextToolbarFeedback('به لایتنر افزوده شد ✓');
+                    playChimeSound('ding');
+                    setTimeout(() => {
+                      handleClearSelection();
+                    }, 1400);
+                  }}
+                  className="px-2.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-[10.5px] transition shadow-md shadow-purple-600/20 active:scale-95 flex items-center gap-1"
+                  title="افزودن به جعبه لایتنر با معنی و مثال هوشمند"
+                >
+                  <span>🧠 + لایتنر</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onAddClicheToPractice(selectedText, '', selectedTextContext);
+                    setTextToolbarFeedback('به تمرینات افزوده شد ✓');
+                    playChimeSound('success');
+                    setTimeout(() => {
+                      handleClearSelection();
+                    }, 1400);
+                  }}
+                  className="px-2.5 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-[10.5px] transition shadow-md shadow-cyan-600/20 active:scale-95 flex items-center gap-1"
+                  title="افزودن به بانک تمرین با استخراج معنی دقیق فارسی"
+                >
+                  <span>🎯 + تمرین</span>
+                </button>
+              </>
+            )}
             <button
-              onClick={() => {
-                onAddWordToLeitner(selectedText, selectedTextContext);
-                setTextToolbarFeedback('به لایتنر افزوده شد ✓');
-                setTimeout(() => {
-                  setSelectedText(null);
-                  setSelectedTextContext('');
-                  setTextToolbarFeedback(null);
-                }, 1500);
-              }}
-              className="px-2 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[10px] transition"
-            >
-              افزودن به لایتنر
-            </button>
-            <button
-              onClick={() => {
-                onAddClicheToPractice(selectedText, 'ذخیره شده از بافت مکالمه', selectedTextContext);
-                setTextToolbarFeedback('به تمرینات افزوده شد ✓');
-                setTimeout(() => {
-                  setSelectedText(null);
-                  setSelectedTextContext('');
-                  setTextToolbarFeedback(null);
-                }, 1500);
-              }}
-              className="px-2 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-[10px] transition"
-            >
-              افزودن به تمرینات
-            </button>
-            <button
-              onClick={() => {
-                setSelectedText(null);
-                setSelectedTextContext('');
-              }}
-              className="p-1 text-slate-400 hover:text-white"
+              type="button"
+              onClick={handleClearSelection}
+              className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              title="بستن منوی انتخاب"
             >
               <X className="w-4 h-4" />
             </button>
@@ -853,8 +1067,20 @@ export const SpeakingScreen: React.FC<Props> = ({
         </div>
       )}
 
-      {/* EMPTY CALENDAR STATE: Prompt user to take initial voice assessment */}
-      {!isAssessmentCompleted || calendar.length === 0 ? (
+      {/* LOADING STATE WHILE CLOUD DATA IS SYNCING */}
+      {isCloudLoading ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-4 font-fa max-w-md mx-auto my-auto animate-in fade-in">
+          <div className="w-14 h-14 rounded-3xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center shadow-xl shadow-indigo-600/20">
+            <Sparkles className="w-7 h-7 text-indigo-400 animate-spin" />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="text-sm font-bold text-white">در حال همگام‌سازی اطلاعات ابری...</h3>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              سناریوها، پیام‌ها و کلمات لایتنر در حال بررسی و بارگذاری هستند.
+            </p>
+          </div>
+        </div>
+      ) : !isAssessmentCompleted || calendar.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-4 font-fa max-w-md mx-auto my-auto animate-in fade-in">
           <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-indigo-600 to-cyan-500 text-white flex items-center justify-center shadow-xl shadow-indigo-600/30 text-2xl">
             🎙️
@@ -1184,8 +1410,26 @@ export const SpeakingScreen: React.FC<Props> = ({
 
                       {/* Text */}
                       <p className="font-en text-xs sm:text-sm leading-relaxed tracking-wide select-text break-words">
-                        {sanitizeUserTranscript(msg.text, isUser && msg.audioUrl ? 'صدای ضبط‌شده شما 🎙️' : msg.text) ||
-                          (isUser ? 'صدای ضبط‌شده شما 🎙️' : msg.text)}
+                        {(() => {
+                          const cleanTranscript =
+                            sanitizeUserTranscript(
+                              msg.text,
+                              isUser && msg.audioUrl ? 'صدای ضبط‌شده شما 🎙️' : msg.text
+                            ) || (isUser ? 'صدای ضبط‌شده شما 🎙️' : msg.text);
+
+                          if (cleanTranscript === 'صدای ضبط‌شده شما 🎙️') {
+                            return <span>{cleanTranscript}</span>;
+                          }
+
+                          return (
+                            <InteractiveEnglishText
+                              text={cleanTranscript}
+                              selectedText={selectedText}
+                              selectedTokensContext={selectedTokensContext}
+                              onWordClick={handleWordTokenClick}
+                            />
+                          );
+                        })()}
                       </p>
 
                       {/* User Audio Replay & Quick Analysis Trigger */}
@@ -1336,7 +1580,14 @@ export const SpeakingScreen: React.FC<Props> = ({
                       {/* Main English Reformulation Sentence */}
                       <div className="p-3 rounded-xl bg-slate-950/80 border border-cyan-500/20 space-y-1.5">
                         <p className="font-en text-xs sm:text-sm font-bold text-white tracking-wide dir-ltr text-left select-text leading-relaxed">
-                          "{analysis.nativeAlternative}"
+                          "
+                          <InteractiveEnglishText
+                            text={analysis.nativeAlternative}
+                            selectedText={selectedText}
+                            selectedTokensContext={selectedTokensContext}
+                            onWordClick={handleWordTokenClick}
+                          />
+                          "
                         </p>
                         {analysis.nativeAlternativeFa && (
                           <p className="font-fa text-xs text-slate-200 pt-1 border-t border-slate-800/80 leading-relaxed font-medium">
@@ -1348,16 +1599,70 @@ export const SpeakingScreen: React.FC<Props> = ({
 
                       {/* Target Cliché & Formula Breakdown */}
                       {analysis.nativeCliche && (
-                        <div className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-800/70 border border-slate-700/80 text-xs flex-wrap">
-                          <span className="text-amber-400 font-bold text-[11px] shrink-0">اصطلاح و فرمول کلیدی نیتیو:</span>
-                          <span className="font-en text-cyan-300 font-black px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-700">
-                            "{analysis.nativeCliche}"
-                          </span>
-                          {analysis.nativeClicheMeaningFa && (
-                            <span className="text-slate-300 text-[11px] font-fa">
-                              ({analysis.nativeClicheMeaningFa})
+                        <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/80 text-xs flex-wrap">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-amber-400 font-bold text-[11px] shrink-0">اصطلاح و فرمول کلیدی نیتیو:</span>
+                            <span className="font-en text-cyan-300 font-black px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-700">
+                              "{analysis.nativeCliche}"
                             </span>
-                          )}
+                            {analysis.nativeClicheMeaningFa && (
+                              <span className="text-slate-300 text-[11px] font-fa">
+                                ({analysis.nativeClicheMeaningFa})
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Quick 1-tap Actions on Cliché Chip */}
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => playAudioText(analysis.nativeCliche)}
+                              className="p-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-cyan-300 transition"
+                              title="شنیدن تلفظ نیتیو این اصطلاح"
+                            >
+                              <Volume2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onAddWordToLeitner(
+                                  analysis.nativeCliche,
+                                  analysis.nativeAlternative,
+                                  analysis.nativeClicheMeaningFa
+                                );
+                                setAddedLeitnerPhrases((prev) => ({ ...prev, [`cliche-${msg.id}`]: true }));
+                                playChimeSound('ding');
+                              }}
+                              className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition ${
+                                addedLeitnerPhrases[`cliche-${msg.id}`]
+                                  ? 'bg-purple-600/40 text-purple-200 border border-purple-500/50'
+                                  : 'bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 border border-purple-500/30'
+                              }`}
+                              title="افزودن این اصطلاح به لایتنر"
+                            >
+                              {addedLeitnerPhrases[`cliche-${msg.id}`] ? '✓ لایتنر' : '+ لایتنر'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onAddClicheToPractice(
+                                  analysis.nativeCliche,
+                                  analysis.nativeClicheMeaningFa,
+                                  analysis.nativeAlternative
+                                );
+                                setAddedCliches((prev) => ({ ...prev, [`cliche-${msg.id}`]: true }));
+                                playChimeSound('success');
+                              }}
+                              className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition ${
+                                addedCliches[`cliche-${msg.id}`]
+                                  ? 'bg-emerald-600/40 text-emerald-200 border border-emerald-500/50'
+                                  : 'bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-300 border border-cyan-500/30'
+                              }`}
+                              title="افزودن این اصطلاح به منوی تمرین"
+                            >
+                              {addedCliches[`cliche-${msg.id}`] ? '✓ تمرین' : '+ تمرین'}
+                            </button>
+                          </div>
                         </div>
                       )}
 
@@ -1394,9 +1699,39 @@ export const SpeakingScreen: React.FC<Props> = ({
             })}
 
             {isProcessing && (
-              <div className="flex items-center gap-2 p-2.5 rounded-2xl bg-slate-900 border border-slate-800 text-xs text-slate-400 w-fit animate-pulse">
-                <span className="w-2 h-2 rounded-full bg-indigo-400 animate-ping" />
-                <span>مربی در حال شنیدن و تحلیل مکالمه شما...</span>
+              <div className="flex flex-col gap-2 p-3 sm:p-4 rounded-3xl bg-gradient-to-r from-indigo-950/90 via-slate-900 to-indigo-950/90 border border-indigo-500/50 text-xs shadow-2xl animate-in fade-in slide-in-from-bottom-2 max-w-[92%] sm:max-w-[80%]">
+                <div className="flex items-center gap-3">
+                  <div className="relative flex items-center justify-center shrink-0">
+                    <div className="w-9 h-9 rounded-2xl bg-indigo-600/30 border border-indigo-400/50 flex items-center justify-center text-indigo-300 shadow-md">
+                      <Mic className="w-4 h-4 text-indigo-300 animate-pulse" />
+                    </div>
+                    <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping absolute -top-1 -right-1" />
+                  </div>
+                  <div className="min-w-0 space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-black text-white text-xs sm:text-sm">ویس شما دریافت شد ✓</span>
+                      <span className="text-[10px] text-cyan-300 font-en animate-pulse">● Analyzing...</span>
+                    </div>
+                    <p className="text-[11px] text-slate-300 leading-tight">
+                      مربی {persona.name} در حال تبدیل صدا به متن، سنجش گرامر، تلفظ و بازنویسی نیتیو است...
+                    </p>
+                  </div>
+                </div>
+
+                {/* Animated Voice Spectrum Bar */}
+                <div className="flex items-center gap-1 h-3 pt-1 px-1">
+                  {[40, 70, 95, 60, 85, 45, 90, 65, 100, 50, 80, 35, 75, 55, 90].map((h, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        height: `${h}%`,
+                        animationDelay: `${i * 70}ms`,
+                      }}
+                      className="w-1 bg-gradient-to-t from-indigo-500 to-cyan-400 rounded-full animate-pulse shrink-0"
+                    />
+                  ))}
+                  <span className="text-[10px] text-indigo-300/80 mr-2 font-fa">لطفاً چند ثانیه صبر کنید</span>
+                </div>
               </div>
             )}
 
@@ -1626,9 +1961,14 @@ export const SpeakingScreen: React.FC<Props> = ({
           </div>
         )}
 
-        {/* Floating Mic Button — when recording, transforms into SEND button (نه آیکون خط خورده قرمز!) */}
+        {/* Floating Mic Button — when recording, transforms into SEND button; when processing, displays loading pill */}
         <div className="pointer-events-auto">
-          {isRecording ? (
+          {isProcessing ? (
+            <div className="px-5 py-3 rounded-full bg-slate-900/95 border border-indigo-500/50 text-white font-bold text-xs flex items-center gap-2.5 shadow-2xl backdrop-blur-md animate-pulse">
+              <Sparkles className="w-4 h-4 text-cyan-400 animate-spin" />
+              <span className="font-fa text-slate-100">در حال تحلیل صدای شما...</span>
+            </div>
+          ) : isRecording ? (
             <button
               type="button"
               onClick={toggleRecording}
@@ -1642,8 +1982,7 @@ export const SpeakingScreen: React.FC<Props> = ({
             <button
               type="button"
               onClick={toggleRecording}
-              disabled={isProcessing}
-              className="p-4 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white shadow-2xl shadow-indigo-600/40 border border-indigo-400/40 active:scale-90 transition-all flex items-center justify-center group disabled:opacity-40"
+              className="p-4 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white shadow-2xl shadow-indigo-600/40 border border-indigo-400/40 active:scale-90 transition-all flex items-center justify-center group"
               title="برای شروع صحبت با مربی لمس کنید"
               aria-label="شروع صحبت با مربی"
             >

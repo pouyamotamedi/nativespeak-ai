@@ -22,6 +22,25 @@ export const LeitnerScreen: React.FC<Props> = ({ words, onUpdateWords, onWordMas
   const [reviewIndex, setReviewIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
+  // Reverse Flashcard Mode: Always test from Persian meaning to English recall
+  const [isReverseMode, setIsReverseMode] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return localStorage.getItem('nativespeak_leitner_reverse_mode') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleReverseMode = (enabled: boolean) => {
+    setIsReverseMode(enabled);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('nativespeak_leitner_reverse_mode', String(enabled));
+      } catch {}
+    }
+  };
+
   // AI Dialogue & Scenario Practice Mode
   const [isAiPracticeMode, setIsAiPracticeMode] = useState(false);
   const [isGeneratingPractice, setIsGeneratingPractice] = useState(false);
@@ -218,31 +237,58 @@ export const LeitnerScreen: React.FC<Props> = ({ words, onUpdateWords, onWordMas
         </button>
       </div>
 
-      {/* Review Flashcards Button if words available */}
+      {/* Review Flashcards Button & Settings if words available */}
       {filteredWords.length > 0 && !isReviewMode && !isAiPracticeMode && (
-        <div className="flex items-center justify-between my-2">
-          <span className="text-xs text-slate-400">
-            تعداد لغات این بخش: <strong className="text-white">{filteredWords.length}</strong>
-          </span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 my-2.5 p-3 rounded-2xl bg-slate-900 border border-slate-800">
+          <div className="flex items-center justify-between sm:justify-start gap-3">
+            <span className="text-xs text-slate-400">
+              تعداد لغات این بخش: <strong className="text-white">{filteredWords.length}</strong>
+            </span>
+            <label className="flex items-center gap-1.5 cursor-pointer text-xs select-none">
+              <input
+                type="checkbox"
+                checked={isReverseMode}
+                onChange={(e) => handleToggleReverseMode(e.target.checked)}
+                className="w-3.5 h-3.5 rounded text-indigo-600 bg-slate-800 border-slate-700 focus:ring-indigo-500"
+              />
+              <span className={`text-[11px] font-bold ${isReverseMode ? 'text-cyan-300' : 'text-slate-400'}`}>
+                حالت برعکس (پرسش فارسی ➔ انگلیسی)
+              </span>
+            </label>
+          </div>
           <button
             onClick={() => {
               setReviewIndex(0);
               setIsFlipped(false);
               setIsReviewMode(true);
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition"
+            className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white text-xs font-bold transition shadow-md active:scale-95"
           >
-            <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
-            <span>مرور فلش‌کارتی</span>
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>شروع مرور فلش‌کارتی</span>
           </button>
         </div>
       )}
 
       {/* Review Mode Modal / View */}
       {isReviewMode && filteredWords.length > 0 && (
-        <div className="p-4 rounded-3xl bg-slate-900 border border-slate-800 my-2 space-y-4 shadow-2xl">
+        <div className="p-4 rounded-3xl bg-slate-900 border border-slate-800 my-2 space-y-4 shadow-2xl animate-in fade-in">
           <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>کارت {reviewIndex + 1} از {filteredWords.length}</span>
+            <div className="flex items-center gap-2">
+              <span>کارت {reviewIndex + 1} از {filteredWords.length}</span>
+              <button
+                type="button"
+                onClick={() => handleToggleReverseMode(!isReverseMode)}
+                className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition border ${
+                  isReverseMode
+                    ? 'bg-cyan-950/80 border-cyan-500/40 text-cyan-300'
+                    : 'bg-slate-800 border-slate-700 text-slate-400'
+                }`}
+                title="تغییر جهت پرسش کارت (انگلیسی به فارسی یا فارسی به انگلیسی)"
+              >
+                {isReverseMode ? 'حالت برعکس: فارسی ➔ انگلیسی' : 'حالت عادی: انگلیسی ➔ فارسی'} ⇄
+              </button>
+            </div>
             <button
               onClick={() => setIsReviewMode(false)}
               className="text-slate-400 hover:text-white"
@@ -254,43 +300,98 @@ export const LeitnerScreen: React.FC<Props> = ({ words, onUpdateWords, onWordMas
           {/* Flashcard container */}
           <div
             onClick={() => setIsFlipped(!isFlipped)}
-            className="min-h-[180px] p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 cursor-pointer flex flex-col justify-between text-center select-none shadow-inner"
+            className="min-h-[200px] p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 cursor-pointer flex flex-col justify-between text-center select-none shadow-inner"
           >
-            <div>
-              <div className="text-[11px] text-indigo-400 uppercase font-en tracking-wider mb-1">
-                {filteredWords[reviewIndex].partOfSpeech}
-              </div>
-              <h3 className="text-2xl font-black text-white font-en tracking-wide">
-                {filteredWords[reviewIndex].word}
-              </h3>
-              <p className="text-xs text-slate-400 font-en mt-1">
-                {filteredWords[reviewIndex].phonetic}
-              </p>
-            </div>
-
-            {/* Revealed back of card */}
-            {isFlipped ? (
-              <div className="mt-4 pt-4 border-t border-slate-700 space-y-2 text-right">
-                <div className="text-sm font-bold text-cyan-300">
-                  {filteredWords[reviewIndex].persianMeaning}
-                </div>
-                {filteredWords[reviewIndex].persianNuance && (
-                  <p className="text-[11px] text-slate-300">
-                    💡 نکته: {filteredWords[reviewIndex].persianNuance}
-                  </p>
-                )}
-                {filteredWords[reviewIndex].sampleSentences?.[0] && (
-                  <div className="p-2 rounded-xl bg-slate-900 text-left font-en text-xs text-slate-200">
-                    "{filteredWords[reviewIndex].sampleSentences[0].english}"
-                    <div className="text-right font-fa text-[10px] text-slate-400 mt-1">
-                      {filteredWords[reviewIndex].sampleSentences[0].persian}
+            {isReverseMode ? (
+              /* REVERSE MODE: Front shows Persian meaning/hint, Back reveals English word/phonetics/examples */
+              <div>
+                {!isFlipped ? (
+                  /* FRONT: PERSIAN PROMPT */
+                  <div className="space-y-3 py-2">
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 inline-block font-fa">
+                      معنی و کاربرد فارسی را ببینید و معادل انگلیسی را بگویید:
+                    </span>
+                    <h3 className="text-xl sm:text-2xl font-black text-white font-fa leading-relaxed">
+                      {filteredWords[reviewIndex].persianMeaning}
+                    </h3>
+                    {filteredWords[reviewIndex].persianNuance && (
+                      <p className="text-xs text-slate-300 max-w-sm mx-auto leading-relaxed font-fa">
+                        💡 نکته کاربردی: {filteredWords[reviewIndex].persianNuance}
+                      </p>
+                    )}
+                    {filteredWords[reviewIndex].sampleSentences?.[0]?.persian && (
+                      <div className="text-[11px] text-slate-400 font-fa italic">
+                        مثال در بافت: "{filteredWords[reviewIndex].sampleSentences[0].persian}"
+                      </div>
+                    )}
+                    <div className="text-[11px] text-indigo-400 pt-2 animate-pulse font-fa">
+                      (برای مشاهده کلمه انگلیسی و تلفظ صحیح لمس کنید)
                     </div>
+                  </div>
+                ) : (
+                  /* BACK: ENGLISH REVELATION */
+                  <div className="space-y-3 py-1 animate-in fade-in">
+                    <div className="text-[11px] text-indigo-400 uppercase font-en tracking-wider">
+                      {filteredWords[reviewIndex].partOfSpeech}
+                    </div>
+                    <h3 className="text-2xl sm:text-3xl font-black text-emerald-400 font-en tracking-wide">
+                      {filteredWords[reviewIndex].word}
+                    </h3>
+                    {filteredWords[reviewIndex].phonetic && (
+                      <p className="text-xs text-slate-400 font-en">
+                        {filteredWords[reviewIndex].phonetic}
+                      </p>
+                    )}
+                    {filteredWords[reviewIndex].sampleSentences?.[0] && (
+                      <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-left font-en text-xs text-slate-200 space-y-1">
+                        <div>"{filteredWords[reviewIndex].sampleSentences[0].english}"</div>
+                        <div className="text-right font-fa text-[10px] text-slate-400">
+                          {filteredWords[reviewIndex].sampleSentences[0].persian}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             ) : (
-              <div className="text-[11px] text-slate-400 opacity-60">
-                (برای مشاهده معنی و مثال لمس کنید)
+              /* STANDARD MODE: Front shows English word, Back reveals Persian meaning & nuance */
+              <div>
+                <div>
+                  <div className="text-[11px] text-indigo-400 uppercase font-en tracking-wider mb-1">
+                    {filteredWords[reviewIndex].partOfSpeech}
+                  </div>
+                  <h3 className="text-2xl font-black text-white font-en tracking-wide">
+                    {filteredWords[reviewIndex].word}
+                  </h3>
+                  <p className="text-xs text-slate-400 font-en mt-1">
+                    {filteredWords[reviewIndex].phonetic}
+                  </p>
+                </div>
+
+                {isFlipped ? (
+                  <div className="mt-4 pt-4 border-t border-slate-700 space-y-2 text-right animate-in fade-in">
+                    <div className="text-sm font-bold text-cyan-300 font-fa">
+                      {filteredWords[reviewIndex].persianMeaning}
+                    </div>
+                    {filteredWords[reviewIndex].persianNuance && (
+                      <p className="text-[11px] text-slate-300 font-fa">
+                        💡 نکته: {filteredWords[reviewIndex].persianNuance}
+                      </p>
+                    )}
+                    {filteredWords[reviewIndex].sampleSentences?.[0] && (
+                      <div className="p-2 rounded-xl bg-slate-900 text-left font-en text-xs text-slate-200">
+                        "{filteredWords[reviewIndex].sampleSentences[0].english}"
+                        <div className="text-right font-fa text-[10px] text-slate-400 mt-1">
+                          {filteredWords[reviewIndex].sampleSentences[0].persian}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-slate-400 opacity-60 font-fa">
+                    (برای مشاهده معنی و مثال لمس کنید)
+                  </div>
+                )}
               </div>
             )}
 
@@ -301,6 +402,7 @@ export const LeitnerScreen: React.FC<Props> = ({ words, onUpdateWords, onWordMas
                 playAudioText(filteredWords[reviewIndex].word);
               }}
               className="self-center mt-3 flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs transition"
+              title="تلفظ فوری محلی نیتیو"
             >
               <Volume2 className="w-3.5 h-3.5" />
               <span>تلفظ صوتی</span>

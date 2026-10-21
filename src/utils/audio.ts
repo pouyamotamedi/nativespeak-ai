@@ -53,26 +53,38 @@ function playBrowserTts(
     return;
   }
 
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = options?.rate ?? 1.0;
-  utterance.pitch = options?.pitch ?? 1.0;
-  // Force American English for coach voice consistency
-  utterance.lang = 'en-US';
+  try {
+    window.speechSynthesis.cancel();
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    }
 
-  const voice = pickAmericanVoice();
-  if (voice) utterance.voice = voice;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = options?.rate ?? 1.0;
+    utterance.pitch = options?.pitch ?? 1.0;
+    // Force American English for coach voice consistency
+    utterance.lang = options?.lang || 'en-US';
 
-  if (options?.onEnd) {
-    utterance.onend = options.onEnd;
-    utterance.onerror = options.onEnd;
+    const voice = pickAmericanVoice();
+    if (voice) utterance.voice = voice;
+
+    if (options?.onEnd) {
+      utterance.onend = options.onEnd;
+      utterance.onerror = options.onEnd;
+    }
+
+    window.speechSynthesis.speak(utterance);
+  } catch (err) {
+    console.warn('Browser SpeechSynthesis error:', err);
+    options?.onEnd?.();
   }
-
-  window.speechSynthesis.speak(utterance);
 }
 
 /**
- * Prefer server American TTS (OpenAI / Gemini); fall back to browser en-US voice.
+ * Prioritizes instant local device TTS (Web Speech API) with natural American voices:
+ * - 0ms latency: audio plays immediately when speaker button is clicked
+ * - 0 AI tokens consumed: completely free, runs on the user's phone / browser
+ * Falls back to server TTS only if SpeechSynthesis is not supported.
  */
 export async function playAudioText(
   text: string,
@@ -82,6 +94,7 @@ export async function playAudioText(
     lang?: string;
     onEnd?: () => void;
     forceBrowser?: boolean;
+    forceServer?: boolean;
   }
 ): Promise<void> {
   const clean = (text || '').trim();
@@ -92,7 +105,14 @@ export async function playAudioText(
 
   stopAudioPlayback();
 
-  if (!options?.forceBrowser && typeof window !== 'undefined') {
+  // 1. DEFAULT TO INSTANT LOCAL DEVICE TTS (0ms latency, zero tokens, works offline)
+  if (!options?.forceServer && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    playBrowserTts(clean, options);
+    return;
+  }
+
+  // 2. Server fallback only if explicitly requested or device lacks speechSynthesis
+  if (typeof window !== 'undefined') {
     try {
       const res = await apiFetch('/api/tts', {
         method: 'POST',

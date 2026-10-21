@@ -116,43 +116,65 @@ export const KNOWN_DEMO_PHRASES = new Set([
 
 export function isDemoLeitnerWord(w: any): boolean {
   if (!w || typeof w !== 'object') return true;
+  if (!w.word || typeof w.word !== 'string' || !w.word.trim()) return true;
   if (w.id && DEMO_LEITNER_IDS.has(w.id)) return true;
   if (w.id && (w.id === 'default-item' || String(w.id).startsWith('demo-'))) return true;
-  const wordClean = (w.word || '').toLowerCase().trim();
-  if (KNOWN_DEMO_PHRASES.has(wordClean)) {
-    const isTimestampId = w.id && /^word-\d{12,}$/.test(String(w.id));
-    if (!isTimestampId) return true;
-  }
   return false;
 }
 
 export function isDemoPracticeItem(p: any): boolean {
   if (!p || typeof p !== 'object') return true;
+  if (!p.cliche || typeof p.cliche !== 'string' || !p.cliche.trim()) return true;
   if (p.id && DEMO_PRACTICE_IDS.has(p.id)) return true;
   if (p.id && (p.id === 'default-item' || String(p.id).startsWith('demo-'))) return true;
-  const clicheClean = (p.cliche || '').toLowerCase().trim();
-  if (KNOWN_DEMO_PHRASES.has(clicheClean)) {
-    const isTimestampId = p.id && /^practice-\d{12,}$/.test(String(p.id));
-    if (!isTimestampId) return true;
-  }
   return false;
 }
 
-// Leitner Words
+const LEITNER_STORAGE_KEYS = [
+  STORAGE_KEYS.LEITNER_WORDS,
+  'nativespeak_leitner_words_v1',
+  'nativespeak_leitner_words',
+  'leitner_words',
+  'nativespeak_words',
+];
+
+const PRACTICE_STORAGE_KEYS = [
+  STORAGE_KEYS.PRACTICE_ITEMS,
+  'nativespeak_practice_items_v1',
+  'nativespeak_practice_items',
+  'practice_items',
+];
+
+// Leitner Words: Multi-key recovery ensuring no previously saved word is ever lost
 export function getStoredLeitnerWords(): LeitnerWord[] {
   if (typeof window === 'undefined') return [];
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.LEITNER_WORDS);
-    if (!raw) {
-      return [];
+    const wordsMap = new Map<string, LeitnerWord>();
+
+    for (const key of LEITNER_STORAGE_KEYS) {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((item) => {
+              if (item && item.word && !isDemoLeitnerWord(item)) {
+                const termKey = String(item.word).toLowerCase().trim();
+                if (!wordsMap.has(termKey)) {
+                  wordsMap.set(termKey, item);
+                }
+              }
+            });
+          }
+        } catch (e) {}
+      }
     }
-    const parsed: LeitnerWord[] = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    const userWords = parsed.filter((w) => !isDemoLeitnerWord(w));
-    if (userWords.length !== parsed.length) {
-      localStorage.setItem(STORAGE_KEYS.LEITNER_WORDS, JSON.stringify(userWords));
+
+    const aggregated = Array.from(wordsMap.values());
+    if (aggregated.length > 0) {
+      localStorage.setItem(STORAGE_KEYS.LEITNER_WORDS, JSON.stringify(aggregated));
     }
-    return userWords;
+    return aggregated;
   } catch (e) {
     return [];
   }
@@ -162,25 +184,44 @@ export function saveStoredLeitnerWords(words: LeitnerWord[]) {
   if (typeof window === 'undefined') return;
   try {
     const cleaned = words.filter((w) => !isDemoLeitnerWord(w));
-    localStorage.setItem(STORAGE_KEYS.LEITNER_WORDS, JSON.stringify(cleaned));
+    const serialized = JSON.stringify(cleaned);
+    localStorage.setItem(STORAGE_KEYS.LEITNER_WORDS, serialized);
+    // Mirror as fallback to legacy keys so no version upgrade loses data
+    localStorage.setItem('nativespeak_leitner_words_v1', serialized);
+    localStorage.setItem('nativespeak_leitner_words', serialized);
   } catch (e) {}
 }
 
-// Practice Items (Clichés saved from Speaking with + button or text selection)
+// Practice Items: Multi-key recovery ensuring no previously saved cliché is ever lost
 export function getStoredPracticeItems(): PracticeItem[] {
   if (typeof window === 'undefined') return [];
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.PRACTICE_ITEMS);
-    if (!raw) {
-      return [];
+    const itemsMap = new Map<string, PracticeItem>();
+
+    for (const key of PRACTICE_STORAGE_KEYS) {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((item) => {
+              if (item && item.cliche && !isDemoPracticeItem(item)) {
+                const clicheKey = String(item.cliche).toLowerCase().trim();
+                if (!itemsMap.has(clicheKey)) {
+                  itemsMap.set(clicheKey, item);
+                }
+              }
+            });
+          }
+        } catch (e) {}
+      }
     }
-    const parsed: PracticeItem[] = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    const userItems = parsed.filter((p) => !isDemoPracticeItem(p));
-    if (userItems.length !== parsed.length) {
-      localStorage.setItem(STORAGE_KEYS.PRACTICE_ITEMS, JSON.stringify(userItems));
+
+    const aggregated = Array.from(itemsMap.values());
+    if (aggregated.length > 0) {
+      localStorage.setItem(STORAGE_KEYS.PRACTICE_ITEMS, JSON.stringify(aggregated));
     }
-    return userItems;
+    return aggregated;
   } catch (e) {
     return [];
   }
@@ -190,7 +231,11 @@ export function saveStoredPracticeItems(items: PracticeItem[]) {
   if (typeof window === 'undefined') return;
   try {
     const cleaned = items.filter((p) => !isDemoPracticeItem(p));
-    localStorage.setItem(STORAGE_KEYS.PRACTICE_ITEMS, JSON.stringify(cleaned));
+    const serialized = JSON.stringify(cleaned);
+    localStorage.setItem(STORAGE_KEYS.PRACTICE_ITEMS, serialized);
+    // Mirror as fallback to legacy keys so no version upgrade loses data
+    localStorage.setItem('nativespeak_practice_items_v1', serialized);
+    localStorage.setItem('nativespeak_practice_items', serialized);
   } catch (e) {}
 }
 
@@ -446,6 +491,43 @@ export function clearStoredScenarioDraft(scenarioId: string) {
   if (typeof window === 'undefined') return;
   try {
     localStorage.removeItem(`nativespeak_scenario_draft_${scenarioId}`);
+  } catch (e) {}
+}
+
+export function getAllStoredScenarioDrafts(): Record<string, StoredScenarioDraft> {
+  if (typeof window === 'undefined') return {};
+  const result: Record<string, StoredScenarioDraft> = {};
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('nativespeak_scenario_draft_')) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.scenarioId) {
+            result[parsed.scenarioId] = parsed;
+          }
+        }
+      }
+    }
+  } catch (e) {}
+  return result;
+}
+
+export function restoreAllStoredScenarioDrafts(drafts: Record<string, any>) {
+  if (typeof window === 'undefined' || !drafts || typeof drafts !== 'object') return;
+  try {
+    Object.entries(drafts).forEach(([scenarioId, draft]) => {
+      if (scenarioId && draft) {
+        localStorage.setItem(
+          `nativespeak_scenario_draft_${scenarioId}`,
+          JSON.stringify(draft)
+        );
+        if (Array.isArray(draft.messages)) {
+          localStorage.setItem(`nativespeak_chat_${scenarioId}`, JSON.stringify(draft.messages));
+        }
+      }
+    });
   } catch (e) {}
 }
 

@@ -35,6 +35,9 @@ import {
   isDemoPracticeItem,
   getStoredActiveScenarioId,
   saveStoredActiveScenarioId,
+  getAllStoredScenarioDrafts,
+  restoreAllStoredScenarioDrafts,
+  saveStoredScenarioDraft,
 } from './utils/storage';
 import {
   getNextUntickedC2Cohort,
@@ -43,6 +46,7 @@ import {
   matchWeaknessToC2ChecklistItem,
 } from './data/c2Checklist';
 import {
+  auth,
   subscribeToAuth,
   logOut,
   loadUserCloudData,
@@ -118,6 +122,7 @@ export default function App() {
   // Authentication State — initialized from local session cache so it never flashes logged out
   const [currentUser, setCurrentUser] = useState<User | any>(() => getCachedAuthUser());
   const [authReady, setAuthReady] = useState(false);
+  const [isCloudLoading, setIsCloudLoading] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
 
@@ -161,15 +166,10 @@ export default function App() {
   const [isBannerDismissed, setIsBannerDismissed] = useState(false);
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(true);
 
-  /** Onboarding & sync: Close auth modal, and if placement isn't done yet, invite to placement. */
+  /** Onboarding & sync: Close auth modal cleanly without forcing unwanted assessment popups */
   const continueOnboardingAfterAuth = (user: User | null, assCompleted?: boolean) => {
     setIsAuthModalOpen(false);
     setIsApiKeysOpen(false);
-    if (!user) return;
-    const done = assCompleted ?? getStoredAssessment().completed;
-    if (!done || isCycleReassessment) {
-      setIsAssessmentOpen(true);
-    }
   };
 
   const openAssessmentFlow = () => {
@@ -180,14 +180,30 @@ export default function App() {
     setIsApiKeysOpen(false);
   };
 
-  // Helper to sync to Firestore for current user
+  // Helper to sync to Firestore for current user safely
   const syncToCloud = (partial: any) => {
-    if (currentUser?.uid) {
-      saveUserCloudData(currentUser.uid, partial);
+    const effectiveUid = currentUser?.uid || auth.currentUser?.uid;
+    if (effectiveUid) {
+      saveUserCloudData(effectiveUid, partial).catch((err) => {
+        console.warn('Cloud sync error:', err);
+      });
     }
   };
 
-  // Firebase Auth: Login FIRST, then API keys, then placement — never skip login
+  // Persist scenario conversation drafts to local storage AND Firestore cloud
+  const handleSaveScenarioDraft = (scenarioId: string, draft: any) => {
+    saveStoredScenarioDraft(scenarioId, draft);
+    const effectiveUid = currentUser?.uid || auth.currentUser?.uid;
+    if (effectiveUid) {
+      const allDrafts = getAllStoredScenarioDrafts();
+      allDrafts[scenarioId] = draft;
+      saveUserCloudData(effectiveUid, {
+        scenarioDrafts: allDrafts,
+      }).catch((e) => console.warn('Failed to sync draft to cloud:', e));
+    }
+  };
+
+  // Firebase Auth & Cloud Sync: Non-destructive, bidirectional merge
   useEffect(() => {
     let cancelled = false;
 
@@ -211,111 +227,200 @@ export default function App() {
         setCurrentUser(null);
         clearCachedAuthUser();
       }
-      setAuthReady(true);
 
       if (!user) {
+        setIsCloudLoading(false);
+        setAuthReady(true);
         continueOnboardingAfterAuth(null);
         return;
       }
+
+      setIsCloudLoading(true);
 
       try {
         const cloudData = await loadUserCloudData(user.uid);
         if (cancelled) return;
 
+        // Current local state snapshot
+        const localAssessment = getStoredAssessment();
+        const localCalendar = getStoredCalendar();
+        const localLeitnerWords = getStoredLeitnerWords().filter((w) => !isDemoLeitnerWord(w));
+        const localPracticeItems = getStoredPracticeItems().filter((p) => !isDemoPracticeItem(p));
+        const localWeaknesses = getStoredWeaknesses();
+        const localProgress = getStoredProgress();
+        const localC2State = getStoredC2ChecklistState();
+        const localDrafts = getAllStoredScenarioDrafts();
+
         if (cloudData) {
-          const isAssCompleted = Boolean(cloudData.assessment && cloudData.assessment.completed);
-          if (cloudData.assessment) {
-            setAssessment(cloudData.assessment);
-            saveStoredAssessment(cloudData.assessment);
-          }
-          if (isAssCompleted && cloudData.calendar && cloudData.calendar.length > 0) {
-            const cleanedCalendar = cloudData.calendar.filter(
-              (item: any) =>
-                item &&
-                item.id !== 'airport-customs' &&
-                !item.titleFa?.includes('گیت بازرسی') &&
-                !item.titleFa?.includes('کنترل گذرنامه') &&
-                !item.title?.toLowerCase().includes('customs') &&
-                !item.title?.toLowerCase().includes('airport')
-            );
-            setCalendar(cleanedCalendar);
-            saveStoredCalendar(cleanedCalendar);
-            if (cleanedCalendar.length > 0) {
-              const savedScenarioId = getStoredActiveScenarioId();
-              const matchedScenario = savedScenarioId
-                ? cleanedCalendar.find((c: any) => c.id === savedScenarioId)
-                : null;
-              if (matchedScenario) {
-                setActiveScenario(convertCalendarToScenario(matchedScenario));
-              } else if (!savedScenarioId) {
-                setActiveScenario(convertCalendarToScenario(cleanedCalendar[0]));
-              }
-            }
-          } else if (!isAssCompleted) {
-            setCalendar([]);
-            saveStoredCalendar([]);
-            setActiveScenario(DEFAULT_ORIENTATION_SCENARIO);
-          }
-          if (cloudData.weaknesses && cloudData.weaknesses.length > 0) {
-            setWeaknesses(cloudData.weaknesses);
-            saveStoredWeaknesses(cloudData.weaknesses);
-          }
-          if (cloudData.leitnerWords) {
-            const filteredWords = (cloudData.leitnerWords as LeitnerWord[]).filter(
-              (w) => !isDemoLeitnerWord(w)
-            );
-            setLeitnerWords(filteredWords);
-            saveStoredLeitnerWords(filteredWords);
-            if (filteredWords.length !== cloudData.leitnerWords.length) {
-              saveUserCloudData(user.uid, { leitnerWords: filteredWords });
-            }
-          } else {
-            setLeitnerWords([]);
-            saveStoredLeitnerWords([]);
-          }
-          if (cloudData.practiceItems) {
-            const filteredItems = (cloudData.practiceItems as PracticeItem[]).filter(
-              (p) => !isDemoPracticeItem(p)
-            );
-            setPracticeItems(filteredItems);
-            saveStoredPracticeItems(filteredItems);
-            if (filteredItems.length !== cloudData.practiceItems.length) {
-              saveUserCloudData(user.uid, { practiceItems: filteredItems });
-            }
-          } else {
-            setPracticeItems([]);
-            saveStoredPracticeItems([]);
-          }
-          if (cloudData.progress) {
-            setProgress(cloudData.progress);
-            saveStoredProgress(cloudData.progress);
-          }
-          if (cloudData.c2ChecklistState) {
-            setC2ChecklistState(cloudData.c2ChecklistState);
-            saveStoredC2ChecklistState(cloudData.c2ChecklistState);
+          // 1. ASSESSMENT: If cloud has completed assessment, use it; if local has completed assessment, preserve it!
+          const cloudAssCompleted = Boolean(cloudData.assessment && cloudData.assessment.completed);
+          const localAssCompleted = Boolean(localAssessment && localAssessment.completed);
+
+          let finalAssessment = localAssessment;
+          if (cloudAssCompleted) {
+            finalAssessment = cloudData.assessment;
+          } else if (localAssCompleted) {
+            finalAssessment = localAssessment;
+          } else if (cloudData.assessment) {
+            finalAssessment = cloudData.assessment;
           }
 
-          continueOnboardingAfterAuth(user, isAssCompleted);
-        } else {
+          setAssessment(finalAssessment);
+          saveStoredAssessment(finalAssessment);
+
+          // 2. CALENDAR: Use cloud calendar if present; otherwise keep local
+          let finalCalendar = (Array.isArray(cloudData.calendar) && cloudData.calendar.length > 0)
+            ? cloudData.calendar
+            : localCalendar;
+
+          finalCalendar = finalCalendar.filter(
+            (item: any) =>
+              item &&
+              item.id !== 'airport-customs' &&
+              !item.titleFa?.includes('گیت بازرسی') &&
+              !item.titleFa?.includes('کنترل گذرنامه') &&
+              !item.title?.toLowerCase().includes('customs') &&
+              !item.title?.toLowerCase().includes('airport')
+          );
+
+          setCalendar(finalCalendar);
+          saveStoredCalendar(finalCalendar);
+
+          if (finalCalendar.length > 0) {
+            const savedScenarioId = cloudData.activeScenarioId || getStoredActiveScenarioId();
+            const matchedScenario = savedScenarioId
+              ? finalCalendar.find((c: any) => c.id === savedScenarioId)
+              : null;
+            if (matchedScenario) {
+              setActiveScenario(convertCalendarToScenario(matchedScenario));
+            } else {
+              setActiveScenario(convertCalendarToScenario(finalCalendar[0]));
+            }
+          }
+
+          // 3. LEITNER WORDS: UNION MERGE! (Never delete user words!)
+          const cloudWords = Array.isArray(cloudData.leitnerWords)
+            ? (cloudData.leitnerWords as LeitnerWord[]).filter((w) => !isDemoLeitnerWord(w))
+            : [];
+          const wordsMap = new Map<string, LeitnerWord>();
+          cloudWords.forEach((w) => {
+            if (w.word) wordsMap.set(w.word.toLowerCase().trim(), w);
+          });
+          localLeitnerWords.forEach((w) => {
+            if (w.word) {
+              const key = w.word.toLowerCase().trim();
+              if (!wordsMap.has(key)) {
+                wordsMap.set(key, w);
+              }
+            }
+          });
+          const mergedLeitnerWords = Array.from(wordsMap.values());
+          setLeitnerWords(mergedLeitnerWords);
+          saveStoredLeitnerWords(mergedLeitnerWords);
+
+          // 4. PRACTICE ITEMS: UNION MERGE!
+          const cloudPractice = Array.isArray(cloudData.practiceItems)
+            ? (cloudData.practiceItems as PracticeItem[]).filter((p) => !isDemoPracticeItem(p))
+            : [];
+          const practiceMap = new Map<string, PracticeItem>();
+          cloudPractice.forEach((p) => {
+            if (p.cliche) practiceMap.set(p.cliche.toLowerCase().trim(), p);
+          });
+          localPracticeItems.forEach((p) => {
+            if (p.cliche) {
+              const key = p.cliche.toLowerCase().trim();
+              if (!practiceMap.has(key)) {
+                practiceMap.set(key, p);
+              }
+            }
+          });
+          const mergedPracticeItems = Array.from(practiceMap.values());
+          setPracticeItems(mergedPracticeItems);
+          saveStoredPracticeItems(mergedPracticeItems);
+
+          // 5. WEAKNESSES: MERGE
+          const mergedWeaknesses = (Array.isArray(cloudData.weaknesses) && cloudData.weaknesses.length > 0)
+            ? cloudData.weaknesses
+            : localWeaknesses;
+          setWeaknesses(mergedWeaknesses);
+          saveStoredWeaknesses(mergedWeaknesses);
+
+          // 6. PROGRESS: Combine progress taking highest activity metrics
+          let finalProgress = localProgress;
+          if (cloudData.progress) {
+            const cp = cloudData.progress;
+            finalProgress = {
+              ...localProgress,
+              ...cp,
+              streakDays: Math.max(localProgress.streakDays || 0, cp.streakDays || 0),
+              totalMinutesSpoken: Math.max(localProgress.totalMinutesSpoken || 0, cp.totalMinutesSpoken || 0),
+              totalWordsLearned: Math.max(localProgress.totalWordsLearned || 0, cp.totalWordsLearned || 0),
+              wordsMastered: Math.max(localProgress.wordsMastered || 0, cp.wordsMastered || 0),
+            };
+          }
+          setProgress(finalProgress);
+          saveStoredProgress(finalProgress);
+
+          // 7. C2 CHECKLIST STATE
+          const finalC2State = cloudData.c2ChecklistState || localC2State;
+          setC2ChecklistState(finalC2State);
+          saveStoredC2ChecklistState(finalC2State);
+
+          // 8. SCENARIO DRAFTS (CONVERSATIONS): RESTORE FROM CLOUD!
+          if (cloudData.scenarioDrafts && typeof cloudData.scenarioDrafts === 'object') {
+            restoreAllStoredScenarioDrafts(cloudData.scenarioDrafts);
+          }
+          const allLocalDrafts = getAllStoredScenarioDrafts();
+          const mergedDrafts = {
+            ...(cloudData.scenarioDrafts || {}),
+            ...allLocalDrafts,
+          };
+
+          // Synchronize complete merged data back to Firestore
           saveUserCloudData(user.uid, {
             uid: user.uid,
             email: user.email,
             displayName: user.displayName,
             photoURL: user.photoURL,
-            assessment,
-            calendar,
-            weaknesses,
-            c2ChecklistState,
-            leitnerWords: leitnerWords.filter((w) => !isDemoLeitnerWord(w)),
-            practiceItems: practiceItems.filter((p) => !isDemoPracticeItem(p)),
-            progress,
-          });
-          continueOnboardingAfterAuth(user, assessment.completed);
+            assessment: finalAssessment,
+            calendar: finalCalendar,
+            weaknesses: mergedWeaknesses,
+            c2ChecklistState: finalC2State,
+            leitnerWords: mergedLeitnerWords,
+            practiceItems: mergedPracticeItems,
+            progress: finalProgress,
+            scenarioDrafts: mergedDrafts,
+          }).catch((e) => console.warn('Could not sync merged data to Firestore:', e));
+
+          const isEffectiveAssCompleted = Boolean(finalAssessment && finalAssessment.completed);
+          continueOnboardingAfterAuth(user, isEffectiveAssCompleted);
+        } else {
+          // First time user registration / document creation: sync all local data up to cloud!
+          saveUserCloudData(user.uid, {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+            photoURL: user.photoURL,
+            assessment: localAssessment,
+            calendar: localCalendar,
+            weaknesses: localWeaknesses,
+            c2ChecklistState: localC2State,
+            leitnerWords: localLeitnerWords,
+            practiceItems: localPracticeItems,
+            progress: localProgress,
+            scenarioDrafts: localDrafts,
+          }).catch((e) => console.warn('Could not initialize user data in Firestore:', e));
+
+          continueOnboardingAfterAuth(user, Boolean(localAssessment && localAssessment.completed));
         }
       } catch (err) {
         console.warn('Cloud sync after login failed:', err);
-        // Still continue onboarding locally even if Firestore hiccups
         continueOnboardingAfterAuth(user, getStoredAssessment().completed);
+      } finally {
+        if (!cancelled) {
+          setIsCloudLoading(false);
+          setAuthReady(true);
+        }
       }
     });
 
@@ -477,18 +582,23 @@ export default function App() {
     }
   };
 
-  // Add cliché to Practice with authentic context sentence
-  const handleAddClicheToPractice = (cliche: string, meaningFa: string, contextSentence?: string) => {
+  // Add cliché to Practice with authentic context sentence and real Persian meaning
+  const handleAddClicheToPractice = async (cliche: string, meaningFa?: string, contextSentence?: string) => {
     const term = cliche.trim();
+    if (!term) return;
     const exists = practiceItems.some((p) => p.cliche.toLowerCase() === term.toLowerCase());
     if (exists) return;
 
+    const isPlaceholder = !meaningFa || meaningFa.includes('ذخیره شده') || meaningFa === 'کلیشه محاوره‌ای نیتیو' || meaningFa.trim() === '';
+    const itemId = `practice-${Date.now()}`;
+    const initialMeaning = isPlaceholder ? 'در حال دریافت معنی دقیق فارسی...' : meaningFa;
+
     const newItem: PracticeItem = {
-      id: `practice-${Date.now()}`,
+      id: itemId,
       cliche: term,
-      persianMeaning: meaningFa || 'کلیشه محاوره‌ای نیتیو',
+      persianMeaning: initialMeaning,
       context: activeScenario.titleFa,
-      exampleSentence: contextSentence || generateSmartExampleSentence(term, meaningFa),
+      exampleSentence: contextSentence || generateSmartExampleSentence(term, isPlaceholder ? undefined : meaningFa),
       addedAt: new Date().toISOString(),
       timesPracticed: 0,
       masteryScore: 40,
@@ -498,11 +608,123 @@ export default function App() {
     saveStoredPracticeItems(updated);
     syncToCloud({ practiceItems: updated });
     playChimeSound('success');
+
+    // Asynchronously fetch authentic Persian meaning and context usage
+    if (isPlaceholder) {
+      try {
+        const resp = await apiFetch('/api/lookup-word', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ word: term, context: contextSentence }),
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          const resolvedMeaning =
+            data.persianMeaning ||
+            data.persianNuance ||
+            (data.americanUsageNote ? `کاربرد: ${data.americanUsageNote}` : 'اصطلاح و فرمول کاربردی نیتیو');
+          setPracticeItems((prev) => {
+            const mapped = prev.map((item) => {
+              if (item.id === itemId) {
+                return {
+                  ...item,
+                  persianMeaning: resolvedMeaning,
+                  exampleSentence:
+                    (data.sampleSentences && data.sampleSentences[0]?.english) || item.exampleSentence,
+                };
+              }
+              return item;
+            });
+            saveStoredPracticeItems(mapped);
+            syncToCloud({ practiceItems: mapped });
+            return mapped;
+          });
+        }
+      } catch (e) {
+        console.warn('Practice item lookup failed:', e);
+        setPracticeItems((prev) => {
+          const mapped = prev.map((item) => {
+            if (item.id === itemId && item.persianMeaning === 'در حال دریافت معنی دقیق فارسی...') {
+              return { ...item, persianMeaning: `اصطلاح کاربردی: ${term}` };
+            }
+            return item;
+          });
+          saveStoredPracticeItems(mapped);
+          return mapped;
+        });
+      }
+    }
   };
+
+  // Background Auto-Heal: Fix any legacy Practice items that have placeholder meanings like "ذخیره شده از بافت مکالمه"
+  useEffect(() => {
+    const itemsNeedingFix = practiceItems.filter(
+      (p) =>
+        p.persianMeaning &&
+        (p.persianMeaning.includes('ذخیره شده') ||
+          p.persianMeaning === 'کلیشه محاوره‌ای نیتیو' ||
+          p.persianMeaning === 'اصطلاح بومی آمریکایی' ||
+          p.persianMeaning.trim() === '')
+    );
+
+    if (itemsNeedingFix.length === 0) return;
+
+    let isCancelled = false;
+
+    const repairItems = async () => {
+      let hasUpdates = false;
+      const currentList = [...practiceItems];
+
+      for (const item of itemsNeedingFix) {
+        if (isCancelled) break;
+        try {
+          const resp = await apiFetch('/api/lookup-word', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ word: item.cliche, context: item.exampleSentence }),
+          });
+          if (resp.ok) {
+            const data = await resp.json();
+            const realMeaning =
+              data.persianMeaning ||
+              data.persianNuance ||
+              (data.americanUsageNote ? `کاربرد: ${data.americanUsageNote}` : null);
+            if (realMeaning) {
+              const idx = currentList.findIndex((p) => p.id === item.id);
+              if (idx !== -1) {
+                currentList[idx] = {
+                  ...currentList[idx],
+                  persianMeaning: realMeaning,
+                  exampleSentence:
+                    (data.sampleSentences && data.sampleSentences[0]?.english) ||
+                    currentList[idx].exampleSentence,
+                };
+                hasUpdates = true;
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Auto-repair cliché meaning failed for:', item.cliche, e);
+        }
+      }
+
+      if (hasUpdates && !isCancelled) {
+        setPracticeItems([...currentList]);
+        saveStoredPracticeItems(currentList);
+        syncToCloud({ practiceItems: currentList });
+      }
+    };
+
+    const timer = setTimeout(repairItems, 1500);
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [practiceItems.length]);
 
   const handleAddWordToBoth = (wordText: string, contextSentence?: string, customMeaning?: string) => {
     handleAddWordToLeitner(wordText, contextSentence, customMeaning);
-    handleAddClicheToPractice(wordText, customMeaning || 'اصطلاح محاوره‌ای نیتیو', contextSentence);
+    handleAddClicheToPractice(wordText, customMeaning, contextSentence);
   };
 
   const handleUpdateGoals = (newGoals: PracticeGoals) => {
@@ -898,6 +1120,30 @@ export default function App() {
               <PWAInstallButton />
             </div>
 
+            {/* Cloud Sync / Account Pill */}
+            {currentUser ? (
+              <button
+                type="button"
+                onClick={() => setIsAuthModalOpen(true)}
+                className="flex items-center gap-1.5 py-1 px-2 sm:px-2.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-xs font-bold transition active:scale-95"
+                title={`حساب ابری: ${currentUser.email || 'متصل'} (کلیک برای مدیریت)`}
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <span className="text-[11px] font-fa hidden sm:inline">ابری متصل</span>
+                <span className="text-[11px] font-fa sm:hidden">حساب</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsAuthModalOpen(true)}
+                className="flex items-center gap-1.5 py-1 px-2.5 sm:px-3 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs transition shadow-sm active:scale-95"
+                title="ورود به حساب کاربری برای بازیابی و همگام‌سازی ابری"
+              >
+                <UserIcon className="w-3.5 h-3.5 shrink-0" />
+                <span className="text-[11px] font-fa">ورود</span>
+              </button>
+            )}
+
             {/* Frame View Toggle (desktop only) */}
             <button
               onClick={() => setIsMobileFrame(!isMobileFrame)}
@@ -926,39 +1172,39 @@ export default function App() {
         </header>
 
         {/* Responsive, Dismissible Notice Banner (Only 1 sleek banner max) */}
-        {!isBannerDismissed && (!assessment.completed || !currentUser) && (
+        {!isBannerDismissed && (!currentUser || !assessment.completed) && (
           <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 border-b border-indigo-500/30 px-3 py-1.5 flex items-center justify-between text-xs gap-2 shrink-0 animate-in fade-in">
             <div className="flex items-center gap-2 min-w-0">
-              {!assessment.completed ? (
+              {!currentUser ? (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping shrink-0" />
+                  <span className="text-slate-200 text-[11px] truncate">
+                    برای بازیابی کلمات لایتنر، مکالمات و تعیین سطح، وارد حساب شوید.
+                  </span>
+                </>
+              ) : (
                 <>
                   <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-pulse" />
                   <span className="text-slate-200 text-[11px] truncate">
                     هنوز تعیین سطح صوتی نداده‌اید!
                   </span>
                 </>
-              ) : (
-                <>
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
-                  <span className="text-slate-200 text-[11px] truncate">
-                    برای ذخیره دائمی ابری پیشرفت، وارد حساب شوید.
-                  </span>
-                </>
               )}
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
-              {!assessment.completed ? (
+              {!currentUser ? (
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="px-2.5 py-1 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-slate-950 font-black text-[11px] transition shadow-sm active:scale-95"
+                >
+                  ورود به حساب 🔑
+                </button>
+              ) : (
                 <button
                   onClick={openAssessmentFlow}
                   className="px-2.5 py-1 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-[11px] transition shadow-sm active:scale-95"
                 >
                   شروع آزمون 🎙️
-                </button>
-              ) : (
-                <button
-                  onClick={() => setIsAuthModalOpen(true)}
-                  className="px-2.5 py-1 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-[11px] transition"
-                >
-                  ورود به حساب
                 </button>
               )}
               <button
@@ -998,6 +1244,8 @@ export default function App() {
               isAssessmentCompleted={Boolean(assessment.completed)}
               onOpenAssessment={openAssessmentFlow}
               isHeaderCollapsed={isHeaderCollapsed}
+              onSaveScenarioDraft={handleSaveScenarioDraft}
+              isCloudLoading={isCloudLoading}
             />
           )}
 
