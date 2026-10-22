@@ -271,6 +271,12 @@ export interface VoiceAcousticAnalysis {
   drillSequenceFa: string[];
 }
 
+export interface SentencePattern {
+  pattern: string; // e.g. "X is gradually fading.", "X is still more [adjective] than Y."
+  meaningFa: string; // Persian translation and usage
+  slotExplanation?: string; // Guidance on what fits into X, Y, or slots
+}
+
 export interface SpeakingAnalysis {
   overallScore: number;
   grammarScore: number;
@@ -310,6 +316,8 @@ export interface SpeakingAnalysis {
   }>;
   nativeCliche?: string; // the specific key cliché/idiomatic chunk
   nativeClicheMeaningFa?: string;
+  /** Reusable native formulaic patterns/templates (Sentence Patterns) */
+  sentencePatterns?: SentencePattern[];
   pronunciationIssues?: AcousticPronunciationFeedback[];
   accentTips?: Array<{
     word: string;

@@ -45,6 +45,7 @@ import {
   transcribeAudioBase64,
 } from '../utils/audio';
 import { evaluateSpeakingTextLocally, convertCalendarToScenario } from '../utils/linguisticEngine';
+import { LessonObjectivesModal } from './LessonObjectivesModal';
 import {
   getStoredScenarioDraft,
   saveStoredScenarioDraft,
@@ -251,10 +252,12 @@ export const SpeakingScreen: React.FC<Props> = ({
   // Scenario Calendar Modal & Inline 10-Lesson Drawer
   const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
   const [isScenarioDrawerOpen, setIsScenarioDrawerOpen] = useState(false);
+  const [infoModalScenario, setInfoModalScenario] = useState<Scenario | CalendarScenario | null>(null);
 
   // Added Clichés & Leitner Words feedback
   const [addedCliches, setAddedCliches] = useState<Record<string, boolean>>({});
   const [addedLeitnerPhrases, setAddedLeitnerPhrases] = useState<Record<string, boolean>>({});
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -429,6 +432,17 @@ export const SpeakingScreen: React.FC<Props> = ({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isProcessing, isRecording]);
+
+  const handleMessagesScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const distanceFromBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+    setShowScrollBottom(distanceFromBottom > 160);
+  };
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setShowScrollBottom(false);
+  };
 
   // Cleanup timers on unmount
   useEffect(() => {
@@ -722,6 +736,7 @@ export const SpeakingScreen: React.FC<Props> = ({
           weaknessesItems,
           cefrLevel,
           targetLevel: activeScenario.targetLevel || cefrLevel,
+          turnNumber: messages.filter((m) => m.role === 'user').length + 1,
           persona: {
             name: persona.name,
             accent: persona.accent,
@@ -969,104 +984,6 @@ export const SpeakingScreen: React.FC<Props> = ({
 
   return (
     <div className="relative flex flex-col h-full bg-slate-950 font-fa select-text overflow-hidden">
-      {/* FLOATING UPGRADED TOOLBAR ON TEXT SELECTION */}
-      {selectedText && (
-        <div className="sticky top-0 z-40 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-b border-cyan-500/40 p-2 sm:p-2.5 shadow-2xl flex flex-wrap items-center justify-between gap-2 text-xs animate-in slide-in-from-top-2 backdrop-blur-md">
-          {/* Selected Text Badge & Audio preview */}
-          <div className="flex items-center gap-1.5 max-w-full sm:max-w-md">
-            <span className="text-[10px] text-slate-400 font-bold shrink-0">انتخاب:</span>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900/90 border border-cyan-500/50 shadow-inner">
-              <span className="font-en font-black text-cyan-300 text-xs sm:text-sm tracking-wide">
-                "{selectedText}"
-              </span>
-              <button
-                type="button"
-                onClick={() => playAudioText(selectedText)}
-                className="p-1 rounded-lg text-slate-400 hover:text-cyan-300 hover:bg-slate-800 transition"
-                title="شنیدن تلفظ نیتیو این عبارت"
-              >
-                <Volume2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* Expand / Shrink buttons for easy multi-word selection */}
-            {selectedTokensContext && (
-              <div className="flex items-center gap-1 bg-slate-800/80 p-0.5 rounded-xl border border-slate-700/80">
-                <button
-                  type="button"
-                  onClick={handleExpandSelection}
-                  className="px-2 py-1 rounded-lg bg-indigo-600/40 hover:bg-indigo-600 text-indigo-200 hover:text-white text-[10px] font-bold transition flex items-center gap-1"
-                  title="اضافه کردن کلمه بعدی برای انتخاب اصطلاحات و عبارات چندکلمه‌ای"
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>بعد</span>
-                </button>
-                {selectedTokensContext.span[1] > selectedTokensContext.span[0] && (
-                  <button
-                    type="button"
-                    onClick={handleShrinkSelection}
-                    className="p-1 rounded-lg hover:bg-slate-700 text-slate-300 transition"
-                    title="حذف آخرین کلمه انتخاب‌شده"
-                  >
-                    <Minus className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Action buttons & feedback */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {textToolbarFeedback ? (
-              <span className="text-emerald-300 font-bold text-xs px-2.5 py-1 rounded-xl bg-emerald-950/80 border border-emerald-500/40 animate-in fade-in">
-                {textToolbarFeedback}
-              </span>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onAddWordToLeitner(selectedText, selectedTextContext);
-                    setTextToolbarFeedback('به لایتنر افزوده شد ✓');
-                    playChimeSound('ding');
-                    setTimeout(() => {
-                      handleClearSelection();
-                    }, 1400);
-                  }}
-                  className="px-2.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-[10.5px] transition shadow-md shadow-purple-600/20 active:scale-95 flex items-center gap-1"
-                  title="افزودن به جعبه لایتنر با معنی و مثال هوشمند"
-                >
-                  <span>🧠 + لایتنر</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onAddClicheToPractice(selectedText, '', selectedTextContext);
-                    setTextToolbarFeedback('به تمرینات افزوده شد ✓');
-                    playChimeSound('success');
-                    setTimeout(() => {
-                      handleClearSelection();
-                    }, 1400);
-                  }}
-                  className="px-2.5 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-[10.5px] transition shadow-md shadow-cyan-600/20 active:scale-95 flex items-center gap-1"
-                  title="افزودن به بانک تمرین با استخراج معنی دقیق فارسی"
-                >
-                  <span>🎯 + تمرین</span>
-                </button>
-              </>
-            )}
-            <button
-              type="button"
-              onClick={handleClearSelection}
-              className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
-              title="بستن منوی انتخاب"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* LOADING STATE WHILE CLOUD DATA IS SYNCING */}
       {isCloudLoading ? (
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-4 font-fa max-w-md mx-auto my-auto animate-in fade-in">
@@ -1171,6 +1088,16 @@ export const SpeakingScreen: React.FC<Props> = ({
                 </div>
               </button>
 
+              {/* Lesson Objectives Info "i" Button */}
+              <button
+                type="button"
+                onClick={() => setInfoModalScenario(activeScenario)}
+                className="p-2 rounded-xl bg-cyan-600/15 hover:bg-cyan-600/30 text-cyan-400 hover:text-cyan-300 border border-cyan-500/40 transition active:scale-95 shrink-0 flex items-center justify-center shadow-sm"
+                title="مشاهده اهداف جامع آموزشی این درس"
+              >
+                <Info className="w-4 h-4 stroke-[2.5]" />
+              </button>
+
               {/* Progress & 80% Mastery Action */}
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
@@ -1241,26 +1168,43 @@ export const SpeakingScreen: React.FC<Props> = ({
                 const isActive = sc.id === activeScenario.id || sc.titleFa === activeScenario.titleFa;
                 const isMastered = sc.status === 'completed';
                 return (
-                  <button
+                  <div
                     key={sc.id || idx}
-                    type="button"
-                    onClick={() => {
-                      if (onSelectCalendarScenario) onSelectCalendarScenario(sc);
-                      playChimeSound('ding');
-                    }}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition shrink-0 active:scale-95 ${
+                    className={`inline-flex items-center rounded-xl border text-xs font-bold transition shrink-0 ${
                       isActive
-                        ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-white shadow-md shadow-indigo-600/30 ring-1 ring-cyan-400'
+                        ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-white shadow-md shadow-indigo-600/30 ring-1 ring-cyan-400 border-transparent'
                         : isMastered
-                        ? 'bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300'
+                        ? 'bg-emerald-950/80 hover:bg-emerald-900 border-emerald-500/40 text-emerald-300'
                         : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80'
                     }`}
-                    title={sc.titleFa}
                   >
-                    <span className="text-xs">{sc.icon || '🎯'}</span>
-                    <span className="text-[11px] whitespace-nowrap">درس {idx + 1}</span>
-                    {isMastered && <Check className="w-3 h-3 text-emerald-400 stroke-[3]" />}
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onSelectCalendarScenario) onSelectCalendarScenario(sc);
+                        playChimeSound('ding');
+                      }}
+                      className="flex items-center gap-1.5 px-2.5 py-1 active:scale-95 transition"
+                      title={sc.titleFa}
+                    >
+                      <span className="text-xs">{sc.icon || '🎯'}</span>
+                      <span className="text-[11px] whitespace-nowrap">درس {idx + 1}</span>
+                      {isMastered && <Check className="w-3 h-3 text-emerald-400 stroke-[3]" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setInfoModalScenario(sc);
+                      }}
+                      className={`p-1 pl-1.5 pr-1.5 hover:bg-white/20 transition rounded-l-xl ${
+                        isActive ? 'text-white/90 hover:text-white' : 'text-cyan-400 hover:text-cyan-300'
+                      }`}
+                      title="مشاهده اهداف جامع آموزشی این درس"
+                    >
+                      <Info className="w-3 h-3 stroke-[2.5]" />
+                    </button>
+                  </div>
                 );
               })}
             </div>
@@ -1328,15 +1272,28 @@ export const SpeakingScreen: React.FC<Props> = ({
                           </div>
                         </div>
 
-                        <span className="shrink-0 text-[10px] font-bold">
-                          {isActive ? (
-                            <span className="px-1.5 py-0.5 rounded bg-indigo-500 text-white text-[9px]">فعال</span>
-                          ) : isDone ? (
-                            <span className="text-emerald-400 text-[10px]">✓ تسلط</span>
-                          ) : (
-                            <span className="text-slate-500 text-[9px]">انتخاب</span>
-                          )}
-                        </span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setInfoModalScenario(sc);
+                            }}
+                            className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 hover:text-cyan-300 border border-slate-700/80 transition"
+                            title="مشاهده اهداف آموزشی این درس"
+                          >
+                            <Info className="w-3.5 h-3.5 stroke-[2.5]" />
+                          </button>
+                          <span className="text-[10px] font-bold">
+                            {isActive ? (
+                              <span className="px-1.5 py-0.5 rounded bg-indigo-500 text-white text-[9px]">فعال</span>
+                            ) : isDone ? (
+                              <span className="text-emerald-400 text-[10px]">✓ تسلط</span>
+                            ) : (
+                              <span className="text-slate-500 text-[9px]">انتخاب</span>
+                            )}
+                          </span>
+                        </div>
                       </button>
                     );
                   })}
@@ -1353,20 +1310,34 @@ export const SpeakingScreen: React.FC<Props> = ({
                   {activeScenario.targetGrammarFa || activeScenario.targetGrammar || 'مکالمه روان نیتیو'}
                 </span>
               </div>
-              {targetClichesList.length > 0 && (
-                <div className="flex items-center gap-1 truncate shrink-0 max-w-[45%] text-[10px]">
-                  <span className="text-amber-400 shrink-0">اصطلاح:</span>
-                  <span className="text-amber-200 font-en truncate">
-                    {targetClichesList[0]?.replace(/\(.*?\)/g, '').trim()}
-                  </span>
-                </div>
-              )}
+              <div className="flex items-center gap-2 shrink-0">
+                {targetClichesList.length > 0 && (
+                  <div className="flex items-center gap-1 truncate max-w-[40%] text-[10px]">
+                    <span className="text-amber-400 shrink-0">اصطلاح:</span>
+                    <span className="text-amber-200 font-en truncate">
+                      {targetClichesList[0]?.replace(/\(.*?\)/g, '').trim()}
+                    </span>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setInfoModalScenario(activeScenario)}
+                  className="flex items-center gap-1 text-[10px] text-cyan-400 hover:text-cyan-300 font-bold hover:underline"
+                  title="مشاهده کامل اهداف آموزشی این درس"
+                >
+                  <Info className="w-3 h-3 stroke-[2.5]" />
+                  <span>اهداف جامع</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
           {/* Messages Scroll Area */}
-          <div className="flex-1 overflow-y-auto p-3 sm:p-4 pb-28 space-y-3.5">
+          <div
+            onScroll={handleMessagesScroll}
+            className="flex-1 overflow-y-auto p-3 sm:p-4 pb-32 space-y-3.5 relative"
+          >
             {messages.map((msg) => {
               const isUser = msg.role === 'user';
               const analysis = msg.analysis;
@@ -1666,6 +1637,98 @@ export const SpeakingScreen: React.FC<Props> = ({
                         </div>
                       )}
 
+                      {/* Sentence Patterns & Formulas (الگوها و فرمول‌های کاربردی جمله‌سازی نیتیو) */}
+                      {analysis.sentencePatterns && analysis.sentencePatterns.length > 0 && (
+                        <div className="p-2.5 sm:p-3 rounded-2xl bg-slate-950/95 border border-indigo-500/30 text-xs space-y-2">
+                          <div className="flex items-center justify-between gap-2 pb-1 border-b border-slate-800">
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400">
+                              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                              <span>الگوها و فرمول‌های جمله‌سازی نیتیو (Sentence Patterns):</span>
+                            </div>
+                            <span className="text-[10px] text-slate-400">برای سناریوسازی در منوی تمرین</span>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            {analysis.sentencePatterns.map((pat, pIdx) => {
+                              const patKey = `${msg.id}-pat-${pIdx}`;
+                              return (
+                                <div
+                                  key={pIdx}
+                                  className="p-2 sm:p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-cyan-500/40 transition flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm"
+                                >
+                                  <div className="space-y-0.5 flex-1 min-w-0">
+                                    <div className="font-en font-bold text-xs sm:text-sm text-cyan-300 break-words dir-ltr text-left">
+                                      {pat.pattern}
+                                    </div>
+                                    <div className="text-[11px] text-slate-300 font-fa leading-relaxed">
+                                      <span className="text-white font-medium">{pat.meaningFa}</span>
+                                      {pat.slotExplanation && (
+                                        <span className="text-[10px] text-slate-400 mr-1.5 font-fa">
+                                          ({pat.slotExplanation})
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-1 shrink-0 self-end sm:self-center">
+                                    <button
+                                      type="button"
+                                      onClick={() => playAudioText(pat.pattern.replace(/[\[\]]/g, ''))}
+                                      className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-cyan-300 transition"
+                                      title="شنیدن تلفظ"
+                                    >
+                                      <Volume2 className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        onAddClicheToPractice(
+                                          pat.pattern,
+                                          pat.meaningFa,
+                                          analysis.nativeAlternative
+                                        );
+                                        setAddedCliches((prev) => ({ ...prev, [patKey]: true }));
+                                        playChimeSound('success');
+                                      }}
+                                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1 active:scale-95 ${
+                                        addedCliches[patKey]
+                                          ? 'bg-emerald-600/40 text-emerald-200 border border-emerald-500/50'
+                                          : 'bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-300 border border-cyan-500/30'
+                                      }`}
+                                      title="افزودن این فرمول جمله‌سازی به منوی تمرین"
+                                    >
+                                      <Plus className="w-3 h-3" />
+                                      <span>{addedCliches[patKey] ? '✓ تمرین' : 'تمرین'}</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        onAddWordToLeitner(
+                                          pat.pattern,
+                                          analysis.nativeAlternative,
+                                          pat.meaningFa
+                                        );
+                                        setAddedLeitnerPhrases((prev) => ({ ...prev, [patKey]: true }));
+                                        playChimeSound('ding');
+                                      }}
+                                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1 active:scale-95 ${
+                                        addedLeitnerPhrases[patKey]
+                                          ? 'bg-purple-600/40 text-purple-200 border border-purple-500/50'
+                                          : 'bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 border border-purple-500/30'
+                                      }`}
+                                      title="افزودن این فرمول به لایتنر"
+                                    >
+                                      <Plus className="w-3 h-3" />
+                                      <span>{addedLeitnerPhrases[patKey] ? '✓ لایتنر' : 'لایتنر'}</span>
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Pedagogical Corrections Preview (if grammar issues identified) */}
                       {analysis.categorizedIssues && analysis.categorizedIssues.length > 0 && (
                         <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs space-y-1.5">
@@ -1737,6 +1800,123 @@ export const SpeakingScreen: React.FC<Props> = ({
 
             <div ref={messagesEndRef} />
           </div>
+
+          {/* FLOATING SCROLL TO BOTTOM BUTTON */}
+          {showScrollBottom && (
+            <button
+              type="button"
+              onClick={scrollToBottom}
+              className="fixed bottom-24 right-4 sm:right-8 z-30 flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-indigo-600/95 hover:bg-indigo-500 text-white text-xs font-bold shadow-2xl border border-indigo-400/50 backdrop-blur-md transition-all active:scale-95 animate-in fade-in slide-in-from-bottom-2 group"
+              title="اسکرول به انتهای مکالمه"
+            >
+              <ChevronDown className="w-4 h-4 text-cyan-300 group-hover:translate-y-0.5 transition-transform" />
+              <span>برو به پایین</span>
+            </button>
+          )}
+
+          {/* FLOATING ERGONOMIC BOTTOM DOCK ON TEXT SELECTION */}
+          {selectedText && (
+            <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[95%] max-w-lg z-40 bg-slate-900/98 border border-cyan-500/60 rounded-2xl shadow-2xl p-2.5 sm:p-3 backdrop-blur-md animate-in slide-in-from-bottom-3 space-y-2">
+              {/* Top Row: Selected text preview + Audio + Close */}
+              <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-slate-800">
+                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                  <span className="text-[10px] text-slate-400 font-bold shrink-0">متن انتخاب‌شده:</span>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-950 border border-cyan-500/40 min-w-0 flex-1 shadow-inner">
+                    <span className="font-en font-black text-cyan-300 text-xs sm:text-sm truncate block">
+                      "{selectedText}"
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => playAudioText(selectedText)}
+                      className="p-1 rounded-lg text-slate-400 hover:text-cyan-300 hover:bg-slate-800 transition shrink-0"
+                      title="شنیدن تلفظ نیتیو"
+                    >
+                      <Volume2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleClearSelection}
+                  className="p-1 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition shrink-0"
+                  title="بستن منوی انتخاب"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Bottom Row: Fixed thumb controls (coordinates NEVER jump when text expands!) */}
+              <div className="flex items-center justify-between gap-2">
+                {/* Target actions: Leitner and Practice */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {textToolbarFeedback ? (
+                    <span className="text-emerald-300 font-bold text-xs px-2.5 py-1 rounded-xl bg-emerald-950/80 border border-emerald-500/40 animate-in fade-in">
+                      {textToolbarFeedback}
+                    </span>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onAddWordToLeitner(selectedText, selectedTextContext);
+                          setTextToolbarFeedback('به لایتنر افزوده شد ✓');
+                          playChimeSound('ding');
+                          setTimeout(() => {
+                            handleClearSelection();
+                          }, 1400);
+                        }}
+                        className="px-2.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-[10.5px] transition shadow-md shadow-purple-600/20 active:scale-95 flex items-center gap-1"
+                        title="افزودن به جعبه لایتنر"
+                      >
+                        <span>🧠 + لایتنر</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onAddClicheToPractice(selectedText, '', selectedTextContext);
+                          setTextToolbarFeedback('به تمرینات افزوده شد ✓');
+                          playChimeSound('success');
+                          setTimeout(() => {
+                            handleClearSelection();
+                          }, 1400);
+                        }}
+                        className="px-2.5 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-[10.5px] transition shadow-md shadow-cyan-600/20 active:scale-95 flex items-center gap-1"
+                        title="افزودن به بانک تمرینات"
+                      >
+                        <span>🎯 + تمرین</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* Expansion controls: FIXED on right side, right under thumb, coordinates never shift! */}
+                {selectedTokensContext && (
+                  <div className="flex items-center gap-1 bg-slate-800/90 p-0.5 rounded-xl border border-slate-700 shrink-0">
+                    {selectedTokensContext.span[1] > selectedTokensContext.span[0] && (
+                      <button
+                        type="button"
+                        onClick={handleShrinkSelection}
+                        className="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 transition active:scale-95"
+                        title="حذف آخرین کلمه"
+                      >
+                        <Minus className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleExpandSelection}
+                      className="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold transition flex items-center gap-1 active:scale-95 shadow-sm"
+                      title="افزودن کلمه بعدی به انتخاب برای اصطلاحات چندکلمه‌ای"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>کلمه بعد</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -2025,6 +2205,31 @@ export const SpeakingScreen: React.FC<Props> = ({
           }
         }}
         cefrLevel={cefrLevel}
+      />
+
+      {/* Lesson Comprehensive Objectives Modal */}
+      <LessonObjectivesModal
+        isOpen={Boolean(infoModalScenario)}
+        onClose={() => setInfoModalScenario(null)}
+        scenario={infoModalScenario}
+        lessonIndex={
+          infoModalScenario
+            ? (infoModalScenario as CalendarScenario).dayIndex ||
+              calendar.findIndex((c) => c.id === infoModalScenario.id) + 1 ||
+              1
+            : 1
+        }
+        totalLessons={calendar.length || 10}
+        onSelectAndStart={(sc) => {
+          if (onSelectCalendarScenario) {
+            onSelectCalendarScenario(sc as CalendarScenario);
+          }
+          setInfoModalScenario(null);
+        }}
+        onAddClicheToPractice={(cliche, meaningFa) => {
+          onAddClicheToPractice(cliche, meaningFa);
+        }}
+        isCurrentlyActive={infoModalScenario?.id === activeScenario.id}
       />
     </div>
   );

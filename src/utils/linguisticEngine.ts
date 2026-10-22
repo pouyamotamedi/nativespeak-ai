@@ -1149,6 +1149,18 @@ export function evaluateSpeakingTextLocally(
     nativeAlternativesList: alternativesList,
     nativeCliche,
     nativeClicheMeaningFa,
+    sentencePatterns: [
+      {
+        pattern: `X tries to ${nativeCliche} in [situation].`,
+        meaningFa: `استفاده از الگوی اصطلاحی ${nativeClicheMeaningFa || nativeCliche}`,
+        slotExplanation: 'X: شخص یا فاعل، situation: موقعیت و شرایط وقوع',
+      },
+      {
+        pattern: `Whenever X happens, I always make sure to ${nativeCliche}.`,
+        meaningFa: `بیان واکنش همیشگی با الگوی ${nativeCliche}`,
+        slotExplanation: 'X: شرط یا اتفاق محرک',
+      },
+    ],
     repetitionChallengePromptFa: `حالا سعی کن با استفاده از عبارت نیتیو («${nativeCliche}») چالش مربی را پاسخ بدهی و صحبتت را تکمیل کنی.`,
     inCharacterChallenge,
     pronunciationIssues: dynamicPronunciationIssues,

@@ -15,8 +15,10 @@ import {
   Compass,
   Filter,
   Volume2,
+  Info,
 } from 'lucide-react';
 import { playChimeSound } from '../utils/audio';
+import { LessonObjectivesModal } from './LessonObjectivesModal';
 
 interface Props {
   isOpen: boolean;
@@ -50,6 +52,7 @@ export const ScenarioCalendarModal: React.FC<Props> = ({
   onOpenAssessment,
 }) => {
   const [levelFilter, setLevelFilter] = useState<'all' | 'B1' | 'B2' | 'C1' | 'C2'>('all');
+  const [selectedInfoScenario, setSelectedInfoScenario] = useState<CalendarScenario | null>(null);
 
   if (!isOpen) return null;
 
@@ -266,24 +269,39 @@ export const ScenarioCalendarModal: React.FC<Props> = ({
                       </div>
                     </div>
 
-                    {/* Launch Scenario Button */}
-                    <button
-                      onClick={() => {
-                        onSelectCalendarScenario(item);
-                        playChimeSound('ding');
-                        onClose();
-                      }}
-                      className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold transition shadow-sm active:scale-95 shrink-0 ${
-                        isSelected
-                          ? 'bg-emerald-600 text-white'
-                          : isCurrent
-                          ? 'bg-amber-400 hover:bg-amber-300 text-slate-950 font-black shadow-amber-400/20 shadow-md'
-                          : 'bg-indigo-600 hover:bg-indigo-500 text-white'
-                      }`}
-                    >
-                      <Play className="w-3.5 h-3.5 fill-current" />
-                      <span>{isSelected ? 'سناریوی جاری' : 'شروع تمرین سناریو'}</span>
-                    </button>
+                    {/* Actions: Info & Launch */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedInfoScenario(item);
+                        }}
+                        className="p-2.5 rounded-xl bg-cyan-600/15 hover:bg-cyan-600/30 text-cyan-400 hover:text-cyan-300 border border-cyan-500/30 transition shadow-sm active:scale-95 flex items-center justify-center"
+                        title="مشاهده اهداف جامع آموزشی این سناریو"
+                      >
+                        <Info className="w-4 h-4 stroke-[2.5]" />
+                      </button>
+
+                      {/* Launch Scenario Button */}
+                      <button
+                        onClick={() => {
+                          onSelectCalendarScenario(item);
+                          playChimeSound('ding');
+                          onClose();
+                        }}
+                        className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold transition shadow-sm active:scale-95 shrink-0 ${
+                          isSelected
+                            ? 'bg-emerald-600 text-white'
+                            : isCurrent
+                            ? 'bg-amber-400 hover:bg-amber-300 text-slate-950 font-black shadow-amber-400/20 shadow-md'
+                            : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                        }`}
+                      >
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                        <span>{isSelected ? 'سناریوی جاری' : 'شروع تمرین سناریو'}</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Educational Objectives: Grammar, Clichés & Pronunciation */}
@@ -348,6 +366,21 @@ export const ScenarioCalendarModal: React.FC<Props> = ({
           )}
         </div>
       </div>
+
+      {/* Comprehensive Lesson Objectives Modal */}
+      <LessonObjectivesModal
+        isOpen={Boolean(selectedInfoScenario)}
+        onClose={() => setSelectedInfoScenario(null)}
+        scenario={selectedInfoScenario}
+        lessonIndex={selectedInfoScenario?.dayIndex || 1}
+        totalLessons={calendar.length || 10}
+        onSelectAndStart={(sc) => {
+          onSelectCalendarScenario(sc as CalendarScenario);
+          setSelectedInfoScenario(null);
+          onClose();
+        }}
+        isCurrentlyActive={selectedInfoScenario?.id === activeScenario.id}
+      />
     </div>
   );
 };
