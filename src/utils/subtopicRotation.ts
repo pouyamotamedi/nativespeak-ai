@@ -817,10 +817,10 @@ export function trackConversationDriftAndRotateSubtopic(params: {
    - Craft your probing question in this new situation so that formulating a natural, native answer REQUIRES using the target grammar structure and offers a golden opportunity to produce "${primaryTargetCliche}".
    - DO NOT make it feel like a grammar drill—it must flow as a realistic human dilemma in this new setting.
 
-5. SENTENCE PATTERNS TO MODEL & ELICIT IN THIS NEW SETTING:
-   Derive at least two of your returned "sentencePatterns" from how a native speaker would address this new challenge:
-   Pattern A: "${situation.sentencePatternTemplates[0]?.pattern || 'X is gradually fading.'}" (Persian: ${situation.sentencePatternTemplates[0]?.meaningFa || ''})
-   Pattern B: "${situation.sentencePatternTemplates[1]?.pattern || 'X tries to steer clear of Y.'}" (Persian: ${situation.sentencePatternTemplates[1]?.meaningFa || ''})
+5. STRICT ISOLATION OF "sentencePatterns" (فرمول‌های جمله‌سازی منحصراً از مفهوم کاربر استخراج شوند):
+   - The returned "sentencePatterns" MUST ALWAYS BE DERIVED DIRECTLY FROM "nativeAlternative" (how a native speaker would express the exact thought and concept THE USER just uttered)!
+   - NEVER inject sentence patterns from the new rotated situation (e.g. do NOT give workout/gym patterns when the user was speaking about dog phobia, work, or priorities)!
+   - Sentence patterns are reusable grammatical/idiomatic frames (using X, Y, Z or [bracketed slots]) that empower the learner to reuse the native rewrite in various contexts.
 
 6. IN "inCharacterChallenge":
    - "probingQuestionEn": The sharp, immersive question in this NEW setting that demands an answer using the target grammar.

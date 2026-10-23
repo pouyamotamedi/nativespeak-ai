@@ -12,11 +12,14 @@ import {
   MessageSquare,
   Play,
   Layers,
-  Award,
-  Info,
   BookOpen,
+  CheckCheck,
+  AlertTriangle,
+  Lightbulb,
 } from 'lucide-react';
 import { playAudioText, playChimeSound } from '../utils/audio';
+import { C2_SCIENTIFIC_CHECKLIST } from '../data/c2Checklist';
+import { SCENARIO_BLUEPRINTS } from '../utils/c2ScenarioEngine';
 
 interface Props {
   isOpen: boolean;
@@ -44,7 +47,62 @@ export const LessonObjectivesModal: React.FC<Props> = ({
 
   if (!isOpen || !scenario) return null;
 
-  const targetCliches = scenario.targetCliches || [];
+  // 1. Locate authentic C2 Scientific Checklist item
+  const checklistId = (scenario as any).targetChecklistItemId;
+  const checklistItem = C2_SCIENTIFIC_CHECKLIST.find(
+    (c) =>
+      c.id === checklistId ||
+      (scenario.id && scenario.id.includes(c.id)) ||
+      c.titleEn.toLowerCase() === scenario.targetGrammar?.toLowerCase() ||
+      c.titleFa === scenario.targetGrammarFa ||
+      (scenario.titleFa && scenario.titleFa.includes(c.titleFa))
+  );
+
+  // 2. Locate authentic blueprint details
+  const blueprintKey = checklistId || checklistItem?.id || (scenario.id && SCENARIO_BLUEPRINTS[scenario.id] ? scenario.id : null);
+  const blueprint = blueprintKey ? SCENARIO_BLUEPRINTS[blueprintKey] : null;
+
+  // 3. Resolve dynamic & authentic objectives
+  const effectiveGrammarTitle =
+    scenario.targetGrammar ||
+    checklistItem?.titleEn ||
+    blueprint?.title ||
+    'Spoken Fluency & Accuracy';
+
+  const effectiveGrammarFa =
+    scenario.targetGrammarFa ||
+    checklistItem?.descriptionFa ||
+    blueprint?.titleFa ||
+    'تسلط بر ساختارهای محاوره‌ای و حذف خطاهای ترجمه‌ای زبان مادری';
+
+  // Resolve target clichés
+  let resolvedCliches: string[] = [];
+  if (Array.isArray(scenario.targetCliches) && scenario.targetCliches.length > 0) {
+    resolvedCliches = scenario.targetCliches;
+  } else if (blueprint?.targetCliches && blueprint.targetCliches.length > 0) {
+    resolvedCliches = blueprint.targetCliches;
+  } else if (checklistItem?.exampleGood) {
+    resolvedCliches = [
+      `${checklistItem.titleEn} (ساختار استاندارد نیتیو)`,
+      'on the same page (هم‌نظر و هماهنگ)',
+    ];
+  }
+
+  // Resolve target vocabulary
+  const resolvedVocabulary: string[] =
+    (scenario as any).targetVocabulary || blueprint?.targetVocabulary || [];
+
+  // Resolve pronunciation target
+  const effectivePronunciation =
+    scenario.targetPronunciation ||
+    blueprint?.targetPronunciation ||
+    checklistItem?.criteriaForMasteryFa ||
+    'لهجه استاندارد جنرال امریکن: Flap-T، کاهش مصوت‌ها (Schwa) و پیوستگی کلام';
+
+  // Resolve opening line / starter
+  const effectiveStarter = scenario.starter || blueprint?.starter || '';
+  const effectiveStarterFa = scenario.starterFa || blueprint?.starterFa || '';
+
   const targetWeaknesses = scenario.activeWeaknessesInjected || [];
   const dayIndex = (scenario as CalendarScenario).dayIndex || lessonIndex;
   const isMastered = (scenario as CalendarScenario).status === 'completed';
@@ -52,7 +110,6 @@ export const LessonObjectivesModal: React.FC<Props> = ({
   const handleAddCliche = (cliche: string) => {
     if (addedCliches[cliche]) return;
     if (onAddClicheToPractice) {
-      // Extract clean cliché and meaning if combined
       let cleanCliche = cliche;
       let meaning = 'کلیشه کلیدی سناریو';
       const parenMatch = cliche.match(/^(.*?)\((.*?)\)/);
@@ -67,9 +124,9 @@ export const LessonObjectivesModal: React.FC<Props> = ({
   };
 
   const handlePlayStarter = () => {
-    if (!scenario.starter) return;
+    if (!effectiveStarter) return;
     setIsPlayingAudio(true);
-    playAudioText(scenario.starter, {
+    playAudioText(effectiveStarter, {
       lang: 'en-US',
       rate: 0.95,
       onEnd: () => setIsPlayingAudio(false),
@@ -83,16 +140,16 @@ export const LessonObjectivesModal: React.FC<Props> = ({
         <div className="p-4 sm:p-5 border-b border-slate-800 bg-slate-950/90 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <span className="text-3xl p-2.5 rounded-2xl bg-cyan-600/15 border border-cyan-500/30 text-cyan-400 shrink-0">
-              {scenario.icon || '🎯'}
+              {scenario.icon || blueprint?.icon || '🎯'}
             </span>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-[11px] font-bold text-cyan-400 font-en">
                   Lesson #{dayIndex} of {totalLessons}
                 </span>
-                {scenario.targetLevel && (
+                {(scenario.targetLevel || checklistItem?.cefrLevel) && (
                   <span className="text-[9px] px-2 py-0.5 rounded-md bg-indigo-950 text-indigo-300 border border-indigo-500/30 font-en font-bold">
-                    Target: {scenario.targetLevel}
+                    Target: {scenario.targetLevel || checklistItem?.cefrLevel}
                   </span>
                 )}
                 {isMastered && (
@@ -108,10 +165,10 @@ export const LessonObjectivesModal: React.FC<Props> = ({
                 )}
               </div>
               <h3 className="text-base font-black text-white mt-1 truncate">
-                {scenario.titleFa}
+                {scenario.titleFa || blueprint?.titleFa}
               </h3>
               <p className="text-xs text-slate-400 font-en truncate mt-0.5">
-                {scenario.title}
+                {scenario.title || blueprint?.title}
               </p>
             </div>
           </div>
@@ -143,7 +200,7 @@ export const LessonObjectivesModal: React.FC<Props> = ({
           </div>
 
           {/* Objective 1: Target Grammar & Structural Patterns */}
-          <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
+          <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-cyan-300 flex items-center gap-1.5">
                 <Target className="w-4 h-4 text-cyan-400" />
@@ -153,16 +210,48 @@ export const LessonObjectivesModal: React.FC<Props> = ({
                 محور اصلی درس
               </span>
             </div>
-            <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800/90 space-y-1.5">
+            <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800/90 space-y-2">
               <div className="text-xs font-bold text-white">
-                {scenario.targetGrammarFa || 'تقویت روانی کلام و ساختارهای محاوره‌ای'}
+                {effectiveGrammarFa}
               </div>
-              <div className="text-xs font-en text-cyan-200 bg-slate-950/70 p-2 rounded-lg border border-cyan-500/20">
-                {scenario.targetGrammar || 'Spoken Fluency and Conversational Mastery'}
+              <div className="text-xs font-en text-cyan-200 bg-slate-950/70 p-2 rounded-lg border border-cyan-500/20 font-bold">
+                {effectiveGrammarTitle}
               </div>
-              <p className="text-[11px] text-slate-400 leading-relaxed">
-                مربی هوش مصنوعی با طرح سناریوها و پرسش‌های هدفمند، شما را هدایت می‌کند تا افکار خود را بدون ترجمه لغت به لغت در قالب این الگوی گرامری بیان کنید.
-              </p>
+
+              {/* Real Correct vs Incorrect Examples from C2 Checklist */}
+              {checklistItem && (checklistItem.exampleGood || checklistItem.exampleBad) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                  {checklistItem.exampleGood && (
+                    <div className="p-2.5 rounded-xl bg-emerald-950/50 border border-emerald-500/30 space-y-1">
+                      <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1">
+                        <CheckCheck className="w-3.5 h-3.5" />
+                        <span>فرم صحیح و نیتیو (Correct American Form):</span>
+                      </span>
+                      <p className="text-xs font-en text-emerald-100 font-medium">
+                        "{checklistItem.exampleGood}"
+                      </p>
+                    </div>
+                  )}
+                  {checklistItem.exampleBad && (
+                    <div className="p-2.5 rounded-xl bg-rose-950/40 border border-rose-500/30 space-y-1">
+                      <span className="text-[10px] font-bold text-rose-400 flex items-center gap-1">
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        <span>اشتباه تداخل زبان مادری (Persian L1 Mistake to Avoid):</span>
+                      </span>
+                      <p className="text-xs font-en text-rose-200 font-medium line-through decoration-rose-400">
+                        "{checklistItem.exampleBad}"
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {checklistItem?.criteriaForMasteryFa && (
+                <div className="p-2 rounded-lg bg-indigo-950/40 border border-indigo-500/20 text-[11px] text-indigo-200 flex items-start gap-1.5 mt-1">
+                  <Lightbulb className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                  <span>معیار سنجش تسلط: {checklistItem.criteriaForMasteryFa}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -171,16 +260,20 @@ export const LessonObjectivesModal: React.FC<Props> = ({
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
                 <Sparkles className="w-4 h-4 text-amber-400" />
-                <span>۲. کلیشه‌ها و اصطلاحات اصیل آمریکایی (Native Clichés to Master):</span>
+                <span>۲. کلیشه‌ها و اصطلاحات اصیل آمریکایی این درس (Native Clichés to Master):</span>
               </span>
               <span className="text-[10px] text-amber-400/80 font-bold">
-                {targetCliches.length} عبارت کلیدی
+                {resolvedCliches.length} عبارت کلیدی
               </span>
             </div>
-            {targetCliches.length > 0 ? (
+            {resolvedCliches.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {targetCliches.map((cliche, idx) => {
+                {resolvedCliches.map((cliche, idx) => {
                   const isAdded = addedCliches[cliche];
+                  const parenMatch = cliche.match(/^(.*?)\((.*?)\)/);
+                  const displayCliche = parenMatch ? parenMatch[1].trim() : cliche;
+                  const displayMeaning = parenMatch ? parenMatch[2].trim() : 'اصطلاح پرکاربرد مکالمه آمریکایی';
+
                   return (
                     <div
                       key={idx}
@@ -188,10 +281,10 @@ export const LessonObjectivesModal: React.FC<Props> = ({
                     >
                       <div className="min-w-0">
                         <span className="font-en font-bold text-amber-200 block truncate text-xs">
-                          {cliche}
+                          {displayCliche}
                         </span>
-                        <span className="text-[10.5px] text-slate-400 block mt-0.5 truncate">
-                          اصطلاح طبیعی گفتگوی آمریکایی
+                        <span className="text-[10.5px] text-slate-400 block mt-0.5 truncate font-fa">
+                          {displayMeaning}
                         </span>
                       </div>
                       <button
@@ -213,7 +306,7 @@ export const LessonObjectivesModal: React.FC<Props> = ({
                         ) : (
                           <>
                             <Plus className="w-3 h-3 text-amber-400" />
-                            <span>تمرین</span>
+                            <span>+ تمرین</span>
                           </>
                         )}
                       </button>
@@ -228,15 +321,35 @@ export const LessonObjectivesModal: React.FC<Props> = ({
             )}
           </div>
 
-          {/* Objective 3: Acoustic Phonetics & Accent Focus */}
+          {/* Objective 3: Key Collocations & Target Vocabulary */}
+          {resolvedVocabulary.length > 0 && (
+            <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
+              <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                <BookOpen className="w-4 h-4 text-emerald-400" />
+                <span>۳. واژگان همنشین و کالوکیشن‌های هدف (Target Collocations):</span>
+              </span>
+              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                {resolvedVocabulary.map((vocab, idx) => (
+                  <span
+                    key={idx}
+                    className="text-[11px] px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-200 font-en font-medium"
+                  >
+                    {vocab}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Objective 4: Acoustic Phonetics & Accent Focus */}
           <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
             <span className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
               <Volume2 className="w-4 h-4 text-indigo-400" />
-              <span>۳. تمرکز آوایی و لهجه آمریکایی (Acoustic Phonetics & Accent):</span>
+              <span>۴. تمرکز آوایی و لهجه آمریکایی (Acoustic Phonetics & Accent):</span>
             </span>
             <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800/90 space-y-1">
               <div className="text-xs font-bold text-slate-200">
-                {scenario.targetPronunciation || 'General American accent: Flap-T, Rhotic R & Connected Speech'}
+                {effectivePronunciation}
               </div>
               <p className="text-[11px] text-slate-400 leading-relaxed mt-1">
                 سیستم تحلیل صوت در صورت ضبط ویس، تلفظ شما را روی این شاخص‌ها و کاهش مصوت‌ها (Schwa) ارزیابی کرده و خطاهای انتقال زبان مادری را گوشزد می‌کند.
@@ -244,12 +357,12 @@ export const LessonObjectivesModal: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* Objective 4: Injected Personalized Weaknesses (if any) */}
+          {/* Objective 5: Injected Personalized Weaknesses (if any) */}
           {targetWeaknesses.length > 0 && (
             <div className="p-3.5 rounded-2xl bg-amber-950/30 border border-amber-500/30 space-y-2">
               <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
                 <ShieldAlert className="w-4 h-4 text-amber-400" />
-                <span>۴. ترمیم نقاط ضعف اختصاصی ثبت‌شده شما:</span>
+                <span>۵. ترمیم نقاط ضعف اختصاصی ثبت‌شده شما:</span>
               </span>
               <div className="flex flex-wrap gap-1.5 pt-0.5">
                 {targetWeaknesses.map((w, idx) => (
@@ -267,24 +380,24 @@ export const LessonObjectivesModal: React.FC<Props> = ({
             </div>
           )}
 
-          {/* Objective 5: Real-world Context & Social Dynamics */}
+          {/* Objective 6: Real-world Context & Social Dynamics */}
           <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2.5">
             <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
               <Layers className="w-4 h-4 text-slate-400" />
-              <span>۵. بافت موقعیت و نقش‌های مکالمه:</span>
+              <span>۶. بافت موقعیت و نقش‌های مکالمه:</span>
             </span>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
               <div className="p-2 rounded-xl bg-slate-900 border border-slate-800">
                 <span className="text-[10px] text-slate-400 block">نقش شما:</span>
-                <span className="font-bold text-white block mt-0.5 truncate">{scenario.userRole || 'Learner'}</span>
+                <span className="font-bold text-white block mt-0.5 truncate">{scenario.userRole || blueprint?.userRole || 'Learner'}</span>
               </div>
               <div className="p-2 rounded-xl bg-slate-900 border border-slate-800">
                 <span className="text-[10px] text-slate-400 block">نقش مربی:</span>
-                <span className="font-bold text-white block mt-0.5 truncate">{scenario.aiRole || 'Partner'}</span>
+                <span className="font-bold text-white block mt-0.5 truncate">{scenario.aiRole || blueprint?.aiRole || 'Partner'}</span>
               </div>
               <div className="p-2 rounded-xl bg-slate-900 border border-slate-800">
                 <span className="text-[10px] text-slate-400 block">رابطه:</span>
-                <span className="font-bold text-white block mt-0.5 truncate">{scenario.relationship || 'Friend'}</span>
+                <span className="font-bold text-white block mt-0.5 truncate">{scenario.relationship || blueprint?.relationship || 'Friend'}</span>
               </div>
               <div className="p-2 rounded-xl bg-slate-900 border border-slate-800">
                 <span className="text-[10px] text-slate-400 block">سطح رسمیت:</span>
@@ -293,15 +406,15 @@ export const LessonObjectivesModal: React.FC<Props> = ({
                 </span>
               </div>
             </div>
-            {((scenario as any).descriptionFa || (scenario as any).context) && (
+            {(blueprint?.context || (scenario as any).descriptionFa || (scenario as any).context) && (
               <p className="text-xs text-slate-300 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800/80 leading-relaxed">
-                {(scenario as any).descriptionFa || (scenario as any).context}
+                {blueprint?.context || (scenario as any).descriptionFa || (scenario as any).context}
               </p>
             )}
           </div>
 
           {/* Section: Starter Prompt */}
-          {scenario.starter && (
+          {effectiveStarter && (
             <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
@@ -311,19 +424,19 @@ export const LessonObjectivesModal: React.FC<Props> = ({
                 <button
                   type="button"
                   onClick={handlePlayStarter}
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-[10.5px] transition"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-[10.5px] font-bold transition active:scale-95 shadow-sm"
                   title="پخش صوتی آغازگر"
                 >
                   <Volume2 className={`w-3.5 h-3.5 ${isPlayingAudio ? 'animate-bounce text-cyan-400' : ''}`} />
                   <span>{isPlayingAudio ? 'در حال پخش...' : 'پخش صدا'}</span>
                 </button>
               </div>
-              <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 font-en text-xs text-slate-100 leading-relaxed">
-                "{scenario.starter}"
+              <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 font-en text-xs text-slate-100 leading-relaxed font-medium">
+                "{effectiveStarter}"
               </div>
-              {scenario.starterFa && (
-                <div className="text-[11px] text-slate-400 font-fa px-1">
-                  ترجمه: «{scenario.starterFa}»
+              {effectiveStarterFa && (
+                <div className="text-[11px] text-slate-400 font-fa px-1 leading-relaxed">
+                  ترجمه: «{effectiveStarterFa}»
                 </div>
               )}
             </div>

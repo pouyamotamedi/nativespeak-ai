@@ -1064,13 +1064,13 @@ export default function App() {
         >
           <header className="px-3 py-2 sm:px-5 sm:py-2.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between shrink-0 gap-2">
           {/* Brand & CEFR Level Badge */}
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-cyan-500 flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0">
               <Mic className="w-4 h-4 text-white" />
             </div>
-            <div className="min-w-0">
+            <div className="shrink-0">
               <div className="flex items-center gap-1.5">
-                <h1 className="text-sm font-black text-white tracking-tight truncate">NativeSpeak</h1>
+                <h1 className="text-sm font-black text-white tracking-tight whitespace-nowrap">NativeSpeak</h1>
                 <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-en hidden md:inline">
                   AI Coach
                 </span>
@@ -1096,10 +1096,10 @@ export default function App() {
 
           {/* Right Header Controls — Clean, spacious, unified with Hamburger Menu */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Quick Persona Pill */}
+            {/* Quick Persona Pill (hidden on very narrow mobile to save space, accessible via Menu) */}
             <button
               onClick={() => setIsPersonaModalOpen(true)}
-              className="flex items-center gap-1 p-1 sm:px-2 sm:py-1 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-white transition active:scale-95"
+              className="hidden sm:flex items-center gap-1 p-1 sm:px-2 sm:py-1 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-white transition active:scale-95 shrink-0"
               title={`مربی فعال: ${persona.name} (کلیک برای تغییر)`}
             >
               <span className="text-sm">{persona.avatar}</span>
@@ -1108,7 +1108,7 @@ export default function App() {
 
             {/* Streak Indicator */}
             <div
-              className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-bold"
+              className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-bold shrink-0"
               title="روزهای متوالی تمرین"
             >
               <Flame className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
@@ -1116,7 +1116,7 @@ export default function App() {
             </div>
 
             {/* PWA Button (sm+ screens) */}
-            <div className="hidden md:block">
+            <div className="hidden md:block shrink-0">
               <PWAInstallButton />
             </div>
 
@@ -1125,7 +1125,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setIsAuthModalOpen(true)}
-                className="flex items-center gap-1.5 py-1 px-2 sm:px-2.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-xs font-bold transition active:scale-95"
+                className="flex items-center gap-1.5 py-1 px-2 sm:px-2.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-xs font-bold transition active:scale-95 shrink-0"
                 title={`حساب ابری: ${currentUser.email || 'متصل'} (کلیک برای مدیریت)`}
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
@@ -1136,7 +1136,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setIsAuthModalOpen(true)}
-                className="flex items-center gap-1.5 py-1 px-2.5 sm:px-3 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs transition shadow-sm active:scale-95"
+                className="flex items-center gap-1.5 py-1 px-2.5 sm:px-3 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs transition shadow-sm active:scale-95 shrink-0"
                 title="ورود به حساب کاربری برای بازیابی و همگام‌سازی ابری"
               >
                 <UserIcon className="w-3.5 h-3.5 shrink-0" />
@@ -1147,7 +1147,7 @@ export default function App() {
             {/* Frame View Toggle (desktop only) */}
             <button
               onClick={() => setIsMobileFrame(!isMobileFrame)}
-              className="hidden sm:inline-flex p-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition"
+              className="hidden sm:inline-flex p-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition shrink-0"
               title={isMobileFrame ? 'نمای تمام‌صفحه' : 'نمای گوشی اندروید'}
             >
               {isMobileFrame ? (
@@ -1161,7 +1161,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(true)}
-              className="flex items-center gap-1.5 py-1 px-2.5 sm:px-3 sm:py-1.5 rounded-xl bg-gradient-to-r from-indigo-600/30 to-cyan-600/20 hover:from-indigo-600/40 hover:to-cyan-600/30 border border-indigo-500/40 text-white font-bold text-xs transition active:scale-95 shadow-sm"
+              className="flex items-center gap-1.5 py-1 px-2.5 sm:px-3 sm:py-1.5 rounded-xl bg-gradient-to-r from-indigo-600/30 to-cyan-600/20 hover:from-indigo-600/40 hover:to-cyan-600/30 border border-indigo-500/40 text-white font-bold text-xs transition active:scale-95 shadow-sm shrink-0"
               title="منوی اصلی و تنظیمات حساب"
               aria-label="منوی اصلی و تنظیمات حساب"
             >

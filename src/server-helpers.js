@@ -1,10 +1,3 @@
-// server.app.ts
-import express from "express";
-import path from "path";
-import { fileURLToPath } from "url";
-import dotenv from "dotenv";
-import { GoogleGenAI } from "@google/genai";
-
 // src/utils/linguisticEngine.ts
 var KNOWN_PRACTICE_SITUATIONS = {
   "call it a day": [
@@ -1043,9 +1036,1214 @@ function evaluateSpeakingTextLocally(userText, scenario, persona) {
     analysis
   };
 }
+function generateAdaptiveScenarioFromWeaknesses(activeWeaknesses, dayIndex) {
+  const topWeakness = activeWeaknesses.length > 0 ? activeWeaknesses[0] : {
+    category: "grammar",
+    titleFa: "\u062A\u062F\u0627\u062E\u0644 \u062D\u0627\u0644 \u06A9\u0627\u0645\u0644 \u0648 \u06AF\u0630\u0634\u062A\u0647 \u0633\u0627\u062F\u0647",
+    descriptionFa: "\u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0627\u0632 \u0633\u0627\u062E\u062A\u0627\u0631 \u06AF\u0630\u0634\u062A\u0647 \u0633\u0627\u062F\u0647 \u0628\u0631\u0627\u06CC \u062E\u0627\u0637\u0631\u0627\u062A \u0628\u0627 \u0642\u06CC\u062F \u0632\u0645\u0627\u0646 \u0645\u0634\u062E\u0635"
+  };
+  const id = `adaptive-cal-${Date.now()}`;
+  let title = "Tackling Past Narratives: Road Trip Memories";
+  let titleFa = `\u0633\u0646\u0627\u0631\u06CC\u0648\u06CC \u062A\u0637\u0628\u06CC\u0642\u06CC: \u0645\u0631\u0648\u0631 \u062E\u0627\u0637\u0631\u0627\u062A \u0633\u0641\u0631 \u062C\u0627\u062F\u0647\u200C\u0627\u06CC (\u062A\u0645\u0631\u06A9\u0632 \u0631\u0648\u06CC: ${topWeakness.titleFa})`;
+  let starter = "We were just talking about unforgettable road trips. Tell me about the first time you took a long trip\u2014when was it and what happened?";
+  let starterFa = "\u062F\u0627\u0634\u062A\u06CC\u0645 \u062F\u0631\u0628\u0627\u0631\u0647 \u0633\u0641\u0631\u0647\u0627\u06CC \u062C\u0627\u062F\u0647\u200C\u0627\u06CC \u0641\u0631\u0627\u0645\u0648\u0634\u200C\u0646\u0634\u062F\u0646\u06CC \u062D\u0631\u0641 \u0645\u06CC\u200C\u0632\u062F\u06CC\u0645. \u0627\u0632 \u0627\u0648\u0644\u06CC\u0646 \u0628\u0627\u0631\u06CC \u06A9\u0647 \u0631\u0641\u062A\u06CC \u06CC\u0647 \u0633\u0641\u0631 \u0637\u0648\u0644\u0627\u0646\u06CC \u0628\u06AF\u0648\u2014\u06A9\u06CC \u0628\u0648\u062F \u0648 \u0686\u06CC \u0634\u062F\u061F";
+  let targetGrammar = "Past Simple narrative vs Present Perfect pitfall";
+  let targetPronunciation = "American R and Flap T in past verb endings";
+  let relationship = "Close Friend / Travel Buddy";
+  if (topWeakness.category === "pronunciation") {
+    title = "At the Downtown Juice Bar & Cafe";
+    titleFa = `\u0633\u0646\u0627\u0631\u06CC\u0648\u06CC \u062A\u0637\u0628\u06CC\u0642\u06CC: \u0633\u0641\u0627\u0631\u0634 \u0622\u0628\u200C\u0645\u06CC\u0648\u0647 \u062F\u0631 \u06A9\u0627\u0641\u0647 (\u062A\u0645\u0631\u06A9\u0632 \u0628\u0631: ${topWeakness.titleFa})`;
+    starter = "Welcome to Green Oasis! Would you like a bottle of cold-pressed water or our special better-berry smoothie today?";
+    starterFa = "\u0628\u0647 \u06AF\u0631\u06CC\u0646 \u0627\u0648\u06CC\u0633\u06CC\u0633 \u062E\u0648\u0634 \u0627\u0648\u0645\u062F\u06CC\u062F! \u0627\u0645\u0631\u0648\u0632 \u06CC\u0647 \u0628\u0637\u0631\u06CC \u0622\u0628 \u062A\u0627\u0632\u0647 \u0645\u06CC\u0644 \u062F\u0627\u0631\u06CC\u062F \u06CC\u0627 \u0627\u0633\u0645\u0648\u062A\u06CC \u0645\u062E\u0635\u0648\u0635 \u062A\u0645\u0634\u06A9 \u0645\u0627\u061F";
+    targetGrammar = "Polite modal requests (Can I get / Could I have)";
+    targetPronunciation = "Flap T in 'water', 'bottle', 'better'";
+    relationship = "Barista & Customer";
+  } else if (topWeakness.category === "register_tone") {
+    title = "Meeting Your Project Lead for Coffee";
+    titleFa = `\u0633\u0646\u0627\u0631\u06CC\u0648\u06CC \u062A\u0637\u0628\u06CC\u0642\u06CC: \u0647\u0645\u0627\u0647\u0646\u06AF\u06CC \u062E\u0648\u062F\u0645\u0627\u0646\u06CC \u0628\u0627 \u0645\u062F\u06CC\u0631 \u067E\u0631\u0648\u0698\u0647 (\u062A\u0645\u0631\u06A9\u0632 \u0628\u0631: ${topWeakness.titleFa})`;
+    starter = "Hey, thanks for making time to meet! Before we get into work, how was your weekend? Did you do anything fun?";
+    starterFa = "\u0633\u0644\u0627\u0645\u060C \u0645\u0645\u0646\u0648\u0646 \u06A9\u0647 \u0648\u0642\u062A \u06AF\u0630\u0627\u0634\u062A\u06CC \u0628\u0628\u06CC\u0646\u0645\u062A! \u0642\u0628\u0644 \u0627\u06CC\u0646\u200C\u06A9\u0647 \u0628\u0631\u06CC\u0645 \u0633\u0631 \u06A9\u0627\u0631\u060C \u0622\u062E\u0631 \u0647\u0641\u062A\u0647\u200C\u062A \u0686\u0637\u0648\u0631 \u0628\u0648\u062F\u061F \u062A\u0641\u0631\u06CC\u062D \u062E\u0627\u0635\u06CC \u0631\u0641\u062A\u06CC\u061F";
+    targetGrammar = "Casual conversational reductions (gonna, kinda, gotta)";
+    targetPronunciation = "Connected speech in fast friendly chat";
+    relationship = "Work Colleague / Casual Lead";
+  }
+  return {
+    id,
+    dayIndex,
+    title,
+    titleFa,
+    category: "daily",
+    context: "Weakness Targeted Adaptive Session",
+    relationship,
+    userRole: "Learner",
+    aiRole: "Conversation Partner",
+    icon: "\u{1F3AF}",
+    starter,
+    starterFa,
+    targetGrammar,
+    targetCliches: ["Brings back memories", "Hit the road", "Catch up"],
+    targetPronunciation,
+    activeWeaknessesInjected: [topWeakness.titleFa],
+    status: "current"
+  };
+}
+function convertCalendarToScenario(cal) {
+  return {
+    id: cal.id,
+    title: cal.title,
+    titleFa: cal.titleFa,
+    category: cal.category,
+    userRole: cal.userRole,
+    aiRole: cal.aiRole,
+    icon: cal.icon,
+    starter: cal.starter,
+    starterFa: cal.starterFa,
+    descriptionFa: cal.targetGrammarFa || `${cal.targetGrammar} | ${cal.targetPronunciation}`,
+    clicheTag: (cal.targetCliches || []).join(" / "),
+    relationship: cal.relationship,
+    recommendedRegister: cal.relationship?.toLowerCase().includes("formal") ? "formal" : "casual",
+    activeWeaknessesInjected: cal.activeWeaknessesInjected,
+    targetGrammar: cal.targetGrammar,
+    targetGrammarFa: cal.targetGrammarFa,
+    targetCliches: cal.targetCliches,
+    targetPronunciation: cal.targetPronunciation,
+    targetLevel: cal.targetLevel,
+    targetChecklistItemId: cal.targetChecklistItemId,
+    cycleNumber: cal.cycleNumber
+  };
+}
+
+// src/data/c2Checklist.ts
+var C2_SCIENTIFIC_CHECKLIST = [
+  // ================= TIER 1: Foundational Fluency & L1 Transfer Elimination (A2 - B1) =================
+  {
+    id: "c2-chk-01",
+    tier: 1,
+    tierNameFa: "\u0641\u0627\u0632 \u06F1: \u062A\u062B\u0628\u06CC\u062A \u0631\u0648\u0627\u0646\u06CC \u067E\u0627\u06CC\u0647 \u0648 \u0631\u06CC\u0634\u0647\u200C\u06A9\u0646\u06CC \u062A\u062F\u0627\u062E\u0644\u0627\u062A \u0632\u0628\u0627\u0646 \u0645\u0627\u062F\u0631\u06CC (A2 - B1)",
+    cefrLevel: "A2",
+    category: "grammar",
+    categoryFa: "\u062F\u0633\u062A\u0648\u0631 \u0632\u0628\u0627\u0646 \u0648 \u0646\u062D\u0648",
+    titleEn: "Elimination of Preposition Calques from Persian",
+    titleFa: "\u0631\u06CC\u0634\u0647\u200C\u06A9\u0646\u06CC \u062D\u0631\u0648\u0641 \u0627\u0636\u0627\u0641\u0647 \u0627\u0634\u062A\u0628\u0627\u0647 \u0646\u0627\u0634\u06CC \u0627\u0632 \u062A\u0631\u062C\u0645\u0647 \u0645\u0633\u062A\u0642\u06CC\u0645 \u0641\u0627\u0631\u0633\u06CC",
+    descriptionFa: "\u062F\u0631 \u0641\u0627\u0631\u0633\u06CC \u0645\u06CC\u200C\u06AF\u0648\u06CC\u06CC\u0645 \xAB\u0628\u0647 \u0645\u0648\u0633\u06CC\u0642\u06CC \u06AF\u0648\u0634 \u062F\u0627\u062F\u0646\xBB \u0627\u0645\u0627 \u062F\u0631 \u0627\u0646\u06AF\u0644\u06CC\u0633\u06CC listen \u0628\u0627 to \u0645\u06CC\u200C\u0622\u06CC\u062F\u061B \u06CC\u0627 \xAB\u0639\u0644\u0627\u0642\u0647\u200C\u0645\u0646\u062F \u0628\u0647\xBB \u06A9\u0647 interested in \u0627\u0633\u062A \u0646\u0647 interested to. \u062A\u0633\u0644\u0637 \u0628\u0631 \u062D\u0631\u0648\u0641 \u0627\u0636\u0627\u0641\u0647 \u0647\u0645\u0646\u0634\u06CC\u0646.",
+    scientificReference: "Swan & Smith: Learner English (Persian L1 Calques); CEFR B1 Grammatical Accuracy",
+    criteriaForMasteryFa: "\u0639\u062F\u0645 \u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0627\u0632 \u062D\u0631\u0648\u0641 \u0627\u0636\u0627\u0641\u0647 \u062A\u062D\u062A\u200C\u0627\u0644\u0644\u0641\u0638\u06CC \u0645\u062B\u0644 interested to, marry with, explain to me, wait for.",
+    exampleGood: "I'm deeply interested in cognitive psychology, and I listen to podcasts daily.",
+    exampleBad: "I am interested to psychology and listen music.",
+    priorityOrder: 1
+  },
+  {
+    id: "c2-chk-02",
+    tier: 1,
+    tierNameFa: "\u0641\u0627\u0632 \u06F1: \u062A\u062B\u0628\u06CC\u062A \u0631\u0648\u0627\u0646\u06CC \u067E\u0627\u06CC\u0647 \u0648 \u0631\u06CC\u0634\u0647\u200C\u06A9\u0646\u06CC \u062A\u062F\u0627\u062E\u0644\u0627\u062A \u0632\u0628\u0627\u0646 \u0645\u0627\u062F\u0631\u06CC (A2 - B1)",
+    cefrLevel: "A2",
+    category: "grammar",
+    categoryFa: "\u062F\u0633\u062A\u0648\u0631 \u0632\u0628\u0627\u0646 \u0648 \u0646\u062D\u0648",
+    titleEn: 'Stative & Predicate Verb Accuracy (No "I am agree")',
+    titleFa: "\u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0635\u062D\u06CC\u062D \u0627\u0632 \u0627\u0641\u0639\u0627\u0644 \u062D\u0627\u0644\u062A\u06CC \u0648 \u0627\u0633\u0646\u0627\u062F\u06CC (\u062D\u0630\u0641 \u0633\u0627\u062E\u062A\u0627\u0631 \u0627\u0634\u062A\u0628\u0627\u0647 I am agree)",
+    descriptionFa: "\u06A9\u0644\u0645\u0647 agree \u062F\u0631 \u0627\u0646\u06AF\u0644\u06CC\u0633\u06CC \u0641\u0639\u0644 \u0627\u0633\u062A \u0648 \u0646\u0628\u0627\u06CC\u062F \u0628\u0627 to be \u0628\u06CC\u0627\u06CC\u062F (I agree \u0646\u0647 I am agree). \u0647\u0645\u0686\u0646\u06CC\u0646 \u0627\u0641\u0639\u0627\u0644\u06CC \u0646\u0638\u06CC\u0631 cost, weigh, belong.",
+    scientificReference: "Yarmohammadi (Contrastive Analysis of Persian & English Syntax); CEFR A2/B1",
+    criteriaForMasteryFa: "\u0627\u062F\u0627\u06CC \u062F\u0631\u0633\u062A I agree, I disagree, It depends \u0628\u062F\u0648\u0646 \u0627\u0641\u0639\u0627\u0644 \u06A9\u0645\u06A9\u06CC \u0632\u0627\u06CC\u062F \u0641\u0627\u0631\u0633\u06CC.",
+    exampleGood: "I completely agree with your proposal on remote work.",
+    exampleBad: "I am agree with your proposal because I'm think it's good.",
+    priorityOrder: 2
+  },
+  {
+    id: "c2-chk-03",
+    tier: 1,
+    tierNameFa: "\u0641\u0627\u0632 \u06F1: \u062A\u062B\u0628\u06CC\u062A \u0631\u0648\u0627\u0646\u06CC \u067E\u0627\u06CC\u0647 \u0648 \u0631\u06CC\u0634\u0647\u200C\u06A9\u0646\u06CC \u062A\u062F\u0627\u062E\u0644\u0627\u062A \u0632\u0628\u0627\u0646 \u0645\u0627\u062F\u0631\u06CC (A2 - B1)",
+    cefrLevel: "B1",
+    category: "phonetics",
+    categoryFa: "\u0622\u06A9\u0648\u0633\u062A\u06CC\u06A9 \u0648 \u0641\u0648\u0646\u062A\u06CC\u06A9 \u0627\u0645\u0631\u06CC\u06A9\u0646",
+    titleEn: "Intervocalic American Flap-T [\u027E]",
+    titleFa: "\u062A\u0644\u0641\u0638 \u0631\u0648\u0627\u0646 Flap T \u0627\u0645\u0631\u06CC\u06A9\u0646 \u0628\u06CC\u0646 \u062F\u0648 \u0648\u0627\u06A9\u0647",
+    descriptionFa: "\u062F\u0631 \u0644\u0647\u062C\u0647 \u0627\u0645\u0631\u06CC\u06A9\u0646 \u0648\u0642\u062A\u06CC T \u06CC\u0627 D \u0628\u06CC\u0646 \u062F\u0648 \u062D\u0631\u0641 \u0635\u062F\u0627\u062F\u0627\u0631 \u0642\u0631\u0627\u0631 \u0645\u06CC\u200C\u06AF\u06CC\u0631\u062F (\u0645\u0627\u0646\u0646\u062F water, city, better, meeting) \u0628\u0647 \u0635\u062F\u0627\u06CC \u0646\u0631\u0645 \u062A\u067E/\u0641\u0644\u067E [\u027E] \u062A\u0628\u062F\u06CC\u0644 \u0645\u06CC\u200C\u0634\u0648\u062F \u0646\u0647 T \u0627\u0646\u0641\u062C\u0627\u0631\u06CC \u062E\u0634\u06A9.",
+    scientificReference: "Ladefoged & Johnson: A Course in Phonetics; CEFR Phonological Control B1+",
+    criteriaForMasteryFa: "\u062A\u0644\u0641\u0638 \u067E\u06CC\u0648\u0633\u062A\u0647 Flap-T \u062F\u0631 \u062D\u062F\u0627\u0642\u0644 \u06F8\u06F0 \u062F\u0631\u0635\u062F \u06A9\u0644\u0645\u0627\u062A \u062F\u0627\u0631\u0627\u06CC \u0634\u0631\u0627\u06CC\u0637 \u062F\u0631 \u0645\u06A9\u0627\u0644\u0645\u0647 \u0632\u0646\u062F\u0647.",
+    exampleGood: "Could I get a bottle of water in the city meeting?",
+    exampleBad: "Could I get a bo[t\u02B0]le of wa[t\u02B0]er in the ci[t\u02B0]y mee[t\u02B0]ing?",
+    priorityOrder: 3
+  },
+  {
+    id: "c2-chk-04",
+    tier: 1,
+    tierNameFa: "\u0641\u0627\u0632 \u06F1: \u062A\u062B\u0628\u06CC\u062A \u0631\u0648\u0627\u0646\u06CC \u067E\u0627\u06CC\u0647 \u0648 \u0631\u06CC\u0634\u0647\u200C\u06A9\u0646\u06CC \u062A\u062F\u0627\u062E\u0644\u0627\u062A \u0632\u0628\u0627\u0646 \u0645\u0627\u062F\u0631\u06CC (A2 - B1)",
+    cefrLevel: "B1",
+    category: "phonetics",
+    categoryFa: "\u0622\u06A9\u0648\u0633\u062A\u06CC\u06A9 \u0648 \u0641\u0648\u0646\u062A\u06CC\u06A9 \u0627\u0645\u0631\u06CC\u06A9\u0646",
+    titleEn: "Schwa [\u0259] & Vowel Reduction in Function Words",
+    titleFa: "\u06A9\u0627\u0647\u0634 \u0622\u0648\u0627\u06CC\u06CC \u0634\u0648\u0622 [\u0259] \u062F\u0631 \u06A9\u0644\u0645\u0627\u062A \u06AF\u0631\u0627\u0645\u0631\u06CC \u0648 \u062A\u0627\u0628\u0639\u06CC",
+    descriptionFa: "\u062F\u0631 \u06AF\u0641\u062A\u0627\u0631 \u0646\u06CC\u062A\u06CC\u0648 \u0627\u0645\u0631\u06CC\u06A9\u0646\u060C \u06A9\u0644\u0645\u0627\u062A\u06CC \u0645\u0627\u0646\u0646\u062F to, for, can, and, of \u0628\u0627 \u0648\u0627\u06A9\u0647 \u06A9\u0627\u0645\u0644 \u062A\u0644\u0641\u0638 \u0646\u0645\u06CC\u200C\u0634\u0648\u0646\u062F \u0628\u0644\u06A9\u0647 \u0628\u0647 \u0635\u062F\u0627\u06CC \u0634\u0648\u0622 \u06A9\u0627\u0647\u0634 \u0645\u06CC\u200C\u06CC\u0627\u0628\u0646\u062F \u062A\u0627 \u0631\u06CC\u062A\u0645 \u0627\u0633\u062A\u0631\u0633-\u062A\u0627\u06CC\u0645\u062F \u0634\u06A9\u0644 \u0628\u06AF\u06CC\u0631\u062F.",
+    scientificReference: "Celce-Murcia et al.: Teaching Pronunciation; CEFR B1 Prosodic Features",
+    criteriaForMasteryFa: "\u06A9\u0627\u0647\u0634 \u0645\u0635\u0648\u062A\u200C\u0647\u0627\u06CC \u06A9\u0648\u062A\u0627\u0647 \u062F\u0631 \u062D\u0631\u0648\u0641 \u0627\u0636\u0627\u0641\u0647 \u0648 \u0627\u0641\u0639\u0627\u0644 \u06A9\u0645\u06A9\u06CC \u0648 \u0639\u062F\u0645 \u062A\u0644\u0641\u0638 \u062A\u06A9\u06CC\u0647\u200C\u062F\u0627\u0631 \u0622\u0646\u0647\u0627.",
+    exampleGood: "I can /k\u0259n/ go to /t\u0259/ the store for /f\u0259r/ some bread.",
+    exampleBad: "I /k\xE6n/ go /tu:/ the store /f\u0254\u02D0r/ some bread.",
+    priorityOrder: 4
+  },
+  {
+    id: "c2-chk-05",
+    tier: 1,
+    tierNameFa: "\u0641\u0627\u0632 \u06F1: \u062A\u062B\u0628\u06CC\u062A \u0631\u0648\u0627\u0646\u06CC \u067E\u0627\u06CC\u0647 \u0648 \u0631\u06CC\u0634\u0647\u200C\u06A9\u0646\u06CC \u062A\u062F\u0627\u062E\u0644\u0627\u062A \u0632\u0628\u0627\u0646 \u0645\u0627\u062F\u0631\u06CC (A2 - B1)",
+    cefrLevel: "B1",
+    category: "grammar",
+    categoryFa: "\u062F\u0633\u062A\u0648\u0631 \u0632\u0628\u0627\u0646 \u0648 \u0646\u062D\u0648",
+    titleEn: "Past Narrative Aspect: Simple vs Continuous vs Perfect",
+    titleFa: "\u062A\u0633\u0644\u0637 \u0628\u0631 \u0648\u062C\u0648\u0647 \u0632\u0645\u0627\u0646\u06CC \u06AF\u0630\u0634\u062A\u0647 \u062F\u0631 \u0631\u0648\u0627\u06CC\u062A \u062F\u0627\u0633\u062A\u0627\u0646 (Past Narrative)",
+    descriptionFa: "\u062A\u0641\u06A9\u06CC\u06A9 \u062F\u0642\u06CC\u0642 \u06AF\u0630\u0634\u062A\u0647 \u0633\u0627\u062F\u0647 \u0628\u0631\u0627\u06CC \u0631\u062E\u062F\u0627\u062F\u0647\u0627\u06CC \u0632\u0646\u062C\u06CC\u0631\u0647\u200C\u0627\u06CC\u060C \u06AF\u0630\u0634\u062A\u0647 \u0627\u0633\u062A\u0645\u0631\u0627\u0631\u06CC \u0628\u0631\u0627\u06CC \u067E\u0633\u200C\u0632\u0645\u06CC\u0646\u0647\u060C \u0648 \u06AF\u0630\u0634\u062A\u0647 \u06A9\u0627\u0645\u0644 \u0628\u0631\u0627\u06CC \u0648\u0642\u0627\u06CC\u0639 \u067E\u06CC\u0634\u06CC\u0646.",
+    scientificReference: "Cambridge C2 Speaking Assessment Criteria: Grammatical Resource; CEFR B1 Narrative",
+    criteriaForMasteryFa: "\u0631\u0648\u0627\u06CC\u062A \u06CC\u06A9 \u062E\u0627\u0637\u0631\u0647 \u06CC\u0627 \u0645\u0627\u062C\u0631\u0627 \u0628\u062F\u0648\u0646 \u067E\u0631\u0634 \u063A\u06CC\u0631\u0637\u0628\u06CC\u0639\u06CC \u0628\u06CC\u0646 \u0632\u0645\u0627\u0646 \u062D\u0627\u0644 \u0648 \u06AF\u0630\u0634\u062A\u0647.",
+    exampleGood: "While I was driving home, it started pouring, and I realized I had left the window open.",
+    exampleBad: "When I drive home, it was rain, and I saw I forget my window.",
+    priorityOrder: 5
+  },
+  {
+    id: "c2-chk-06",
+    tier: 1,
+    tierNameFa: "\u0641\u0627\u0632 \u06F1: \u062A\u062B\u0628\u06CC\u062A \u0631\u0648\u0627\u0646\u06CC \u067E\u0627\u06CC\u0647 \u0648 \u0631\u06CC\u0634\u0647\u200C\u06A9\u0646\u06CC \u062A\u062F\u0627\u062E\u0644\u0627\u062A \u0632\u0628\u0627\u0646 \u0645\u0627\u062F\u0631\u06CC (A2 - B1)",
+    cefrLevel: "B1",
+    category: "grammar",
+    categoryFa: "\u062F\u0633\u062A\u0648\u0631 \u0632\u0628\u0627\u0646 \u0648 \u0646\u062D\u0648",
+    titleEn: 'Elimination of "Go to shopping" (Gerund Activity Verbs)',
+    titleFa: "\u062D\u0630\u0641 \u0633\u0627\u062E\u062A\u0627\u0631 \u0646\u0627\u062F\u0631\u0633\u062A Go to shopping \u0648 \u06A9\u0627\u0631\u0628\u0631\u062F \u0635\u062D\u06CC\u062D \u0641\u0631\u0645\u200C\u0647\u0627\u06CC \u062A\u0641\u0631\u06CC\u062D\u06CC",
+    descriptionFa: "\u0627\u0641\u0639\u0627\u0644 \u0641\u0639\u0627\u0644\u06CC\u062A\u06CC \u0628\u0639\u062F \u0627\u0632 go \u0628\u062F\u0648\u0646 \u062D\u0631\u0641 \u0627\u0636\u0627\u0641\u0647 to \u0648 \u0628\u0627 \u0641\u0631\u0645 ing \u0645\u06CC\u200C\u0622\u06CC\u0646\u062F: go shopping, go swimming, go hiking.",
+    scientificReference: "Swan: Practical English Usage; L1 Persian Interference",
+    criteriaForMasteryFa: "\u06A9\u0627\u0631\u0628\u0631\u062F \u062E\u0648\u062F\u06A9\u0627\u0631 go shopping / went shopping \u0628\u062F\u0648\u0646 \u062F\u0631\u062C \u062D\u0631\u0641 \u0627\u0636\u0627\u0641\u0647 to.",
+    exampleGood: "We went shopping downtown and then went hiking in the afternoon.",
+    exampleBad: "We went to shopping in mall and then went to swimming.",
+    priorityOrder: 6
+  },
+  {
+    id: "c2-chk-07",
+    tier: 1,
+    tierNameFa: "\u0641\u0627\u0632 \u06F1: \u062A\u062B\u0628\u06CC\u062A \u0631\u0648\u0627\u0646\u06CC \u067E\u0627\u06CC\u0647 \u0648 \u0631\u06CC\u0634\u0647\u200C\u06A9\u0646\u06CC \u062A\u062F\u0627\u062E\u0644\u0627\u062A \u0632\u0628\u0627\u0646 \u0645\u0627\u062F\u0631\u06CC (A2 - B1)",
+    cefrLevel: "B1",
+    category: "pragmatics",
+    categoryFa: "\u0627\u062A\u06CC\u06A9\u062A \u06AF\u0641\u062A\u0627\u0631\u06CC \u0648 \u06A9\u0627\u0631\u0628\u0631\u062F\u0634\u0646\u0627\u0633\u06CC",
+    titleEn: "Indirect & Softened Question Formulation",
+    titleFa: "\u067E\u0631\u0633\u0634\u06AF\u0631\u06CC \u063A\u06CC\u0631\u0645\u0633\u062A\u0642\u06CC\u0645 \u0648 \u0645\u0648\u0642\u0631 \u062F\u0631 \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u0631\u0648\u0632\u0645\u0631\u0647",
+    descriptionFa: "\u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0627\u0632 \u0633\u0627\u062E\u062A\u0627\u0631\u0647\u0627\u06CC \u0645\u0624\u062F\u0628\u0627\u0646\u0647 \u0628\u0647 \u062C\u0627\u06CC \u0633\u0648\u0627\u0644 \u0645\u0633\u062A\u0642\u06CC\u0645 \u062E\u0634\u06A9: Could you tell me..., Do you happen to know..., I was wondering if...",
+    scientificReference: "Brown & Levinson: Politeness Theory; CEFR B1 Sociolinguistic Appropriateness",
+    criteriaForMasteryFa: "\u062A\u0628\u062F\u06CC\u0644 \u0633\u0648\u0627\u0644\u0627\u062A \u0627\u0645\u0631\u06CC/\u0645\u0633\u062A\u0642\u06CC\u0645 \u0628\u0647 \u0642\u0627\u0644\u0628\u200C\u0647\u0627\u06CC \u0645\u062D\u062A\u0631\u0645\u0627\u0646\u0647 \u062F\u0631 \u0645\u0648\u0642\u0639\u06CC\u062A\u200C\u0647\u0627\u06CC \u062A\u0639\u0627\u0645\u0644\u06CC.",
+    exampleGood: "Do you happen to know where the conference room is located?",
+    exampleBad: "Where is conference room? Tell me.",
+    priorityOrder: 7
+  },
+  {
+    id: "c2-chk-08",
+    tier: 1,
+    tierNameFa: "\u0641\u0627\u0632 \u06F1: \u062A\u062B\u0628\u06CC\u062A \u0631\u0648\u0627\u0646\u06CC \u067E\u0627\u06CC\u0647 \u0648 \u0631\u06CC\u0634\u0647\u200C\u06A9\u0646\u06CC \u062A\u062F\u0627\u062E\u0644\u0627\u062A \u0632\u0628\u0627\u0646 \u0645\u0627\u062F\u0631\u06CC (A2 - B1)",
+    cefrLevel: "B1",
+    category: "phonetics",
+    categoryFa: "\u0622\u06A9\u0648\u0633\u062A\u06CC\u06A9 \u0648 \u0641\u0648\u0646\u062A\u06CC\u06A9 \u0627\u0645\u0631\u06CC\u06A9\u0646",
+    titleEn: "American Rhotic R (Post-Alveolar / Retroflex Approximation)",
+    titleFa: "\u0627\u062F\u0627\u06CC \u0635\u062F\u0627\u06CC R \u0627\u0645\u0631\u06CC\u06A9\u0646 \u0628\u062F\u0648\u0646 \u0644\u0631\u0632\u0634 \u0646\u0648\u06A9 \u0632\u0628\u0627\u0646 (Rhotic R)",
+    descriptionFa: "\u062F\u0631 \u0641\u0627\u0631\u0633\u06CC R \u0644\u0631\u0632\u0634\u06CC \u0628\u0627 \u0646\u0648\u06A9 \u0632\u0628\u0627\u0646 \u0627\u0633\u062A (Tapped [r])\u061B \u062F\u0631 \u0627\u0645\u0631\u06CC\u06A9\u0646 \u0646\u0648\u06A9 \u0632\u0628\u0627\u0646 \u0647\u0631\u06AF\u0632 \u0628\u0647 \u0633\u0642\u0641 \u062F\u0647\u0627\u0646 \u0646\u0645\u06CC\u200C\u062E\u0648\u0631\u062F \u0648 \u0628\u062F\u0646\u0647 \u0632\u0628\u0627\u0646 \u0628\u0647 \u0639\u0642\u0628 \u062C\u0645\u0639 \u0645\u06CC\u200C\u0634\u0648\u062F (Bunched or Retroflex R).",
+    scientificReference: "Pennington & Rogerson-Revell: English Pronunciation Teaching and Research; CEFR B1",
+    criteriaForMasteryFa: "\u0627\u062F\u0627\u06CC R \u0628\u0639\u062F \u0627\u0632 \u0648\u0627\u06A9\u0647 \u062F\u0631 \u06A9\u0644\u0645\u0627\u062A\u06CC \u0645\u0627\u0646\u0646\u062F car, work, morning, first \u0628\u062F\u0648\u0646 \u0628\u0631\u062E\u0648\u0631\u062F \u0632\u0628\u0627\u0646 \u0628\u0627 \u0633\u0642\u0641.",
+    exampleGood: "Her hard work early in the morning paid off.",
+    exampleBad: "Her ha[r]d wo[r]k ea[r]ly in the mo[r]ning (\u0628\u0627 \u0631 \u0644\u0631\u0632\u0634\u06CC \u0641\u0627\u0631\u0633\u06CC).",
+    priorityOrder: 8
+  },
+  {
+    id: "c2-chk-09",
+    tier: 1,
+    tierNameFa: "\u0641\u0627\u0632 \u06F1: \u062A\u062B\u0628\u06CC\u062A \u0631\u0648\u0627\u0646\u06CC \u067E\u0627\u06CC\u0647 \u0648 \u0631\u06CC\u0634\u0647\u200C\u06A9\u0646\u06CC \u062A\u062F\u0627\u062E\u0644\u0627\u062A \u0632\u0628\u0627\u0646 \u0645\u0627\u062F\u0631\u06CC (A2 - B1)",
+    cefrLevel: "B1",
+    category: "discourse",
+    categoryFa: "\u067E\u06CC\u0648\u0633\u062A\u06AF\u06CC \u06AF\u0641\u062A\u0627\u0631 \u0648 \u062F\u06CC\u0633\u06A9\u0648\u0631\u0633",
+    titleEn: "Spoken Discourse Fillers & Hesitation Management",
+    titleFa: "\u0645\u062F\u06CC\u0631\u06CC\u062A \u0645\u06A9\u062B\u200C\u0647\u0627 \u0628\u0627 \u0641\u06CC\u0644\u0631\u0647\u0627\u06CC \u0637\u0628\u06CC\u0639\u06CC \u0645\u06A9\u0627\u0644\u0645\u0647 (Well, Actually, You know)",
+    descriptionFa: "\u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0627\u0632 \u06A9\u0644\u0645\u0627\u062A \u0645\u06A9\u062B \u0637\u0628\u06CC\u0639\u06CC \u0628\u0647 \u062C\u0627\u06CC \u06AF\u0641\u062A\u0646 \xAB\u0627\u0627\u0627\u0627\u0627\u0645\xBB \u06CC\u0627 \u0633\u06A9\u0648\u062A \u0637\u0648\u0644\u0627\u0646\u06CC \u062F\u0631 \u0647\u0646\u06AF\u0627\u0645 \u062A\u0641\u06A9\u0631.",
+    scientificReference: "CEFR Spoken Fluency B1: Pausing and Hesitation Descriptors",
+    criteriaForMasteryFa: "\u062D\u0641\u0638 \u0631\u0634\u062A\u0647 \u06A9\u0644\u0627\u0645 \u0628\u0627 \u0641\u06CC\u0644\u0631\u0647\u0627\u06CC \u0627\u0633\u062A\u0627\u0646\u062F\u0627\u0631\u062F \u0627\u0646\u06AF\u0644\u06CC\u0633\u06CC \u0628\u062F\u0648\u0646 \u0645\u06A9\u062B\u200C\u0647\u0627\u06CC \u0645\u0646\u0642\u0637\u0639 \u0622\u0632\u0627\u0631\u062F\u0647\u0646\u062F\u0647.",
+    exampleGood: "Well, to be perfectly honest, I haven't really looked into that yet.",
+    exampleBad: "I... um... [5 seconds silence]... don't know.",
+    priorityOrder: 9
+  },
+  {
+    id: "c2-chk-10",
+    tier: 1,
+    tierNameFa: "\u0641\u0627\u0632 \u06F1: \u062A\u062B\u0628\u06CC\u062A \u0631\u0648\u0627\u0646\u06CC \u067E\u0627\u06CC\u0647 \u0648 \u0631\u06CC\u0634\u0647\u200C\u06A9\u0646\u06CC \u062A\u062F\u0627\u062E\u0644\u0627\u062A \u0632\u0628\u0627\u0646 \u0645\u0627\u062F\u0631\u06CC (A2 - B1)",
+    cefrLevel: "B1",
+    category: "idioms",
+    categoryFa: "\u0627\u0635\u0637\u0644\u0627\u062D\u0627\u062A \u0648 \u06A9\u0644\u06CC\u0634\u0647\u200C\u0647\u0627\u06CC \u0646\u06CC\u062A\u06CC\u0648",
+    titleEn: "Core American Idiomatic Chunks for Daily Banter",
+    titleFa: "\u06A9\u0644\u06CC\u0634\u0647\u200C\u0647\u0627\u06CC \u0627\u0635\u0644\u06CC \u0645\u062D\u0627\u0648\u0631\u0647 \u0631\u0648\u0632\u0645\u0631\u0647 \u0622\u0645\u0631\u06CC\u06A9\u0627\u06CC\u06CC (Play it by ear, Touch base)",
+    descriptionFa: "\u06A9\u0627\u0631\u0628\u0631\u062F \u0631\u0648\u0627\u0646 \u0627\u0635\u0637\u0644\u0627\u062D\u0627\u062A \u067E\u0631\u06A9\u0627\u0631\u0628\u0631\u062F \u0645\u062B\u0644 play it by ear, touch base, cut to the chase \u062F\u0631 \u0628\u0627\u0641\u062A \u0645\u0646\u0627\u0633\u0628.",
+    scientificReference: "Nattinger & DeCarrico: Lexical Phrases and Language Teaching; CEFR B1/B2 Idiomaticity",
+    criteriaForMasteryFa: "\u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u062F\u0631 \u062C\u0627\u06CC \u0645\u0646\u0627\u0633\u0628 \u0628\u0627 \u0644\u062D\u0646 \u0637\u0628\u06CC\u0639\u06CC \u0628\u062F\u0648\u0646 \u0627\u062D\u0633\u0627\u0633 \u062A\u0631\u062C\u0645\u0647 \u0627\u0632 \u0632\u0628\u0627\u0646 \u0645\u0627\u062F\u0631\u06CC.",
+    exampleGood: "Traffic is pretty unpredictable, so let's just play it by ear.",
+    exampleBad: "Let's see what happens based on conditions.",
+    priorityOrder: 10
+  },
+  {
+    id: "c2-chk-41",
+    tier: 1,
+    tierNameFa: "\u0641\u0627\u0632 \u06F1: \u062A\u062B\u0628\u06CC\u062A \u0631\u0648\u0627\u0646\u06CC \u067E\u0627\u06CC\u0647 \u0648 \u0631\u06CC\u0634\u0647\u200C\u06A9\u0646\u06CC \u062A\u062F\u0627\u062E\u0644\u0627\u062A \u0632\u0628\u0627\u0646 \u0645\u0627\u062F\u0631\u06CC (A2 - B1)",
+    cefrLevel: "B1",
+    category: "pragmatics",
+    categoryFa: "\u0627\u062A\u06CC\u06A9\u062A \u06AF\u0641\u062A\u0627\u0631\u06CC \u0648 \u06A9\u0627\u0631\u0628\u0631\u062F\u0634\u0646\u0627\u0633\u06CC",
+    titleEn: "American Small Talk & Rapport Openers",
+    titleFa: "\u0627\u0633\u0645\u0627\u0644\u200C\u062A\u0627\u06A9 \u0622\u0645\u0631\u06CC\u06A9\u0627\u06CC\u06CC \u0648 \u0628\u0627\u0632 \u06A9\u0631\u062F\u0646 \u06AF\u0641\u062A\u06AF\u0648 \u0628\u0627 \u063A\u0631\u06CC\u0628\u0647\u200C\u0647\u0627 \u0648 \u0647\u0645\u06A9\u0627\u0631\u0627\u0646",
+    descriptionFa: "\u0634\u0631\u0648\u0639 \u0648 \u0627\u062F\u0627\u0645\u0647 \u06AF\u067E \u0633\u0628\u06A9 \u0622\u0645\u0631\u06CC\u06A9\u0627\u06CC\u06CC: \u0622\u0628\u200C\u0648\u0647\u0648\u0627\u060C \u0622\u062E\u0631 \u0647\u0641\u062A\u0647\u060C How's it going\u060C \u0628\u062F\u0648\u0646 \u0648\u0631\u0648\u062F \u0646\u0627\u06AF\u0647\u0627\u0646\u06CC \u0628\u0647 \u0645\u0648\u0636\u0648\u0639 \u0633\u0646\u06AF\u06CC\u0646 \u06CC\u0627 \u067E\u0631\u0633\u0634\u200C\u0647\u0627\u06CC \u062E\u06CC\u0644\u06CC \u0634\u062E\u0635\u06CC.",
+    scientificReference: "CEFR B1 Sociolinguistic Appropriateness; Coupland: Small Talk",
+    criteriaForMasteryFa: "\u062A\u0648\u0627\u0646\u0627\u06CC\u06CC \u06F2\u2013\u06F3 \u0646\u0648\u0628\u062A \u0627\u0633\u0645\u0627\u0644\u200C\u062A\u0627\u06A9 \u0637\u0628\u06CC\u0639\u06CC \u0642\u0628\u0644 \u0627\u0632 \u0645\u0648\u0636\u0648\u0639 \u0627\u0635\u0644\u06CC\u060C \u0628\u0627 follow-up \u0633\u0648\u0627\u0644 \u0645\u0646\u0627\u0633\u0628.",
+    exampleGood: "Pretty crazy weather today, huh? Did you get caught in that downpour this morning?",
+    exampleBad: "Hello. How much is your salary? Are you married?",
+    priorityOrder: 10.5
+  },
+  // ================= TIER 2: Intermediate Expansion & Modal Nuance (B1+ - B2) =================
+  {
+    id: "c2-chk-11",
+    tier: 2,
+    tierNameFa: "\u0641\u0627\u0632 \u06F2: \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u062D\u0631\u0641\u0647\u200C\u0627\u06CC\u060C \u0627\u0641\u0639\u0627\u0644 \u0648\u062C\u0647\u06CC \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644 \u062A\u0639\u0627\u0645\u0644\u06CC (B1+ - B2)",
+    cefrLevel: "B2",
+    category: "grammar",
+    categoryFa: "\u062F\u0633\u062A\u0648\u0631 \u0632\u0628\u0627\u0646 \u0648 \u0646\u062D\u0648",
+    titleEn: "Second Conditional for Hypothetical Dilemmas",
+    titleFa: "\u0634\u0631\u0637\u06CC \u0646\u0648\u0639 \u062F\u0648\u0645 \u062F\u0631 \u0628\u06CC\u0627\u0646 \u0641\u0631\u0636\u06CC\u0627\u062A \u0648 \u0645\u0634\u0627\u0648\u0631\u0647\u200C\u0647\u0627\u06CC \u062F\u0648\u0633\u062A\u0627\u0646\u0647 (If I were you)",
+    descriptionFa: "\u0633\u0627\u062E\u062A\u0627\u0631 If + past simple, would + base verb \u0628\u0631\u0627\u06CC \u0645\u0648\u0642\u0639\u06CC\u062A\u200C\u0647\u0627\u06CC \u063A\u06CC\u0631\u0648\u0627\u0642\u0639\u06CC \u0648 \u0641\u0631\u0636\u06CC.",
+    scientificReference: "CEFR B2 Grammatical Control: Complex Sentence Subordination",
+    criteriaForMasteryFa: "\u0627\u062F\u0627\u06CC \u062E\u0648\u062F\u06A9\u0627\u0631 If I were you, I would... \u0628\u062F\u0648\u0646 \u0627\u0634\u062A\u0628\u0627\u0647 \u062F\u0631 \u0632\u0645\u0627\u0646 \u0627\u0641\u0639\u0627\u0644.",
+    exampleGood: "If I were in your shoes, I'd definitely take that offer without hesitation.",
+    exampleBad: "If I was in your place, I will take this offer.",
+    priorityOrder: 11
+  },
+  {
+    id: "c2-chk-12",
+    tier: 2,
+    tierNameFa: "\u0641\u0627\u0632 \u06F2: \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u062D\u0631\u0641\u0647\u200C\u0627\u06CC\u060C \u0627\u0641\u0639\u0627\u0644 \u0648\u062C\u0647\u06CC \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644 \u062A\u0639\u0627\u0645\u0644\u06CC (B1+ - B2)",
+    cefrLevel: "B2",
+    category: "grammar",
+    categoryFa: "\u062F\u0633\u062A\u0648\u0631 \u0632\u0628\u0627\u0646 \u0648 \u0646\u062D\u0648",
+    titleEn: "Third & Mixed Conditionals for Regret and Past Analysis",
+    titleFa: "\u0634\u0631\u0637\u06CC \u0646\u0648\u0639 \u0633\u0648\u0645 \u0648 \u062A\u0631\u06A9\u06CC\u0628\u06CC \u0628\u0631\u0627\u06CC \u062A\u062D\u0644\u06CC\u0644 \u06AF\u0630\u0634\u062A\u0647 \u0648 \u0627\u0628\u0631\u0627\u0632 \u067E\u0634\u06CC\u0645\u0627\u0646\u06CC (Could/Should have)",
+    descriptionFa: "\u0633\u0627\u062E\u062A\u0627\u0631\u0647\u0627\u06CC If I had known..., I would have... \u0648 \u0627\u0641\u0639\u0627\u0644 \u0648\u062C\u0647\u06CC \u06AF\u0630\u0634\u062A\u0647 \u0646\u0638\u06CC\u0631 should have, could have.",
+    scientificReference: "Cambridge English C1/C2 Handbook: Advanced Structural Flexibility",
+    criteriaForMasteryFa: "\u06A9\u0627\u0631\u0628\u0631\u062F \u0631\u0648\u0627\u0646 would have / should have \u0645\u062E\u0641\u0641 \u0634\u062F\u0647 (/w\u028Ad\u0259/, /\u0283\u028Ad\u0259/) \u062F\u0631 \u0628\u06CC\u0627\u0646 \u062D\u0633\u0631\u062A \u06CC\u0627 \u062A\u062D\u0644\u06CC\u0644.",
+    exampleGood: "If we had left ten minutes earlier, we wouldn't have missed our flight.",
+    exampleBad: "If we left earlier, we did not miss flight.",
+    priorityOrder: 12
+  },
+  {
+    id: "c2-chk-13",
+    tier: 2,
+    tierNameFa: "\u0641\u0627\u0632 \u06F2: \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u062D\u0631\u0641\u0647\u200C\u0627\u06CC\u060C \u0627\u0641\u0639\u0627\u0644 \u0648\u062C\u0647\u06CC \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644 \u062A\u0639\u0627\u0645\u0644\u06CC (B1+ - B2)",
+    cefrLevel: "B2",
+    category: "phonetics",
+    categoryFa: "\u0622\u06A9\u0648\u0633\u062A\u06CC\u06A9 \u0648 \u0641\u0648\u0646\u062A\u06CC\u06A9 \u0627\u0645\u0631\u06CC\u06A9\u0646",
+    titleEn: "Glottal Stop [\u0294] before Syllabic N",
+    titleFa: "\u062A\u0648\u0642\u0641 \u0686\u0627\u06A9\u0646\u0627\u06CC\u06CC (Glottal Stop) \u0642\u0628\u0644 \u0627\u0632 n \u0647\u062C\u0627\u06CC\u06CC \u062F\u0631 \u0648\u0627\u0698\u06AF\u0627\u0646\u06CC \u0645\u0627\u0646\u0646\u062F button, mountain",
+    descriptionFa: "\u062F\u0631 \u0627\u0645\u0631\u06CC\u06A9\u0646 \u0646\u06CC\u062A\u06CC\u0648\u060C \u062F\u0631 \u06A9\u0644\u0645\u0627\u062A\u06CC \u0645\u0627\u0646\u0646\u062F important, curtain, button, kitten \u0635\u062F\u0627\u06CC t \u0628\u0627 \u0627\u0646\u0633\u062F\u0627\u062F \u062D\u0646\u062C\u0631\u0647 \u0627\u062F\u0627 \u0645\u06CC\u200C\u0634\u0648\u062F \u0646\u0647 \u0628\u0627 \u0627\u0646\u0641\u062C\u0627\u0631 \u0646\u0648\u06A9 \u0632\u0628\u0627\u0646.",
+    scientificReference: "Kenyon & Knott: Pronouncing Dictionary of American English; CEFR B2 Phonology",
+    criteriaForMasteryFa: "\u062A\u0644\u0641\u0638 \u062F\u0631\u0633\u062A \u06A9\u0644\u0645\u0627\u062A \u062F\u0627\u0631\u0627\u06CC T \u0642\u0628\u0644 \u0627\u0632 N \u0647\u062C\u0627\u06CC\u06CC \u0628\u0627 \u06AF\u0644\u0648\u062A\u0627\u0644 \u0627\u0633\u062A\u0627\u067E \u0637\u0628\u06CC\u0639\u06CC.",
+    exampleGood: "It is a crucial button on the curtain.",
+    exampleBad: "It is a crucial bu[t\u02B0]on on the cur[t\u02B0]ain.",
+    priorityOrder: 13
+  },
+  {
+    id: "c2-chk-14",
+    tier: 2,
+    tierNameFa: "\u0641\u0627\u0632 \u06F2: \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u062D\u0631\u0641\u0647\u200C\u0627\u06CC\u060C \u0627\u0641\u0639\u0627\u0644 \u0648\u062C\u0647\u06CC \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644 \u062A\u0639\u0627\u0645\u0644\u06CC (B1+ - B2)",
+    cefrLevel: "B2",
+    category: "pragmatics",
+    categoryFa: "\u0627\u062A\u06CC\u06A9\u062A \u06AF\u0641\u062A\u0627\u0631\u06CC \u0648 \u06A9\u0627\u0631\u0628\u0631\u062F\u0634\u0646\u0627\u0633\u06CC",
+    titleEn: "Diplomatic Hedging & Disagreement Softening",
+    titleFa: "\u062D\u0627\u0634\u06CC\u0647\u200C\u0633\u0627\u0632\u06CC \u062F\u06CC\u067E\u0644\u0645\u0627\u062A\u06CC\u06A9 \u0648 \u062A\u0644\u0637\u06CC\u0641 \u0645\u062E\u0627\u0644\u0641\u062A \u062F\u0631 \u062C\u0644\u0633\u0627\u062A \u06A9\u0627\u0631\u06CC",
+    descriptionFa: "\u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0627\u0632 \u0639\u0628\u0627\u0631\u0627\u062A \u0645\u0644\u0627\u06CC\u0645\u200C\u06A9\u0646\u0646\u062F\u0647 \u0646\u0638\u06CC\u0631 I see where you're coming from, but..., I'm not entirely convinced that...",
+    scientificReference: "Hyland: Hedging in Scientific & Spoken Discourse; CEFR B2 Disagreement",
+    criteriaForMasteryFa: "\u0628\u06CC\u0627\u0646 \u0645\u062E\u0627\u0644\u0641\u062A \u0642\u0627\u0637\u0639 \u0628\u062F\u0648\u0646 \u062A\u0647\u0627\u062C\u0645\u06CC \u0628\u0647 \u0646\u0638\u0631 \u0631\u0633\u06CC\u062F\u0646 \u062F\u0631 \u0633\u0646\u0627\u0631\u06CC\u0648\u0647\u0627\u06CC \u06A9\u0627\u0631\u06CC \u0648 \u062A\u06CC\u0645\u06CC.",
+    exampleGood: "I definitely see your point, but don't you think we might be rushing the deadline?",
+    exampleBad: "No, you are wrong, deadline is bad.",
+    priorityOrder: 14
+  },
+  {
+    id: "c2-chk-15",
+    tier: 2,
+    tierNameFa: "\u0641\u0627\u0632 \u06F2: \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u062D\u0631\u0641\u0647\u200C\u0627\u06CC\u060C \u0627\u0641\u0639\u0627\u0644 \u0648\u062C\u0647\u06CC \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644 \u062A\u0639\u0627\u0645\u0644\u06CC (B1+ - B2)",
+    cefrLevel: "B2",
+    category: "idioms",
+    categoryFa: "\u0627\u0635\u0637\u0644\u0627\u062D\u0627\u062A \u0648 \u06A9\u0644\u06CC\u0634\u0647\u200C\u0647\u0627\u06CC \u0646\u06CC\u062A\u06CC\u0648",
+    titleEn: "Three-Part Phrasal Verbs in Spoken Interaction",
+    titleFa: "\u0627\u0641\u0639\u0627\u0644 \u062F\u0648\u0645\u0641\u0639\u0648\u0644\u06CC \u0648 \u0633\u0647\u200C\u0628\u062E\u0634\u06CC \u067E\u0631\u06A9\u0627\u0631\u0628\u0631\u062F (Come up with, Cut down on, Get around to)",
+    descriptionFa: "\u062A\u0633\u0644\u0637 \u0628\u0631 \u0627\u0641\u0639\u0627\u0644 \u0686\u0646\u062F\u06A9\u0644\u0645\u0647\u200C\u0627\u06CC \u067E\u06CC\u0686\u06CC\u062F\u0647 \u0648 \u062C\u0627\u06CC\u06AF\u0630\u0627\u0631\u06CC \u0635\u062D\u06CC\u062D \u0636\u0645\u0627\u06CC\u0631 \u062F\u0631 \u0645\u06CC\u0627\u0646 \u0622\u0646\u0647\u0627.",
+    scientificReference: "Biber et al.: Longman Grammar of Spoken and Written English; CEFR B2 Lexicon",
+    criteriaForMasteryFa: "\u06A9\u0627\u0631\u0628\u0631\u062F \u0631\u0648\u0627\u0646 \u0627\u0641\u0639\u0627\u0644 \u0645\u0631\u06A9\u0628 \u0633\u0647\u200C\u0628\u062E\u0634\u06CC \u062F\u0631 \u067E\u0627\u0633\u062E \u0628\u0647 \u0686\u0627\u0644\u0634\u200C\u0647\u0627\u06CC \u0631\u0648\u0632\u0645\u0631\u0647.",
+    exampleGood: "We need to come up with an innovative solution to cut down on overhead costs.",
+    exampleBad: "We must create new idea to decrease our costs.",
+    priorityOrder: 15
+  },
+  {
+    id: "c2-chk-16",
+    tier: 2,
+    tierNameFa: "\u0641\u0627\u0632 \u06F2: \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u062D\u0631\u0641\u0647\u200C\u0627\u06CC\u060C \u0627\u0641\u0639\u0627\u0644 \u0648\u062C\u0647\u06CC \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644 \u062A\u0639\u0627\u0645\u0644\u06CC (B1+ - B2)",
+    cefrLevel: "B2",
+    category: "listening",
+    categoryFa: "\u0634\u0646\u06CC\u062F\u0627\u0631 \u0648 \u062F\u0631\u06A9 \u06AF\u0641\u062A\u0627\u0631 \u067E\u06CC\u0648\u0633\u062A\u0647 \u0646\u06CC\u062A\u06CC\u0648",
+    titleEn: "Decoding Fast Native Connected Speech & Reductions",
+    titleFa: "\u062F\u0631\u06A9 \u0634\u0646\u06CC\u062F\u0627\u0631\u06CC \u06AF\u0641\u062A\u0627\u0631 \u0633\u0631\u06CC\u0639\u060C \u0627\u062F\u063A\u0627\u0645 \u062D\u0631\u0648\u0641 \u0648 \u062D\u0630\u0641\u06CC\u0627\u062A \u0635\u0648\u062A\u06CC \u0646\u06CC\u062A\u06CC\u0648\u0647\u0627 (Connected Speech & Reductions)",
+    descriptionFa: "\u062F\u0631\u06A9 \u0634\u0646\u06CC\u062F\u0627\u0631\u06CC \u0628\u06CC\u200C\u062F\u0631\u0646\u06AF \u0639\u0628\u0627\u0631\u0627\u062A\u06CC \u0628\u0627 \u062D\u0630\u0641\u06CC\u0627\u062A \u0648 \u0627\u062F\u063A\u0627\u0645\u200C\u0647\u0627\u06CC \u0622\u0648\u0627\u06CC\u06CC \u0645\u062B\u0644 gonna, wanna, shoulda, Whaddya think, lemme see \u0628\u062F\u0648\u0646 \u0633\u0631\u062F\u0631\u06AF\u0645\u06CC \u062F\u0631 \u0645\u06A9\u0627\u0644\u0645\u0647 \u0633\u0631\u06CC\u0639.",
+    scientificReference: "Celce-Murcia: Teaching Pronunciation; CEFR B2 Listening & Spoken Interaction",
+    criteriaForMasteryFa: "\u062A\u0634\u062E\u06CC\u0635 \u0633\u0631\u06CC\u0639 \u062C\u0645\u0644\u0627\u062A \u0628\u0627 \u062D\u0630\u0641\u06CC\u0627\u062A \u06AF\u0641\u062A\u0627\u0631\u06CC \u0646\u06CC\u062A\u06CC\u0648 \u0627\u0645\u0631\u06CC\u06A9\u0646 \u0648 \u067E\u0627\u0633\u062E\u200C\u06AF\u0648\u06CC\u06CC \u0645\u062A\u0646\u0627\u0633\u0628 \u0628\u062F\u0648\u0646 \u0646\u06CC\u0627\u0632 \u0628\u0647 \u062A\u06A9\u0631\u0627\u0631.",
+    exampleGood: "Understood 'Whaddya wanna do tonight?' instantly and replied fluently.",
+    exampleBad: "\u0645\u062A\u0648\u0642\u0641 \u0634\u062F\u0646 \u062F\u0631 \u0645\u06A9\u0627\u0644\u0645\u0647 \u0648 \u062A\u0642\u0627\u0636\u0627\u06CC \u062A\u06A9\u0631\u0627\u0631 \u06A9\u0644\u0645\u0647 \u0628\u0647 \u06A9\u0644\u0645\u0647 What do you want to do.",
+    priorityOrder: 16
+  },
+  {
+    id: "c2-chk-17",
+    tier: 2,
+    tierNameFa: "\u0641\u0627\u0632 \u06F2: \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u062D\u0631\u0641\u0647\u200C\u0627\u06CC\u060C \u0627\u0641\u0639\u0627\u0644 \u0648\u062C\u0647\u06CC \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644 \u062A\u0639\u0627\u0645\u0644\u06CC (B1+ - B2)",
+    cefrLevel: "B2",
+    category: "phonetics",
+    categoryFa: "\u0622\u06A9\u0648\u0633\u062A\u06CC\u06A9 \u0648 \u0641\u0648\u0646\u062A\u06CC\u06A9 \u0627\u0645\u0631\u06CC\u06A9\u0646",
+    titleEn: "Sentence Stress Timing & Content vs Function Rhythm",
+    titleFa: "\u0631\u06CC\u062A\u0645 \u0627\u0633\u062A\u0631\u0633-\u062A\u0627\u06CC\u0645\u062F \u0648 \u0636\u0631\u0628\u200C\u0622\u0647\u0646\u06AF \u0647\u062C\u0627\u0647\u0627\u06CC \u0627\u0637\u0644\u0627\u0639\u0627\u062A\u06CC (Stress-Timed Rhythm)",
+    descriptionFa: "\u062F\u0631 \u0627\u0645\u0631\u06CC\u06A9\u0646 \u0647\u062C\u0627\u0647\u0627\u06CC \u06A9\u0644\u0645\u0627\u062A \u0645\u0639\u0646\u0627\u062F\u0627\u0631 (Content words) \u06A9\u0634\u06CC\u062F\u0647 \u0648 \u0628\u0627 \u062A\u0627\u06A9\u06CC\u062F \u0627\u062F\u0627 \u0645\u06CC\u200C\u0634\u0648\u0646\u062F \u0648 \u06A9\u0644\u0645\u0627\u062A \u0633\u0627\u062E\u062A\u0627\u0631\u06CC \u0641\u0634\u0631\u062F\u0647 \u0645\u06CC\u200C\u0634\u0648\u0646\u062F.",
+    scientificReference: "Abercrombie: Elements of General Phonetics; CEFR B2 Intonation",
+    criteriaForMasteryFa: "\u06A9\u0644\u0627\u0645 \u0636\u0631\u0628\u06CC \u0628\u0627 \u062A\u06A9\u06CC\u0647\u200C\u0647\u0627\u06CC \u062F\u0642\u06CC\u0642 \u0628\u0647 \u062C\u0627\u06CC \u062E\u0648\u0627\u0646\u062F\u0646 \u06CC\u06A9\u0646\u0648\u0627\u062E\u062A \u062A\u0645\u0627\u0645 \u06A9\u0644\u0645\u0627\u062A \u0628\u0647 \u0634\u06CC\u0648\u0647 \u0633\u06CC\u0644\u0627\u0628-\u062A\u0627\u06CC\u0645\u062F \u0641\u0627\u0631\u0633\u06CC.",
+    exampleGood: "I NEVER said he STOLE the MONEY.",
+    exampleBad: "I-ne-ver-said-he-stole-the-mo-ney (\u062A\u06A9\u200C\u062A\u06A9 \u06A9\u0644\u0645\u0627\u062A \u0628\u0627 \u06CC\u06A9 \u0632\u0645\u0627\u0646 \u0628\u0631\u0627\u0628\u0631).",
+    priorityOrder: 17
+  },
+  {
+    id: "c2-chk-18",
+    tier: 2,
+    tierNameFa: "\u0641\u0627\u0632 \u06F2: \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u062D\u0631\u0641\u0647\u200C\u0627\u06CC\u060C \u0627\u0641\u0639\u0627\u0644 \u0648\u062C\u0647\u06CC \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644 \u062A\u0639\u0627\u0645\u0644\u06CC (B1+ - B2)",
+    cefrLevel: "B2",
+    category: "grammar",
+    categoryFa: "\u062F\u0633\u062A\u0648\u0631 \u0632\u0628\u0627\u0646 \u0648 \u0646\u062D\u0648",
+    titleEn: "Modal Nuances of Probability (Must have, Can't be, Might as well)",
+    titleFa: "\u0648\u062C\u0648\u0647 \u0627\u062D\u062A\u0645\u0627\u0644\u0627\u062A \u0648 \u0627\u0633\u062A\u0646\u062A\u0627\u062C \u0645\u0646\u0637\u0642\u06CC \u0628\u0627 \u0627\u0641\u0639\u0627\u0644 \u06A9\u0645\u06A9\u06CC \u0648\u062C\u0647\u06CC",
+    descriptionFa: "\u0628\u06CC\u0627\u0646 \u0642\u0637\u0639\u06CC\u062A\u060C \u0627\u062D\u062A\u0645\u0627\u0644 \u06CC\u0627 \u0646\u0627\u0645\u0645\u06A9\u0646 \u0628\u0648\u062F\u0646 \u0648\u0642\u0627\u06CC\u0639 \u06AF\u0630\u0634\u062A\u0647 \u0648 \u062D\u0627\u0644: must have been, couldn't have known, might as well.",
+    scientificReference: "Palmer: Mood and Modality; CEFR B2 Functional Grammar",
+    criteriaForMasteryFa: "\u0627\u0633\u062A\u0646\u062A\u0627\u062C \u0645\u0646\u0637\u0642\u06CC \u0631\u0648\u0627\u0646 \u062F\u0631 \u0645\u0648\u0627\u062C\u0647\u0647 \u0628\u0627 \u06CC\u06A9 \u0645\u0639\u0645\u0627 \u06CC\u0627 \u062E\u0628\u0631 \u063A\u06CC\u0631\u0645\u0646\u062A\u0638\u0631\u0647.",
+    exampleGood: "She can't be at the office right now; she must have left early for her appointment.",
+    exampleBad: "It is impossible she is in office, maybe she went.",
+    priorityOrder: 18
+  },
+  {
+    id: "c2-chk-19",
+    tier: 2,
+    tierNameFa: "\u0641\u0627\u0632 \u06F2: \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u062D\u0631\u0641\u0647\u200C\u0627\u06CC\u060C \u0627\u0641\u0639\u0627\u0644 \u0648\u062C\u0647\u06CC \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644 \u062A\u0639\u0627\u0645\u0644\u06CC (B1+ - B2)",
+    cefrLevel: "B2",
+    category: "pragmatics",
+    categoryFa: "\u0627\u062A\u06CC\u06A9\u062A \u06AF\u0641\u062A\u0627\u0631\u06CC \u0648 \u06A9\u0627\u0631\u0628\u0631\u062F\u0634\u0646\u0627\u0633\u06CC",
+    titleEn: "Telephone, Ordering & Daily Service Etiquette",
+    titleFa: "\u0627\u062A\u06CC\u06A9\u062A \u067E\u06CC\u0634\u0631\u0641\u062A\u0647 \u062F\u0631 \u0633\u0641\u0627\u0631\u0634\u200C\u062F\u0647\u06CC\u060C \u0631\u0632\u0631\u0648 \u0648 \u062A\u0645\u0627\u0633\u200C\u0647\u0627\u06CC \u0627\u062F\u0627\u0631\u06CC/\u062E\u062F\u0645\u0627\u062A\u06CC",
+    descriptionFa: "\u0645\u0647\u0627\u0631\u062A \u0633\u0641\u0627\u0631\u0634 \u062F\u0627\u062F\u0646\u060C \u067E\u0631\u0633\u200C\u0648\u062C\u0648 \u062F\u0631\u0628\u0627\u0631\u0647 \u0635\u0648\u0631\u062A\u200C\u062D\u0633\u0627\u0628\u060C \u0648 \u0627\u0639\u062A\u0631\u0627\u0636 \u0645\u0624\u062F\u0628\u0627\u0646\u0647 \u0628\u0647 \u062E\u062F\u0645\u0627\u062A \u0628\u062F\u0648\u0646 \u0628\u06CC\u200C\u0627\u062D\u062A\u0631\u0627\u0645\u06CC.",
+    scientificReference: "Yule: Pragmatics; CEFR B2 Transactional Interaction",
+    criteriaForMasteryFa: "\u0645\u062F\u06CC\u0631\u06CC\u062A \u062A\u0645\u0627\u0633 \u06CC\u0627 \u0633\u0641\u0627\u0631\u0634 \u0628\u0627 \u0639\u0628\u0627\u0631\u0627\u062A \u0646\u06CC\u062A\u06CC\u0648: Could I get..., Just to clarify..., Put me through to...",
+    exampleGood: "Could I get a medium oat latte to go, and could you make it extra hot?",
+    exampleBad: "Give me one coffee quickly.",
+    priorityOrder: 19
+  },
+  {
+    id: "c2-chk-42",
+    tier: 2,
+    tierNameFa: "\u0641\u0627\u0632 \u06F2: \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u062D\u0631\u0641\u0647\u200C\u0627\u06CC\u060C \u0627\u0641\u0639\u0627\u0644 \u0648\u062C\u0647\u06CC \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644 \u062A\u0639\u0627\u0645\u0644\u06CC (B1+ - B2)",
+    cefrLevel: "B2",
+    category: "pragmatics",
+    categoryFa: "\u0627\u062A\u06CC\u06A9\u062A \u06AF\u0641\u062A\u0627\u0631\u06CC \u0648 \u06A9\u0627\u0631\u0628\u0631\u062F\u0634\u0646\u0627\u0633\u06CC",
+    titleEn: "Apology, Complaint & Service Recovery Scripts",
+    titleFa: "\u0639\u0630\u0631\u062E\u0648\u0627\u0647\u06CC\u060C \u0634\u06A9\u0627\u06CC\u062A \u0645\u0624\u062F\u0628\u0627\u0646\u0647 \u0648 \u0628\u0627\u0632\u0633\u0627\u0632\u06CC \u0631\u0627\u0628\u0637\u0647 \u062F\u0631 \u062E\u062F\u0645\u0627\u062A/\u06A9\u0627\u0631",
+    descriptionFa: "\u0627\u0644\u06AF\u0648\u0647\u0627\u06CC \u0622\u0645\u0631\u06CC\u06A9\u0627\u06CC\u06CC \u0628\u0631\u0627\u06CC \u0639\u0630\u0631\u062E\u0648\u0627\u0647\u06CC \u0635\u0627\u062F\u0642\u0627\u0646\u0647 (I owe you an apology)\u060C \u0634\u06A9\u0627\u06CC\u062A \u0633\u0627\u0632\u0646\u062F\u0647 (I was hoping you could help)\u060C \u0648 service recovery \u0628\u062F\u0648\u0646 \u062A\u0647\u0627\u062C\u0645 \u06CC\u0627 \u062A\u0639\u0627\u0631\u0641 \u0627\u0641\u0631\u0627\u0637\u06CC \u0641\u0627\u0631\u0633\u06CC.",
+    scientificReference: "Brown & Levinson: Politeness Theory; CEFR B2 Transactional Interaction",
+    criteriaForMasteryFa: "\u0627\u062F\u0627\u06CC \u06CC\u06A9 \u0639\u0630\u0631\u062E\u0648\u0627\u0647\u06CC \u06A9\u0627\u0645\u0644 \u0648 \u06CC\u06A9 \u0634\u06A9\u0627\u06CC\u062A \u0645\u0624\u062F\u0628\u0627\u0646\u0647 \u0628\u0627 \u067E\u06CC\u0634\u0646\u0647\u0627\u062F \u0631\u0627\u0647\u06A9\u0627\u0631\u060C \u0628\u062F\u0648\u0646 \u0644\u062D\u0646 \u0645\u062A\u0647\u0645\u200C\u06A9\u0646\u0646\u062F\u0647 \u06CC\u0627 \u0628\u06CC\u0634\u200C\u0627\u0632\u062D\u062F \u0631\u0633\u0645\u06CC \u06A9\u062A\u0627\u0628\u06CC.",
+    exampleGood: "I'm really sorry about the delay \u2014 that was on me. If it helps, I can send the revised file by noon.",
+    exampleBad: "You made big mistake. Fix it now. I am very angry.",
+    priorityOrder: 19.5
+  },
+  {
+    id: "c2-chk-20",
+    tier: 2,
+    tierNameFa: "\u0641\u0627\u0632 \u06F2: \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u062D\u0631\u0641\u0647\u200C\u0627\u06CC\u060C \u0627\u0641\u0639\u0627\u0644 \u0648\u062C\u0647\u06CC \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644 \u062A\u0639\u0627\u0645\u0644\u06CC (B1+ - B2)",
+    cefrLevel: "B2",
+    category: "idioms",
+    categoryFa: "\u0627\u0635\u0637\u0644\u0627\u062D\u0627\u062A \u0648 \u06A9\u0644\u06CC\u0634\u0647\u200C\u0647\u0627\u06CC \u0646\u06CC\u062A\u06CC\u0648",
+    titleEn: "American Workplace & Professional Idioms",
+    titleFa: "\u06A9\u0644\u06CC\u0634\u0647\u200C\u0647\u0627\u06CC \u062D\u0631\u0641\u0647\u200C\u0627\u06CC \u0645\u062D\u06CC\u0637 \u06A9\u0627\u0631 \u0648 \u06A9\u0633\u0628\u200C\u0648\u06A9\u0627\u0631 \u0622\u0645\u0631\u06CC\u06A9\u0627\u06CC\u06CC (Bite the bullet, Raise the bar)",
+    descriptionFa: "\u0627\u0635\u0637\u0644\u0627\u062D\u0627\u062A\u06CC \u0646\u0638\u06CC\u0631 bite the bullet, raise the bar, touch base, on the same page \u062F\u0631 \u0633\u0646\u0627\u0631\u06CC\u0648\u0647\u0627\u06CC \u062A\u06CC\u0645\u06CC.",
+    scientificReference: "Cambridge Business English Framework; CEFR B2 Lexical Competence",
+    criteriaForMasteryFa: "\u0628\u0647\u200C\u06A9\u0627\u0631\u06AF\u06CC\u0631\u06CC \u062D\u062F\u0627\u0642\u0644 \u06F2 \u0627\u0635\u0637\u0644\u0627\u062D \u0645\u0631\u062A\u0628\u0637 \u06A9\u0627\u0631\u06CC \u062F\u0631 \u06CC\u06A9 \u0645\u06A9\u0627\u0644\u0645\u0647 \u0634\u0628\u06CC\u0647\u200C\u0633\u0627\u0632\u06CC\u200C\u0634\u062F\u0647 \u062A\u06CC\u0645\u06CC.",
+    exampleGood: "Let's bite the bullet and present the honest numbers to the stakeholders.",
+    exampleBad: "We must be brave and show the bad numbers.",
+    priorityOrder: 20
+  },
+  // ================= TIER 3: Upper-Intermediate & Professional Spoken Polish (B2+ - C1) =================
+  {
+    id: "c2-chk-21",
+    tier: 3,
+    tierNameFa: "\u0641\u0627\u0632 \u06F3: \u067E\u0648\u0644\u06CC\u0634 \u0644\u0647\u062C\u0647\u060C \u0633\u0627\u062E\u062A\u0627\u0631\u0647\u0627\u06CC \u062A\u0627\u06A9\u06CC\u062F\u06CC \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644 \u067E\u06CC\u0634\u0631\u0641\u062A\u0647 (B2+ - C1)",
+    cefrLevel: "C1",
+    category: "grammar",
+    categoryFa: "\u062F\u0633\u062A\u0648\u0631 \u0632\u0628\u0627\u0646 \u0648 \u0646\u062D\u0648",
+    titleEn: "Spoken Inversion for Rhetorical Emphasis",
+    titleFa: "\u0648\u0627\u0631\u0648\u0646\u06AF\u06CC \u06AF\u0631\u0627\u0645\u0631\u06CC (Inversion) \u0628\u0631\u0627\u06CC \u0627\u06CC\u062C\u0627\u062F \u062A\u0627\u06A9\u06CC\u062F \u0648 \u06AF\u06CC\u0631\u0627\u06CC\u06CC \u062F\u0631 \u06A9\u0644\u0627\u0645",
+    descriptionFa: "\u0648\u0627\u0631\u0648\u0646\u06AF\u06CC \u0641\u0639\u0644 \u0648 \u0641\u0627\u0639\u0644 \u0628\u0639\u062F \u0627\u0632 \u0642\u06CC\u062F\u0647\u0627\u06CC \u0645\u0646\u0641\u06CC \u06CC\u0627 \u062A\u062D\u062F\u06CC\u062F\u06CC: Rarely have I witnessed..., Not only did we deliver...",
+    scientificReference: "Quirk et al.: A Comprehensive Grammar of the English Language; CEFR C1 Flexibility",
+    criteriaForMasteryFa: "\u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0637\u0628\u06CC\u0639\u06CC \u0627\u0632 \u0648\u0627\u0631\u0648\u0646\u06AF\u06CC \u062A\u0627\u06A9\u06CC\u062F\u06CC \u062F\u0631 \u0628\u06CC\u0627\u0646 \u06CC\u06A9 \u0645\u0648\u0636\u0639 \u0645\u0647\u0645 \u0628\u062F\u0648\u0646 \u0644\u06A9\u0646\u062A.",
+    exampleGood: "Rarely have I seen a team adapt so quickly to such a drastic shift.",
+    exampleBad: "I have rarely seen team adapt so fast.",
+    priorityOrder: 21
+  },
+  {
+    id: "c2-chk-22",
+    tier: 3,
+    tierNameFa: "\u0641\u0627\u0632 \u06F3: \u067E\u0648\u0644\u06CC\u0634 \u0644\u0647\u062C\u0647\u060C \u0633\u0627\u062E\u062A\u0627\u0631\u0647\u0627\u06CC \u062A\u0627\u06A9\u06CC\u062F\u06CC \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644 \u067E\u06CC\u0634\u0631\u0641\u062A\u0647 (B2+ - C1)",
+    cefrLevel: "C1",
+    category: "grammar",
+    categoryFa: "\u062F\u0633\u062A\u0648\u0631 \u0632\u0628\u0627\u0646 \u0648 \u0646\u062D\u0648",
+    titleEn: "Cleft Sentences for Focus & Topic Highlighting",
+    titleFa: "\u062C\u0645\u0644\u0627\u062A \u0634\u06A9\u0627\u0641\u062A\u0647 (Cleft Sentences) \u0628\u0631\u0627\u06CC \u0628\u0631\u062C\u0633\u062A\u0647\u200C\u0633\u0627\u0632\u06CC \u06A9\u0627\u0646\u0648\u0646 \u067E\u06CC\u0627\u0645 (What really matters is...)",
+    descriptionFa: "\u0633\u0627\u062E\u062A\u0627\u0631\u0647\u0627\u06CC Wh-cleft \u0648 It-cleft: What concerns me most is..., It was his lack of transparency that triggered...",
+    scientificReference: "Cambridge English C1 Proficiency Rubrics: Grammatical Resource",
+    criteriaForMasteryFa: "\u0628\u0631\u062C\u0633\u062A\u0647\u200C\u0633\u0627\u0632\u06CC \u0646\u06A9\u0627\u062A \u06A9\u0644\u06CC\u062F\u06CC \u0628\u0627 \u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0627\u0632 \u0633\u0627\u062E\u062A\u0627\u0631\u0647\u0627\u06CC \u06A9\u0644\u0627\u0641\u062A \u062F\u0631 \u0645\u0646\u0627\u0638\u0631\u0647 \u06CC\u0627 \u06AF\u0641\u062A\u06AF\u0648.",
+    exampleGood: "What really strikes me about this proposal is its long-term scalability.",
+    exampleBad: "The proposal is good because of scalability.",
+    priorityOrder: 22
+  },
+  {
+    id: "c2-chk-23",
+    tier: 3,
+    tierNameFa: "\u0641\u0627\u0632 \u06F3: \u067E\u0648\u0644\u06CC\u0634 \u0644\u0647\u062C\u0647\u060C \u0633\u0627\u062E\u062A\u0627\u0631\u0647\u0627\u06CC \u062A\u0627\u06A9\u06CC\u062F\u06CC \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644 \u067E\u06CC\u0634\u0631\u0641\u062A\u0647 (B2+ - C1)",
+    cefrLevel: "C1",
+    category: "phonetics",
+    categoryFa: "\u0622\u06A9\u0648\u0633\u062A\u06CC\u06A9 \u0648 \u0641\u0648\u0646\u062A\u06CC\u06A9 \u0627\u0645\u0631\u06CC\u06A9\u0646",
+    titleEn: "Connected Speech: Catenation, Linking-W, and Linking-Y",
+    titleFa: "\u0645\u062A\u0635\u0644\u200C\u062E\u0648\u0627\u0646\u06CC \u0648 \u0622\u0648\u0627\u0647\u0627\u06CC \u0631\u0627\u0628\u0637 \u062F\u0631 \u06A9\u0644\u0627\u0645 \u067E\u06CC\u0648\u0633\u062A\u0647 (Linking sounds & Liaison)",
+    descriptionFa: "\u0627\u062A\u0635\u0627\u0644 \u0637\u0628\u06CC\u0639\u06CC \u0627\u0646\u062A\u0647\u0627\u06CC \u06A9\u0644\u0645\u0627\u062A \u0628\u0647 \u0627\u0628\u062A\u062F\u0627\u06CC \u06A9\u0644\u0645\u0627\u062A \u0628\u0639\u062F \u0628\u0627 \u0646\u06CC\u0645\u200C\u0648\u0627\u06A9\u0647\u200C\u0647\u0627\u06CC /w/ \u0648 /j/: go[w]out, see[j]it, pick[k]it up.",
+    scientificReference: "Roach: English Phonetics and Phonology; CEFR C1 Phonological Control",
+    criteriaForMasteryFa: "\u067E\u06CC\u0648\u0633\u062A\u06AF\u06CC \u06A9\u0627\u0645\u0644 \u062C\u0631\u06CC\u0627\u0646 \u0635\u0648\u062A\u06CC \u06A9\u0644\u0645\u0627\u062A \u0628\u062F\u0648\u0646 \u0627\u06CC\u062C\u0627\u062F \u0628\u0631\u06CC\u062F\u06AF\u06CC\u200C\u0647\u0627\u06CC \u0645\u0635\u0646\u0648\u0639\u06CC \u0628\u06CC\u0646 \u06A9\u0644\u0645\u0627\u062A \u0645\u062C\u0627\u0648\u0631.",
+    exampleGood: "Can you go[w]out and see[j]if they're ready?",
+    exampleBad: "Can | you | go | out | and | see | if (\u06A9\u0644\u0645\u0627\u062A \u0628\u0631\u06CC\u062F\u0647\u200C\u0628\u0631\u06CC\u062F\u0647).",
+    priorityOrder: 23
+  },
+  {
+    id: "c2-chk-24",
+    tier: 3,
+    tierNameFa: "\u0641\u0627\u0632 \u06F3: \u067E\u0648\u0644\u06CC\u0634 \u0644\u0647\u062C\u0647\u060C \u0633\u0627\u062E\u062A\u0627\u0631\u0647\u0627\u06CC \u062A\u0627\u06A9\u06CC\u062F\u06CC \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644 \u067E\u06CC\u0634\u0631\u0641\u062A\u0647 (B2+ - C1)",
+    cefrLevel: "C1",
+    category: "pragmatics",
+    categoryFa: "\u0627\u062A\u06CC\u06A9\u062A \u06AF\u0641\u062A\u0627\u0631\u06CC \u0648 \u06A9\u0627\u0631\u0628\u0631\u062F\u0634\u0646\u0627\u0633\u06CC",
+    titleEn: "High-Stakes Negotiation & Concession Phrasing",
+    titleFa: "\u0627\u062F\u0628\u06CC\u0627\u062A \u0645\u0630\u0627\u06A9\u0631\u0647 \u062D\u0633\u0627\u0633 \u0648 \u0627\u0639\u0637\u0627\u06CC \u0627\u0645\u062A\u06CC\u0627\u0632\u0627\u062A \u0645\u062A\u0642\u0627\u0628\u0644 (Give and Take)",
+    descriptionFa: "\u0639\u0628\u0627\u0631\u0627\u062A \u0627\u0633\u062A\u0631\u0627\u062A\u0698\u06CC\u06A9 \u062F\u0631 \u0645\u0630\u0627\u06A9\u0631\u0647: meet in the middle, non-starter, on condition that, trade-off.",
+    scientificReference: "Fisher & Ury: Getting to Yes (Principled Negotiation); CEFR C1 Professional Interaction",
+    criteriaForMasteryFa: "\u0645\u062F\u06CC\u0631\u06CC\u062A \u06CC\u06A9 \u0627\u062E\u062A\u0644\u0627\u0641 \u0646\u0638\u0631 \u062A\u062C\u0627\u0631\u06CC \u0628\u0627 \u067E\u06CC\u0634\u0646\u0647\u0627\u062F \u0631\u0627\u0647\u06A9\u0627\u0631\u0647\u0627\u06CC \u0645\u06CC\u0627\u0646\u0647 \u0648 \u0632\u0628\u0627\u0646 \u0627\u0635\u06CC\u0644 \u0645\u0630\u0627\u06A9\u0631\u0647.",
+    exampleGood: "While that price point is a non-starter for us, we could meet you halfway if the timeline is flexible.",
+    exampleBad: "I cannot accept this price. Give me discount.",
+    priorityOrder: 24
+  },
+  {
+    id: "c2-chk-25",
+    tier: 3,
+    tierNameFa: "\u0641\u0627\u0632 \u06F3: \u067E\u0648\u0644\u06CC\u0634 \u0644\u0647\u062C\u0647\u060C \u0633\u0627\u062E\u062A\u0627\u0631\u0647\u0627\u06CC \u062A\u0627\u06A9\u06CC\u062F\u06CC \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644 \u067E\u06CC\u0634\u0631\u0641\u062A\u0647 (B2+ - C1)",
+    cefrLevel: "C1",
+    category: "idioms",
+    categoryFa: "\u0627\u0635\u0637\u0644\u0627\u062D\u0627\u062A \u0648 \u06A9\u0644\u06CC\u0634\u0647\u200C\u0647\u0627\u06CC \u0646\u06CC\u062A\u06CC\u0648",
+    titleEn: "Culturally Embedded Metaphors & Sports Idioms",
+    titleFa: "\u0627\u0633\u062A\u0639\u0627\u0631\u0647\u200C\u0647\u0627\u06CC \u0631\u06CC\u0634\u0647\u200C\u062F\u0627\u0631 \u0641\u0631\u0647\u0646\u06AF\u06CC \u0648 \u0648\u0631\u0632\u0634\u06CC \u062F\u0631 \u06AF\u0641\u062A\u0627\u0631 \u0639\u0645\u0648\u0645\u06CC (Ballpark figure, Curveball)",
+    descriptionFa: "\u0627\u0635\u0637\u0644\u0627\u062D\u0627\u062A\u06CC \u0646\u0638\u06CC\u0631 throw a curveball, in the ballpark, drop the ball, hit a home run \u062F\u0631 \u0645\u062D\u0627\u0648\u0631\u0627\u062A \u0631\u0648\u0632\u0645\u0631\u0647.",
+    scientificReference: "Lakoff & Johnson: Metaphors We Live By; CEFR C1 Sociolinguistic Competence",
+    criteriaForMasteryFa: "\u062F\u0631\u06A9 \u0648 \u0628\u0647\u200C\u06A9\u0627\u0631\u06AF\u06CC\u0631\u06CC \u0627\u0633\u062A\u0639\u0627\u0631\u0647\u200C\u0647\u0627\u06CC \u0641\u0631\u0647\u0646\u06AF\u06CC \u0622\u0645\u0631\u06CC\u06A9\u0627\u06CC\u06CC \u0628\u062F\u0648\u0646 \u062A\u0639\u062C\u0628 \u06CC\u0627 \u062A\u0641\u0633\u06CC\u0631 \u0644\u0641\u0638\u06CC.",
+    exampleGood: "The client threw us a real curveball with that last-minute requirement change.",
+    exampleBad: "The client did something unexpected to us.",
+    priorityOrder: 25
+  },
+  {
+    id: "c2-chk-26",
+    tier: 3,
+    tierNameFa: "\u0641\u0627\u0632 \u06F3: \u067E\u0648\u0644\u06CC\u0634 \u0644\u0647\u062C\u0647\u060C \u0633\u0627\u062E\u062A\u0627\u0631\u0647\u0627\u06CC \u062A\u0627\u06A9\u06CC\u062F\u06CC \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644 \u067E\u06CC\u0634\u0631\u0641\u062A\u0647 (B2+ - C1)",
+    cefrLevel: "C1",
+    category: "discourse",
+    categoryFa: "\u067E\u06CC\u0648\u0633\u062A\u06AF\u06CC \u06AF\u0641\u062A\u0627\u0631 \u0648 \u062F\u06CC\u0633\u06A9\u0648\u0631\u0633",
+    titleEn: "Spontaneous Reformulation & Mid-Sentence Repairs",
+    titleFa: "\u0628\u0627\u0632\u0622\u0631\u0627\u06CC\u06CC \u0641\u06CC\u200C\u0627\u0644\u0628\u062F\u0627\u0647\u0647 \u062C\u0645\u0644\u0647 \u0628\u062F\u0648\u0646 \u062A\u0648\u0642\u0641 \u06CC\u0627 \u0627\u0632 \u062F\u0633\u062A \u062F\u0627\u062F\u0646 \u062A\u0633\u0644\u0637 (Spontaneous Repair)",
+    descriptionFa: "\u062A\u0648\u0627\u0646\u0627\u06CC\u06CC \u062A\u0635\u062D\u06CC\u062D \u06CC\u0627 \u062A\u062F\u0642\u06CC\u0642 \u06A9\u0644\u0627\u0645 \u062F\u0631 \u062D\u06CC\u0646 \u0635\u062D\u0628\u062A \u0628\u0627 \u0639\u0628\u0627\u0631\u0627\u062A\u06CC \u0686\u0648\u0646 or rather, let me rephrase that, to put it more precisely.",
+    scientificReference: "Levelt: Speaking: From Intention to Articulation; CEFR C1 Fluency Descriptors",
+    criteriaForMasteryFa: "\u0627\u0635\u0644\u0627\u062D \u0645\u0633\u06CC\u0631 \u062C\u0645\u0644\u0647 \u0628\u062F\u0648\u0646 \u062A\u067E\u0642 \u0632\u062F\u0646 \u06CC\u0627 \u0634\u0631\u0645\u0646\u062F\u06AF\u06CC\u060C \u0628\u0627 \u062D\u0641\u0638 \u0627\u0639\u062A\u0645\u0627\u062F \u0628\u0647 \u0646\u0641\u0633 \u06A9\u0627\u0645\u0644.",
+    exampleGood: "We should scrap the plan\u2014or rather, pivot our focus to the enterprise tier.",
+    exampleBad: "We scrap... no wait... I mean... uh... change.",
+    priorityOrder: 26
+  },
+  {
+    id: "c2-chk-27",
+    tier: 3,
+    tierNameFa: "\u0641\u0627\u0632 \u06F3: \u067E\u0648\u0644\u06CC\u0634 \u0644\u0647\u062C\u0647\u060C \u0633\u0627\u062E\u062A\u0627\u0631\u0647\u0627\u06CC \u062A\u0627\u06A9\u06CC\u062F\u06CC \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644 \u067E\u06CC\u0634\u0631\u0641\u062A\u0647 (B2+ - C1)",
+    cefrLevel: "C1",
+    category: "phonetics",
+    categoryFa: "\u0622\u06A9\u0648\u0633\u062A\u06CC\u06A9 \u0648 \u0641\u0648\u0646\u062A\u06CC\u06A9 \u0627\u0645\u0631\u06CC\u06A9\u0646",
+    titleEn: "Intonation Contours: High-Rising Terminals vs Falling Declaratives",
+    titleFa: "\u062A\u0637\u0627\u0628\u0642 \u0622\u0647\u0646\u06AF \u06A9\u0644\u0627\u0645 (Intonation) \u0628\u0627 \u0642\u0635\u062F \u0627\u0631\u062A\u0628\u0627\u0637\u06CC (\u06A9\u0627\u0647\u0634 \u0644\u062D\u0646 \u0645\u0631\u062F\u062F Uptalk)",
+    descriptionFa: "\u067E\u0627\u06CC\u0627\u0646 \u062F\u0627\u062F\u0646 \u062C\u0645\u0644\u0627\u062A \u062E\u0628\u0631\u06CC \u0628\u0627 \u0627\u0641\u062A \u062A\u0646 \u0635\u062F\u0627 (Falling tone) \u0628\u0631\u0627\u06CC \u0627\u0644\u0642\u0627\u06CC \u0642\u0627\u0637\u0639\u06CC\u062A \u0648 \u0627\u0642\u062A\u062F\u0627\u0631\u060C \u0648 \u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0628\u0647 \u062C\u0627 \u0627\u0632 \u062E\u06CC\u0632 \u0635\u062F\u0627.",
+    scientificReference: "Wells: English Intonation: An Introduction; CEFR C1 Phonological Control",
+    criteriaForMasteryFa: "\u0627\u062C\u062A\u0646\u0627\u0628 \u0627\u0632 \u0632\u06CC\u0631\u0648\u0628\u0645 \u0633\u0648\u0627\u0644\u06CC \u062F\u0631 \u067E\u0627\u06CC\u0627\u0646 \u062C\u0645\u0644\u0627\u062A \u062E\u0628\u0631\u06CC (\u0639\u062F\u0645 \u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0646\u0627\u062E\u0648\u0627\u0633\u062A\u0647 \u0627\u0632 Uptalk).",
+    exampleGood: "Our strategy is already yielding measurable results. [Firm falling tone]",
+    exampleBad: "Our strategy is already yielding results? [Uncertain high rising tone]",
+    priorityOrder: 27
+  },
+  {
+    id: "c2-chk-28",
+    tier: 3,
+    tierNameFa: "\u0641\u0627\u0632 \u06F3: \u067E\u0648\u0644\u06CC\u0634 \u0644\u0647\u062C\u0647\u060C \u0633\u0627\u062E\u062A\u0627\u0631\u0647\u0627\u06CC \u062A\u0627\u06A9\u06CC\u062F\u06CC \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644 \u067E\u06CC\u0634\u0631\u0641\u062A\u0647 (B2+ - C1)",
+    cefrLevel: "C1",
+    category: "grammar",
+    categoryFa: "\u062F\u0633\u062A\u0648\u0631 \u0632\u0628\u0627\u0646 \u0648 \u0646\u062D\u0648",
+    titleEn: "Participle Clauses & Adverbial Participles in Speech",
+    titleFa: "\u0628\u0646\u062F\u0647\u0627\u06CC \u0648\u062C\u0647\u200C\u0648\u0635\u0644\u06CC (Participle Clauses) \u0628\u0631\u0627\u06CC \u067E\u06CC\u0648\u0633\u062A\u06AF\u06CC \u0631\u0648\u0627\u06CC\u06CC \u0648 \u063A\u0646\u0627\u06CC \u0633\u0627\u062E\u062A\u0627\u0631\u06CC",
+    descriptionFa: "\u062A\u0631\u06A9\u06CC\u0628 \u062C\u0645\u0644\u0627\u062A \u0628\u0627 \u0648\u062C\u0647\u200C\u0648\u0635\u0644\u06CC: Having wrapped up the project, we celebrated; Taking everything into account...",
+    scientificReference: "Huddleston & Pullum: The Cambridge Grammar of the English Language; CEFR C1",
+    criteriaForMasteryFa: "\u06A9\u0627\u0631\u0628\u0631\u062F \u062E\u0648\u062F\u062C\u0648\u0634 \u0639\u0628\u0627\u0631\u0627\u062A \u0648\u062C\u0647\u200C\u0648\u0635\u0644\u06CC \u062F\u0631 \u062A\u0648\u0636\u06CC\u062D \u0631\u062E\u062F\u0627\u062F\u0647\u0627 \u06CC\u0627 \u062C\u0645\u0639\u200C\u0628\u0646\u062F\u06CC \u0645\u0628\u0627\u062D\u062B.",
+    exampleGood: "Having evaluated all prospective vendors, we settled on the cloud-native solution.",
+    exampleBad: "We evaluated all vendors and after that we selected cloud solution.",
+    priorityOrder: 28
+  },
+  {
+    id: "c2-chk-29",
+    tier: 3,
+    tierNameFa: "\u0641\u0627\u0632 \u06F3: \u067E\u0648\u0644\u06CC\u0634 \u0644\u0647\u062C\u0647\u060C \u0633\u0627\u062E\u062A\u0627\u0631\u0647\u0627\u06CC \u062A\u0627\u06A9\u06CC\u062F\u06CC \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644 \u067E\u06CC\u0634\u0631\u0641\u062A\u0647 (B2+ - C1)",
+    cefrLevel: "C1",
+    category: "pragmatics",
+    categoryFa: "\u0627\u062A\u06CC\u06A9\u062A \u06AF\u0641\u062A\u0627\u0631\u06CC \u0648 \u06A9\u0627\u0631\u0628\u0631\u062F\u0634\u0646\u0627\u0633\u06CC",
+    titleEn: "Handling Interruptions & Floor Holding in Meetings",
+    titleFa: "\u0645\u062F\u06CC\u0631\u06CC\u062A \u0642\u0637\u0639 \u06A9\u0644\u0627\u0645 \u0648 \u062D\u0641\u0638 \u0646\u0648\u0628\u062A \u0635\u062D\u0628\u062A \u062F\u0631 \u062C\u0644\u0633\u0627\u062A \u067E\u0631\u0686\u0627\u0644\u0634 (Floor Holding)",
+    descriptionFa: "\u0639\u0628\u0627\u0631\u0627\u062A \u062D\u0631\u0641\u0647\u200C\u0627\u06CC \u0628\u0631\u0627\u06CC \u0628\u0627\u0632\u067E\u0633\u200C\u06AF\u06CC\u0631\u06CC \u062D\u0642 \u0635\u062D\u0628\u062A: If I could just finish this thought..., Hang on a second, let me just add...",
+    scientificReference: "Sacks, Schegloff & Jefferson: A Simplest Systematics for the Organization of Turn-Taking; CEFR C1",
+    criteriaForMasteryFa: "\u062D\u0641\u0638 \u0622\u0631\u0627\u0645\u0634 \u0648 \u0628\u0627\u0632\u067E\u0633\u200C\u06AF\u06CC\u0631\u06CC \u0631\u0634\u062A\u0647 \u06A9\u0644\u0627\u0645 \u062F\u0631 \u0635\u0648\u0631\u062A \u0648\u0642\u0641\u0647 \u0647\u0645\u06A9\u0627\u0631 \u06CC\u0627 \u0645\u062E\u0627\u0637\u0628.",
+    exampleGood: "If I could just finish my train of thought before we open it up for comments...",
+    exampleBad: "Stop talking, let me talk.",
+    priorityOrder: 29
+  },
+  {
+    id: "c2-chk-43",
+    tier: 3,
+    tierNameFa: "\u0641\u0627\u0632 \u06F3: \u067E\u0648\u0644\u06CC\u0634 \u0644\u0647\u062C\u0647\u060C \u0633\u0627\u062E\u062A\u0627\u0631\u0647\u0627\u06CC \u062A\u0627\u06A9\u06CC\u062F\u06CC \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644 \u067E\u06CC\u0634\u0631\u0641\u062A\u0647 (B2+ - C1)",
+    cefrLevel: "C1",
+    category: "discourse",
+    categoryFa: "\u067E\u06CC\u0648\u0633\u062A\u06AF\u06CC \u06AF\u0641\u062A\u0627\u0631 \u0648 \u062F\u06CC\u0633\u06A9\u0648\u0631\u0633",
+    titleEn: "Public Speaking & Presentation Delivery",
+    titleFa: "\u0633\u062E\u0646\u0631\u0627\u0646\u06CC \u062F\u0631 \u062C\u0645\u0639 \u0648 \u0627\u0631\u0627\u0626\u0647 \u062D\u0631\u0641\u0647\u200C\u0627\u06CC (signposting\u060C \u0642\u0644\u0627\u0628 \u0634\u0631\u0648\u0639\u060C \u062C\u0645\u0639\u200C\u0628\u0646\u062F\u06CC)",
+    descriptionFa: "\u0633\u0627\u062E\u062A\u0627\u0631 \u0627\u0631\u0627\u0626\u0647 \u0622\u0645\u0631\u06CC\u06A9\u0627\u06CC\u06CC: hook\u060C roadmap (Today I'll cover three things)\u060C signposting (Moving on to...)\u060C \u0648 closing takeaway \u0628\u0627 \u0627\u0639\u062A\u0645\u0627\u062F\u0628\u0647\u200C\u0646\u0641\u0633 \u0648 \u0644\u062D\u0646 falling declarative.",
+    scientificReference: "CEFR C1 Spoken Production: Sustained Monologue; Duarte: Resonate",
+    criteriaForMasteryFa: "\u0627\u0631\u0627\u0626\u0647 \u06F2 \u062F\u0642\u06CC\u0642\u0647\u200C\u0627\u06CC \u0645\u0646\u0633\u062C\u0645 \u0628\u0627 \u0645\u0642\u062F\u0645\u0647\u060C \u06F2\u2013\u06F3 \u0646\u06A9\u062A\u0647 \u0627\u0635\u0644\u06CC \u0648 \u062C\u0645\u0639\u200C\u0628\u0646\u062F\u06CC\u060C \u0628\u062F\u0648\u0646 \u062E\u0648\u0627\u0646\u062F\u0646 \u062A\u0631\u062C\u0645\u0647\u200C\u06CC \u0641\u0627\u0631\u0633\u06CC.",
+    exampleGood: "I'll keep this brief: first the problem, then what we tried, and finally the ask. Let's start with the customer pain point.",
+    exampleBad: "My presentation is about project. First thing... um... wait... next slide.",
+    priorityOrder: 29.5
+  },
+  {
+    id: "c2-chk-30",
+    tier: 3,
+    tierNameFa: "\u0641\u0627\u0632 \u06F3: \u067E\u0648\u0644\u06CC\u0634 \u0644\u0647\u062C\u0647\u060C \u0633\u0627\u062E\u062A\u0627\u0631\u0647\u0627\u06CC \u062A\u0627\u06A9\u06CC\u062F\u06CC \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644 \u067E\u06CC\u0634\u0631\u0641\u062A\u0647 (B2+ - C1)",
+    cefrLevel: "C1",
+    category: "idioms",
+    categoryFa: "\u0627\u0635\u0637\u0644\u0627\u062D\u0627\u062A \u0648 \u06A9\u0644\u06CC\u0634\u0647\u200C\u0647\u0627\u06CC \u0646\u06CC\u062A\u06CC\u0648",
+    titleEn: "Collocational Precision: Connotation & Lexical Density",
+    titleFa: "\u062F\u0642\u062A \u062F\u0631 \u0647\u0645\u0646\u0634\u06CC\u0646\u06CC \u0648\u0627\u0698\u06AF\u0627\u0646 \u0648 \u0628\u0627\u0631 \u0645\u0639\u0646\u0627\u06CC\u06CC (Collocations & Connotation)",
+    descriptionFa: "\u062A\u0645\u0627\u06CC\u0632 \u0638\u0631\u06CC\u0641 \u06A9\u0644\u0645\u0627\u062A \u0645\u062A\u0631\u0627\u062F\u0641 \u0628\u0631 \u0627\u0633\u0627\u0633 \u0628\u0627\u0631 \u0645\u0646\u0641\u06CC \u06CC\u0627 \u0645\u062B\u0628\u062A: frugal \u062F\u0631 \u0628\u0631\u0627\u0628\u0631 stingy, ambitious \u062F\u0631 \u0628\u0631\u0627\u0628\u0631 ruthless.",
+    scientificReference: "Sinclair: Corpus, Concordance, Collocation; CEFR C1 Lexical Resource",
+    criteriaForMasteryFa: "\u0627\u0646\u062A\u062E\u0627\u0628 \u062F\u0642\u06CC\u0642 \u0648\u0627\u0698\u0647\u200C\u0647\u0627 \u0645\u062A\u0646\u0627\u0633\u0628 \u0628\u0627 \u0628\u0627\u0631 \u0627\u062D\u0633\u0627\u0633\u06CC \u0645\u0648\u0631\u062F \u0646\u0638\u0631 \u0628\u062F\u0648\u0646 \u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0627\u0632 \u06A9\u0644\u0645\u0627\u062A \u063A\u0644\u0637\u200C\u0627\u0646\u062F\u0627\u0632.",
+    exampleGood: "He is prudent with capital, whereas his predecessor was outright reckless.",
+    exampleBad: "He is good with money and the other was very bad.",
+    priorityOrder: 30
+  },
+  // ================= TIER 4: Advanced Native Fluency & Pragmatic Mastery (C1+ - C2) =================
+  {
+    id: "c2-chk-31",
+    tier: 4,
+    tierNameFa: "\u0641\u0627\u0632 \u06F4: \u0627\u0633\u062A\u0627\u062F\u06CC \u06A9\u0627\u0645\u0644\u060C \u0638\u0631\u0627\u0641\u062A\u200C\u0647\u0627\u06CC \u06A9\u0646\u0627\u06CC\u06CC \u0648 \u0631\u0648\u0627\u0646\u06CC \u0628\u0648\u0645\u06CC (C1+ - C2 Native Mastery)",
+    cefrLevel: "C2",
+    category: "listening",
+    categoryFa: "\u0634\u0646\u06CC\u062F\u0627\u0631 \u0648 \u062F\u0631\u06A9 \u06A9\u0646\u0627\u06CC\u0647\u200C\u0647\u0627 \u0648 \u0644\u0627\u06CC\u0647\u200C\u0647\u0627\u06CC \u067E\u0646\u0647\u0627\u0646 \u06AF\u0641\u062A\u0627\u0631 \u0646\u06CC\u062A\u06CC\u0648",
+    titleEn: "Auditory Irony, Sarcasm & Implicit Subtext Comprehension",
+    titleFa: "\u062F\u0631\u06A9 \u0634\u0646\u06CC\u062F\u0627\u0631\u06CC \u06A9\u0646\u0627\u06CC\u0647\u200C\u0647\u0627\u060C \u0637\u0646\u0632 \u062A\u0644\u062E \u0648 \u0644\u0627\u06CC\u0647\u200C\u0647\u0627\u06CC \u067E\u0646\u0647\u0627\u0646 \u06A9\u0644\u0627\u0645 (Auditory Sarcasm & Implicit Subtext)",
+    descriptionFa: "\u062F\u0631\u06A9 \u0644\u062D\u0646\u200C\u0647\u0627\u06CC \u0635\u0648\u062A\u06CC \u0638\u0631\u06CC\u0641 \u0648 \u062A\u0634\u062E\u06CC\u0635 \u062A\u0636\u0627\u062F \u0645\u06CC\u0627\u0646 \u0645\u062D\u062A\u0648\u0627\u06CC \u0644\u0641\u0638\u06CC \u0648 \u067E\u06CC\u0627\u0645 \u0634\u0646\u06CC\u062F\u0627\u0631\u06CC \u0646\u06CC\u062A\u06CC\u0648 (Understatement) \u0628\u0631 \u0627\u0633\u0627\u0633 \u0645\u0644\u0648\u062F\u06CC \u0648 \u0622\u0647\u0646\u06AF \u0635\u062F\u0627.",
+    scientificReference: "Gibbs: The Poetics of Mind; CEFR C2 Listening & Pragmatic Competence",
+    criteriaForMasteryFa: "\u067E\u0627\u0633\u062E \u062F\u0627\u062F\u0646 \u0647\u0648\u0634\u0645\u0646\u062F\u0627\u0646\u0647 \u0628\u0647 \u06A9\u0646\u0627\u06CC\u0647\u200C\u0647\u0627\u06CC \u0641\u0631\u0647\u0646\u06AF\u06CC \u0648 \u0637\u0646\u0632 \u0628\u062F\u0648\u0646 \u062C\u062F\u06CC \u06AF\u0631\u0641\u062A\u0646 \u062A\u062D\u062A\u200C\u0627\u0644\u0644\u0641\u0638\u06CC \u0622\u0646\u0647\u0627.",
+    exampleGood: "Oh, fantastic! A flat tire in the pouring rain\u2014just what my morning was missing.",
+    exampleBad: "Why do you say fantastic? Flat tire is very bad.",
+    priorityOrder: 31
+  },
+  {
+    id: "c2-chk-32",
+    tier: 4,
+    tierNameFa: "\u0641\u0627\u0632 \u06F4: \u0627\u0633\u062A\u0627\u062F\u06CC \u06A9\u0627\u0645\u0644\u060C \u0638\u0631\u0627\u0641\u062A\u200C\u0647\u0627\u06CC \u06A9\u0646\u0627\u06CC\u06CC \u0648 \u0631\u0648\u0627\u0646\u06CC \u0628\u0648\u0645\u06CC (C1+ - C2 Native Mastery)",
+    cefrLevel: "C2",
+    category: "phonetics",
+    categoryFa: "\u0622\u06A9\u0648\u0633\u062A\u06CC\u06A9 \u0648 \u0641\u0648\u0646\u062A\u06CC\u06A9 \u0627\u0645\u0631\u06CC\u06A9\u0646",
+    titleEn: "Coalescent Assimilation in Fast Speech (Would you -> /w\u028Ad\u0292u/)",
+    titleFa: "\u0647\u0645\u06AF\u0648\u0646\u06CC \u0622\u0648\u0627\u06CC\u06CC \u06AF\u0641\u062A\u0627\u0631 \u067E\u0631\u0633\u0631\u0639\u062A \u0646\u06CC\u062A\u06CC\u0648 (Coalescent Assimilation)",
+    descriptionFa: "\u062A\u0631\u06A9\u06CC\u0628 \u0627\u0635\u0648\u0627\u062A \u0645\u062C\u0627\u0648\u0631 \u062F\u0631 \u0633\u0631\u0639\u062A \u0628\u0627\u0644\u0627: What did you -> /w\u028Cd\u0292\u0259/, don't you -> /do\u028Ant\u0283u/, could you -> /k\u028Ad\u0292u/.",
+    scientificReference: "Gimson: Pronunciation of English; CEFR C2 Phonological Competence",
+    criteriaForMasteryFa: "\u062F\u0631\u06A9 \u0648 \u062A\u0648\u0644\u06CC\u062F \u0637\u0628\u06CC\u0639\u06CC \u0622\u0648\u0627\u0647\u0627\u06CC \u0647\u0645\u06AF\u0648\u0646\u200C\u0634\u062F\u0647 \u062F\u0631 \u0645\u06A9\u0627\u0644\u0645\u0647 \u0633\u0631\u06CC\u0639 \u0628\u062F\u0648\u0646 \u062A\u0635\u0646\u0639\u06CC \u0628\u0648\u062F\u0646.",
+    exampleGood: "What'd you think about that keynote speech?",
+    exampleBad: "What | did | you | think (\u0628\u0627 \u0645\u06A9\u062B \u06A9\u0627\u0645\u0644 \u0628\u06CC\u0646 \u0648\u0627\u0698\u0647\u200C\u0647\u0627).",
+    priorityOrder: 32
+  },
+  {
+    id: "c2-chk-33",
+    tier: 4,
+    tierNameFa: "\u0641\u0627\u0632 \u06F4: \u0627\u0633\u062A\u0627\u062F\u06CC \u06A9\u0627\u0645\u0644\u060C \u0638\u0631\u0627\u0641\u062A\u200C\u0647\u0627\u06CC \u06A9\u0646\u0627\u06CC\u06CC \u0648 \u0631\u0648\u0627\u0646\u06CC \u0628\u0648\u0645\u06CC (C1+ - C2 Native Mastery)",
+    cefrLevel: "C2",
+    category: "pragmatics",
+    categoryFa: "\u0627\u062A\u06CC\u06A9\u062A \u06AF\u0641\u062A\u0627\u0631\u06CC \u0648 \u06A9\u0627\u0631\u0628\u0631\u062F\u0634\u0646\u0627\u0633\u06CC",
+    titleEn: "Seamless Register Shifting (Street Casual to Executive Boardroom)",
+    titleFa: "\u0627\u0646\u0639\u0637\u0627\u0641 \u062F\u0631 \u062A\u063A\u06CC\u06CC\u0631 \u0633\u0628\u06A9 \u06AF\u0641\u062A\u0627\u0631 (\u0627\u0632 \u06AF\u067E \u0635\u0645\u06CC\u0645\u0627\u0646\u0647 \u062A\u0627 \u0645\u0630\u0627\u06A9\u0631\u0647 \u0631\u0633\u0645\u06CC \u0639\u0627\u0644\u06CC\u200C\u0631\u062A\u0628\u0647)",
+    descriptionFa: "\u062A\u063A\u06CC\u06CC\u0631 \u0628\u062F\u0648\u0646 \u0632\u062D\u0645\u062A \u0644\u062D\u0646 \u0627\u0632 \u0627\u0633\u0644\u0646\u06AF \u0648 \u0627\u0635\u0637\u0644\u0627\u062D\u0627\u062A \u0631\u0648\u0632\u0645\u0631\u0647 \u0628\u0647 \u0648\u0627\u0698\u06AF\u0627\u0646 \u0641\u0627\u062E\u0631 \u0648 \u0627\u0633\u062A\u0631\u0627\u062A\u0698\u06CC\u06A9 \u0628\u0631 \u0627\u0633\u0627\u0633 \u0645\u062E\u0627\u0637\u0628.",
+    scientificReference: "Biber: Register, Genre, and Style; CEFR C2 Sociolinguistic Appropriateness",
+    criteriaForMasteryFa: "\u062A\u0637\u0628\u06CC\u0642 \u0641\u0648\u0631\u06CC \u06A9\u0644\u0645\u0627\u062A \u0648 \u0633\u0627\u062E\u062A\u0627\u0631\u0647\u0627 \u0645\u062A\u0646\u0627\u0633\u0628 \u0628\u0627 \u062A\u063A\u06CC\u06CC\u0631 \u0646\u0642\u0634 \u0648 \u0645\u0648\u0642\u0639\u06CC\u062A \u062F\u0631 \u0633\u0646\u0627\u0631\u06CC\u0648.",
+    exampleGood: "Casual: 'That's a no-go.' / Formal: 'From a fiscal standpoint, that approach lacks viability.'",
+    exampleBad: "\u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0627\u0632 \u0644\u062D\u0646 \u06A9\u0648\u0686\u0647 \u0628\u0627\u0632\u0627\u0631\u06CC \u062F\u0631 \u062C\u0644\u0633\u0647 \u0647\u06CC\u0626\u062A \u0645\u062F\u06CC\u0631\u0647 \u06CC\u0627 \u0628\u0631\u0639\u06A9\u0633.",
+    priorityOrder: 33
+  },
+  {
+    id: "c2-chk-34",
+    tier: 4,
+    tierNameFa: "\u0641\u0627\u0632 \u06F4: \u0627\u0633\u062A\u0627\u062F\u06CC \u06A9\u0627\u0645\u0644\u060C \u0638\u0631\u0627\u0641\u062A\u200C\u0647\u0627\u06CC \u06A9\u0646\u0627\u06CC\u06CC \u0648 \u0631\u0648\u0627\u0646\u06CC \u0628\u0648\u0645\u06CC (C1+ - C2 Native Mastery)",
+    cefrLevel: "C2",
+    category: "discourse",
+    categoryFa: "\u067E\u06CC\u0648\u0633\u062A\u06AF\u06CC \u06AF\u0641\u062A\u0627\u0631 \u0648 \u062F\u06CC\u0633\u06A9\u0648\u0631\u0633",
+    titleEn: "Rhetorical Rule of Three & Triadic Cadence in Spoken Arguments",
+    titleFa: "\u0631\u06CC\u062A\u0645 \u0633\u0647\u200C\u06AF\u0627\u0646\u0647 \u0628\u0644\u0627\u063A\u06CC (Tricolon / Rule of Three) \u062F\u0631 \u0627\u0633\u062A\u062F\u0644\u0627\u0644\u200C\u0647\u0627\u06CC \u0645\u062A\u0642\u0627\u0639\u062F\u06A9\u0646\u0646\u062F\u0647",
+    descriptionFa: "\u0686\u06CC\u0646\u0634 \u0627\u0633\u062A\u062F\u0644\u0627\u0644\u200C\u0647\u0627 \u062F\u0631 \u06AF\u0631\u0648\u0647\u200C\u0647\u0627\u06CC \u0633\u0647\u200C\u062A\u0627\u06CC\u06CC \u0645\u0648\u0627\u0632\u06CC \u0628\u0631\u0627\u06CC \u062D\u062F\u0627\u06A9\u062B\u0631 \u062A\u0627\u062B\u06CC\u0631\u06AF\u0630\u0627\u0631\u06CC \u0648 \u062C\u0627\u0630\u0628\u0647 \u0634\u0646\u06CC\u062F\u0627\u0631\u06CC.",
+    scientificReference: "Cockcroft & Cockcroft: Persuasing People: An Introduction to Rhetoric; CEFR C2 Coherence",
+    criteriaForMasteryFa: "\u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0627\u0632 \u0633\u0647\u200C\u06AF\u0627\u0646\u0647\u200C\u0647\u0627\u06CC \u0622\u0647\u0646\u06AF\u06CC\u0646 \u062F\u0631 \u062F\u0641\u0627\u0639 \u0627\u0632 \u06CC\u06A9 \u0627\u06CC\u062F\u0647 \u06CC\u0627 \u062C\u0645\u0639\u200C\u0628\u0646\u062F\u06CC \u06CC\u06A9 \u0645\u0648\u0636\u0648\u0639 \u0645\u0647\u0645.",
+    exampleGood: "This strategy empowers our team, streamlines our workflow, and accelerates our growth.",
+    exampleBad: "This strategy is good for team and also workflow is faster and growth happens.",
+    priorityOrder: 34
+  },
+  {
+    id: "c2-chk-35",
+    tier: 4,
+    tierNameFa: "\u0641\u0627\u0632 \u06F4: \u0627\u0633\u062A\u0627\u062F\u06CC \u06A9\u0627\u0645\u0644\u060C \u0638\u0631\u0627\u0641\u062A\u200C\u0647\u0627\u06CC \u06A9\u0646\u0627\u06CC\u06CC \u0648 \u0631\u0648\u0627\u0646\u06CC \u0628\u0648\u0645\u06CC (C1+ - C2 Native Mastery)",
+    cefrLevel: "C2",
+    category: "phonetics",
+    categoryFa: "\u0622\u06A9\u0648\u0633\u062A\u06CC\u06A9 \u0648 \u0641\u0648\u0646\u062A\u06CC\u06A9 \u0627\u0645\u0631\u06CC\u06A9\u0646",
+    titleEn: "Vowel Duration Before Voiced vs Voiceless Consonants",
+    titleFa: "\u062A\u0646\u0638\u06CC\u0645 \u06A9\u0634\u0634 \u0648\u0627\u06A9\u0647 \u0642\u0628\u0644 \u0627\u0632 \u0647\u0645\u062E\u0648\u0627\u0646\u200C\u0647\u0627\u06CC \u0648\u0627\u06A9\u062F\u0627\u0631 \u0648 \u0628\u06CC\u200C\u0648\u0627\u06A9 (Vowel Pre-Fortis Clipping)",
+    descriptionFa: "\u062F\u0631 \u0627\u0645\u0631\u06CC\u06A9\u0646\u060C \u0648\u0627\u06A9\u0647 \u0642\u0628\u0644 \u0627\u0632 \u0635\u0627\u0645\u062A \u0648\u0627\u06A9\u062F\u0627\u0631 (b, d, g, z) \u0637\u0648\u0644\u0627\u0646\u06CC\u200C\u062A\u0631 \u0627\u0633\u062A \u0627\u0632 \u0635\u0627\u0645\u062A \u0628\u06CC\u200C\u0648\u0627\u06A9 (p, t, k, s): bed \u06A9\u0634\u06CC\u062F\u0647\u200C\u062A\u0631 \u0627\u0632 bet \u0627\u0633\u062A.",
+    scientificReference: "House: Analog Study of Speech Characteristics; CEFR C2 Acoustic Mastery",
+    criteriaForMasteryFa: "\u0627\u062F\u0627\u06CC \u062F\u0642\u06CC\u0642 \u062A\u0641\u0627\u0648\u062A \u06A9\u0634\u0634 \u0635\u062F\u0627\u062F\u0627\u0631\u0647\u0627 \u062F\u0631 \u062C\u0641\u062A\u200C\u0647\u0627\u06CC \u06A9\u0645\u06CC\u0646\u0647 (bad vs bat, cab vs cap).",
+    exampleGood: "He had a bad [b\xE6:d] cold and had to take a cab [k\u02B0\xE6:b].",
+    exampleBad: "\u062A\u0644\u0641\u0638 \u0645\u0633\u0627\u0648\u06CC \u0648 \u06A9\u0648\u062A\u0627\u0647 \u0648\u0627\u06A9\u0647\u200C\u0647\u0627 \u0628\u062F\u0648\u0646 \u062A\u0648\u062C\u0647 \u0628\u0647 \u0648\u0627\u06A9\u062F\u0627\u0631\u06CC \u0635\u0627\u0645\u062A \u067E\u0627\u06CC\u0627\u0646\u06CC.",
+    priorityOrder: 35
+  },
+  {
+    id: "c2-chk-36",
+    tier: 4,
+    tierNameFa: "\u0641\u0627\u0632 \u06F4: \u0627\u0633\u062A\u0627\u062F\u06CC \u06A9\u0627\u0645\u0644\u060C \u0638\u0631\u0627\u0641\u062A\u200C\u0647\u0627\u06CC \u06A9\u0646\u0627\u06CC\u06CC \u0648 \u0631\u0648\u0627\u0646\u06CC \u0628\u0648\u0645\u06CC (C1+ - C2 Native Mastery)",
+    cefrLevel: "C2",
+    category: "idioms",
+    categoryFa: "\u0627\u0635\u0637\u0644\u0627\u062D\u0627\u062A \u0648 \u06A9\u0644\u06CC\u0634\u0647\u200C\u0647\u0627\u06CC \u0646\u06CC\u062A\u06CC\u0648",
+    titleEn: "Idiomatic Deconstruction & Spontaneous Double Entendre",
+    titleFa: "\u0634\u06A9\u0633\u062A\u0646 \u062E\u0644\u0627\u0642\u0627\u0646\u0647 \u0627\u0635\u0637\u0644\u0627\u062D\u0627\u062A \u0648 \u0634\u0648\u062E\u06CC\u200C\u0647\u0627\u06CC \u0632\u0628\u0627\u0646\u06CC \u0686\u0646\u062F\u0648\u062C\u0647\u06CC (Wordplay & Pun)",
+    descriptionFa: "\u062A\u0648\u0627\u0646\u0627\u06CC\u06CC \u0628\u0627\u0632\u06CC \u0628\u0627 \u06A9\u0644\u0645\u0627\u062A \u0648 \u062A\u063A\u06CC\u06CC\u0631 \u062E\u0644\u0627\u0642\u0627\u0646\u0647 \u06CC\u06A9 \u0627\u0635\u0637\u0644\u0627\u062D \u0631\u0627\u06CC\u062C \u0628\u0631\u0627\u06CC \u0634\u0648\u062E\u06CC \u06CC\u0627 \u062A\u0627\u06A9\u06CC\u062F \u0628\u06CC\u0634\u062A\u0631 \u062F\u0631 \u0645\u06A9\u0627\u0644\u0645\u0647.",
+    scientificReference: "Crystal: Language Play; CEFR C2 Lexical Resource & Creativity",
+    criteriaForMasteryFa: "\u062F\u0631\u06A9 \u0627\u06CC\u0647\u0627\u0645\u200C\u0647\u0627 \u0648 \u0634\u0648\u062E\u06CC\u200C\u0647\u0627\u06CC \u0632\u0628\u0627\u0646\u06CC \u0628\u0648\u0645\u06CC \u0648 \u062A\u0648\u0627\u0646\u0627\u06CC\u06CC \u067E\u0627\u0633\u062E \u0645\u062A\u0642\u0627\u0628\u0644 \u0647\u0648\u0634\u0645\u0646\u062F\u0627\u0646\u0647.",
+    exampleGood: "They told us to think outside the box, but honestly, there was never a box to begin with.",
+    exampleBad: "\u0639\u062F\u0645 \u062F\u0631\u06A9 \u0634\u0648\u062E\u06CC\u200C\u0647\u0627\u06CC \u06A9\u0644\u0627\u0645\u06CC \u0646\u06CC\u062A\u06CC\u0648\u0647\u0627 \u0648 \u0633\u06A9\u0648\u062A \u0646\u0627\u0634\u06CC \u0627\u0632 \u0633\u0631\u062F\u0631\u06AF\u0645\u06CC.",
+    priorityOrder: 36
+  },
+  {
+    id: "c2-chk-37",
+    tier: 4,
+    tierNameFa: "\u0641\u0627\u0632 \u06F4: \u0627\u0633\u062A\u0627\u062F\u06CC \u06A9\u0627\u0645\u0644\u060C \u0638\u0631\u0627\u0641\u062A\u200C\u0647\u0627\u06CC \u06A9\u0646\u0627\u06CC\u06CC \u0648 \u0631\u0648\u0627\u0646\u06CC \u0628\u0648\u0645\u06CC (C1+ - C2 Native Mastery)",
+    cefrLevel: "C2",
+    category: "grammar",
+    categoryFa: "\u062F\u0633\u062A\u0648\u0631 \u0632\u0628\u0627\u0646 \u0648 \u0646\u062D\u0648",
+    titleEn: "Subjunctive Mood in Complex Organizational Directives",
+    titleFa: "\u06A9\u0627\u0631\u0628\u0631\u062F \u0648\u062C\u0647 \u0627\u0644\u062A\u0632\u0627\u0645\u06CC \u067E\u06CC\u0634\u0631\u0641\u062A\u0647 (Subjunctive) \u062F\u0631 \u0645\u0648\u0642\u0639\u06CC\u062A\u200C\u0647\u0627\u06CC \u0645\u062F\u06CC\u0631\u06CC\u062A\u06CC \u0648 \u062D\u0642\u0648\u0642\u06CC",
+    descriptionFa: "\u0633\u0627\u062E\u062A\u0627\u0631 \u0641\u0639\u0644 \u0633\u0627\u062F\u0647 \u0628\u062F\u0648\u0646 s \u0633\u0648\u0645\u200C\u0634\u062E\u0635: I recommend that he be present; It is imperative that she arrive on time.",
+    scientificReference: "Huddleston: Introduction to the Grammar of English; CEFR C2 Grammatical Precision",
+    criteriaForMasteryFa: "\u0628\u06CC\u0627\u0646 \u062F\u0633\u062A\u0648\u0631\u0627\u0644\u0639\u0645\u0644\u200C\u0647\u0627\u06CC \u0631\u0633\u0645\u06CC \u06CC\u0627 \u062A\u0648\u0635\u06CC\u0647\u200C\u0647\u0627\u06CC \u062D\u0642\u0648\u0642\u06CC \u0628\u0627 \u0648\u062C\u0647 \u0627\u0644\u062A\u0632\u0627\u0645\u06CC \u0628\u062F\u0648\u0646 \u0627\u0641\u0632\u0648\u062F\u0646 s \u06CC\u0627 to be.",
+    exampleGood: "I strongly propose that every stakeholder be consulted before finalizing the draft.",
+    exampleBad: "I recommend that everyone is consulted / must be consulted.",
+    priorityOrder: 37
+  },
+  {
+    id: "c2-chk-38",
+    tier: 4,
+    tierNameFa: "\u0641\u0627\u0632 \u06F4: \u0627\u0633\u062A\u0627\u062F\u06CC \u06A9\u0627\u0645\u0644\u060C \u0638\u0631\u0627\u0641\u062A\u200C\u0647\u0627\u06CC \u06A9\u0646\u0627\u06CC\u06CC \u0648 \u0631\u0648\u0627\u0646\u06CC \u0628\u0648\u0645\u06CC (C1+ - C2 Native Mastery)",
+    cefrLevel: "C2",
+    category: "discourse",
+    categoryFa: "\u067E\u06CC\u0648\u0633\u062A\u06AF\u06CC \u06AF\u0641\u062A\u0627\u0631 \u0648 \u062F\u06CC\u0633\u06A9\u0648\u0631\u0633",
+    titleEn: "Uninterrupted Impromptu Monologue under Cognitive Load (2+ mins)",
+    titleFa: "\u0627\u0631\u0627\u0626\u0647 \u0645\u0648\u0646\u0648\u0644\u0648\u06AF \u0641\u06CC\u200C\u0627\u0644\u0628\u062F\u0627\u0647\u0647 \u0645\u0646\u0633\u062C\u0645 \u0628\u062F\u0648\u0646 \u0645\u06A9\u062B \u0648 \u062A\u067E\u0642 \u062A\u062D\u062A \u0641\u0634\u0627\u0631 \u0634\u0646\u0627\u062E\u062A\u06CC",
+    descriptionFa: "\u0642\u062F\u0631\u062A \u0635\u062D\u0628\u062A \u0645\u0645\u062A\u062F\u060C \u0634\u06CC\u0648\u0627 \u0648 \u0633\u0627\u062E\u062A\u0627\u0631\u06CC\u0627\u0641\u062A\u0647 \u0628\u0647 \u0645\u062F\u062A \u0628\u06CC\u0634 \u0627\u0632 \u062F\u0648 \u062F\u0642\u06CC\u0642\u0647 \u062F\u0631\u0628\u0627\u0631\u0647 \u06CC\u06A9 \u0645\u0648\u0636\u0648\u0639 \u067E\u06CC\u0686\u06CC\u062F\u0647 \u0627\u0646\u062A\u0632\u0627\u0639\u06CC.",
+    scientificReference: "Cambridge CPE Speaking Rubric: Discourse Management C2 (Extended, coherent production)",
+    criteriaForMasteryFa: "\u0635\u062D\u0628\u062A \u067E\u06CC\u0648\u0633\u062A\u0647 \u0628\u0627 \u0633\u0627\u062E\u062A\u0627\u0631 \u0645\u0642\u062F\u0645\u0647\u060C \u062A\u062D\u0644\u06CC\u0644 \u0648 \u0646\u062A\u06CC\u062C\u0647\u200C\u06AF\u06CC\u0631\u06CC \u0628\u062F\u0648\u0646 \u0645\u0646\u0642\u0637\u0639 \u0634\u062F\u0646 \u062C\u0631\u06CC\u0627\u0646 \u06A9\u0644\u0627\u0645.",
+    exampleGood: "Speaking fluently for 2 minutes analyzing ethics of AI with seamless transitions.",
+    exampleBad: "\u0645\u06A9\u062B\u200C\u0647\u0627\u06CC \u0645\u062A\u0648\u0627\u0644\u06CC \u0628\u0639\u062F \u0627\u0632 \u0647\u0631 \u062C\u0645\u0644\u0647 \u0648 \u0646\u0627\u062A\u0648\u0627\u0646\u06CC \u062F\u0631 \u067E\u0631\u0648\u0631\u0627\u0646\u062F\u0646 \u0627\u06CC\u062F\u0647.",
+    priorityOrder: 38
+  },
+  {
+    id: "c2-chk-39",
+    tier: 4,
+    tierNameFa: "\u0641\u0627\u0632 \u06F4: \u0627\u0633\u062A\u0627\u062F\u06CC \u06A9\u0627\u0645\u0644\u060C \u0638\u0631\u0627\u0641\u062A\u200C\u0647\u0627\u06CC \u06A9\u0646\u0627\u06CC\u06CC \u0648 \u0631\u0648\u0627\u0646\u06CC \u0628\u0648\u0645\u06CC (C1+ - C2 Native Mastery)",
+    cefrLevel: "C2",
+    category: "pragmatics",
+    categoryFa: "\u0627\u062A\u06CC\u06A9\u062A \u06AF\u0641\u062A\u0627\u0631\u06CC \u0648 \u06A9\u0627\u0631\u0628\u0631\u062F\u0634\u0646\u0627\u0633\u06CC",
+    titleEn: "Metaphorical Framing in Abstract & Strategic Discourse",
+    titleFa: "\u0686\u0627\u0631\u0686\u0648\u0628\u200C\u0628\u0646\u062F\u06CC \u0627\u0633\u062A\u0639\u0627\u0631\u06CC \u0639\u0645\u06CC\u0642 \u062F\u0631 \u062A\u062D\u0644\u06CC\u0644\u200C\u0647\u0627\u06CC \u0631\u0627\u0647\u0628\u0631\u062F\u06CC \u0648 \u0641\u0644\u0633\u0641\u06CC",
+    descriptionFa: "\u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0627\u0632 \u0634\u0628\u06A9\u0647\u200C\u0647\u0627\u06CC \u0627\u0633\u062A\u0639\u0627\u0631\u06CC \u0628\u0631\u0627\u06CC \u062A\u0628\u06CC\u06CC\u0646 \u0645\u0633\u0627\u0626\u0644 \u0686\u0646\u062F\u0628\u0639\u062F\u06CC (unravel the knot, double-edged sword, tip of the iceberg).",
+    scientificReference: "Charteris-Black: Corpus Approaches to Critical Metaphor Analysis; CEFR C2",
+    criteriaForMasteryFa: "\u062A\u0628\u06CC\u06CC\u0646 \u06CC\u06A9 \u0686\u0627\u0644\u0634 \u067E\u06CC\u0686\u06CC\u062F\u0647 \u06A9\u0627\u0631\u06CC \u06CC\u0627 \u0641\u06A9\u0631\u06CC \u0628\u0627 \u0627\u0633\u062A\u0639\u0627\u0631\u0647\u200C\u0647\u0627\u06CC \u067E\u06CC\u0648\u0633\u062A\u0647 \u0648 \u0645\u062A\u0648\u0627\u0632\u0646.",
+    exampleGood: "This policy is a double-edged sword: while it shields us from short-term volatility, it throttles long-term innovation.",
+    exampleBad: "This policy has good things and bad things.",
+    priorityOrder: 39
+  },
+  {
+    id: "c2-chk-40",
+    tier: 4,
+    tierNameFa: "\u0641\u0627\u0632 \u06F4: \u0627\u0633\u062A\u0627\u062F\u06CC \u06A9\u0627\u0645\u0644\u060C \u0638\u0631\u0627\u0641\u062A\u200C\u0647\u0627\u06CC \u06A9\u0646\u0627\u06CC\u06CC \u0648 \u0631\u0648\u0627\u0646\u06CC \u0628\u0648\u0645\u06CC (C1+ - C2 Native Mastery)",
+    cefrLevel: "C2",
+    category: "discourse",
+    categoryFa: "\u067E\u06CC\u0648\u0633\u062A\u06AF\u06CC \u06AF\u0641\u062A\u0627\u0631 \u0648 \u062F\u06CC\u0633\u06A9\u0648\u0631\u0633",
+    titleEn: "Native Spoken Fluidity: 150+ WPM with Natural Intonation & Prosody",
+    titleFa: "\u0631\u0648\u0627\u0646\u06CC \u06A9\u0627\u0645\u0644 \u0632\u0628\u0627\u0646 \u0645\u0627\u062F\u0631\u06CC \u0628\u0627 \u0633\u0631\u0639\u062A \u06A9\u0644\u0627\u0645 \u0628\u0627\u0644\u0627\u06CC \u06F1\u06F5\u06F0 \u06A9\u0644\u0645\u0647 \u062F\u0631 \u062F\u0642\u06CC\u0642\u0647 \u0648 \u0622\u0647\u0646\u06AF \u0637\u0628\u06CC\u0639\u06CC",
+    descriptionFa: "\u0628\u06CC\u0627\u0646 \u062E\u0648\u062F\u06A9\u0627\u0631\u060C \u0631\u0648\u0627\u0646 \u0648 \u0628\u06CC\u200C\u062A\u0644\u0627\u0634 \u0628\u0627 \u0622\u0647\u0646\u06AF\u060C \u0631\u06CC\u062A\u0645 \u0648 \u0645\u0644\u0648\u062F\u06CC \u06AF\u0641\u062A\u0627\u0631\u06CC \u06A9\u0627\u0645\u0644\u0627\u064B \u0645\u0646\u0637\u0628\u0642 \u0628\u0631 \u06CC\u06A9 \u062A\u062D\u0635\u06CC\u0644\u200C\u06A9\u0631\u062F\u0647 \u0628\u0648\u0645\u06CC \u0622\u0645\u0631\u06CC\u06A9\u0627\u06CC\u06CC.",
+    scientificReference: "CEFR C2 Global Scale: Can express him/herself spontaneously, very fluently and precisely",
+    criteriaForMasteryFa: "\u0627\u062F\u0627\u06CC \u062C\u0645\u0644\u0627\u062A \u0628\u0627 \u0633\u0631\u0639\u062A \u06F1\u06F5\u06F0 \u062A\u0627 \u06F1\u06F7\u06F0 \u06A9\u0644\u0645\u0647 \u062F\u0631 \u062F\u0642\u06CC\u0642\u0647 \u0628\u062F\u0648\u0646 \u062E\u0637\u0627 \u062F\u0631 \u062A\u0644\u0641\u0638 \u06CC\u0627 \u0646\u062D\u0648.",
+    exampleGood: "Natural native delivery matching top-tier American professional podcast/keynote cadence.",
+    exampleBad: "\u06AF\u0641\u062A\u0627\u0631 \u06A9\u0646\u062F\u060C \u0645\u06A9\u0627\u0646\u06CC\u06A9\u06CC \u06CC\u0627 \u067E\u0631 \u0627\u0632 \u0645\u06A9\u062B\u200C\u0647\u0627\u06CC \u062C\u0633\u062A\u062C\u0648\u06CC \u0648\u0627\u0698\u0647.",
+    priorityOrder: 40
+  }
+];
+function getNextUntickedC2Cohort(masteredIds, count = 10) {
+  const masteredSet = new Set(masteredIds);
+  const unticked = C2_SCIENTIFIC_CHECKLIST.filter((item) => !masteredSet.has(item.id)).sort((a, b) => a.priorityOrder - b.priorityOrder);
+  return unticked.slice(0, count);
+}
+function buildScenarioForChecklistItem(item, dayIndex, cycleNumber) {
+  const id = `c2-cycle${cycleNumber}-sc${dayIndex}-${item.id}`;
+  let icon = "\u{1F3AF}";
+  let category = "daily";
+  let userRole = "\u0632\u0628\u0627\u0646\u200C\u0622\u0645\u0648\u0632 \u06A9\u0648\u0634\u0627";
+  let aiRole = "\u067E\u0627\u0631\u062A\u0646\u0631 \u0648 \u0645\u0631\u0628\u06CC \u0647\u0648\u0634 \u0645\u0635\u0646\u0648\u0639\u06CC";
+  let relationship = "\u0645\u0631\u0628\u06CC \u0648 \u062F\u0648\u0633\u062A \u0646\u06CC\u062A\u06CC\u0648";
+  if (item.category === "grammar") {
+    icon = "\u{1F4D0}";
+    category = "work";
+    userRole = "\u0647\u0645\u06A9\u0627\u0631 \u062F\u0631 \u067E\u0631\u0648\u0698\u0647 \u06A9\u0627\u0631\u06CC";
+    aiRole = "\u0633\u0631\u067E\u0631\u0633\u062A \u062A\u06CC\u0645 (\u0645\u0631\u0628\u06CC \u0647\u0648\u0634 \u0645\u0635\u0646\u0648\u0639\u06CC)";
+    relationship = "\u0647\u0645\u06A9\u0627\u0631 \u062D\u0631\u0641\u0647\u200C\u0627\u06CC \u062F\u0631 \u0634\u0631\u06A9\u062A";
+  } else if (item.category === "phonetics") {
+    icon = "\u{1F399}\uFE0F";
+    category = "daily";
+    userRole = "\u0645\u0634\u062A\u0631\u06CC \u062F\u0631 \u06A9\u0627\u0641\u0647 \u06CC\u0627 \u0641\u0631\u0648\u0634\u06AF\u0627\u0647";
+    aiRole = "\u0628\u0627\u0631\u06CC\u0633\u062A\u0627 \u06CC\u0627 \u0645\u062A\u0635\u062F\u06CC \u0646\u06CC\u062A\u06CC\u0648";
+    relationship = "\u062A\u0639\u0627\u0645\u0644 \u0631\u0648\u0632\u0645\u0631\u0647 \u0634\u0647\u0631\u06CC";
+  } else if (item.category === "idioms") {
+    icon = "\u2728";
+    category = "social";
+    userRole = "\u0645\u0647\u0645\u0627\u0646 \u062F\u0631 \u062F\u0648\u0631\u0647\u0645\u06CC \u062F\u0648\u0633\u062A\u0627\u0646\u0647";
+    aiRole = "\u062F\u0648\u0633\u062A \u0635\u0645\u06CC\u0645\u06CC \u0622\u0645\u0631\u06CC\u06A9\u0627\u06CC\u06CC";
+    relationship = "\u062F\u0648\u0633\u062A \u0646\u0632\u062F\u06CC\u06A9 \u0648 \u0627\u0647\u0644 \u0634\u0648\u062E\u06CC";
+  } else if (item.category === "pragmatics") {
+    icon = "\u{1F91D}";
+    category = "work";
+    userRole = "\u0645\u0630\u0627\u06A9\u0631\u0647\u200C\u06A9\u0646\u0646\u062F\u0647 \u062F\u0631 \u062C\u0644\u0633\u0647";
+    aiRole = "\u0637\u0631\u0641 \u0645\u0642\u0627\u0628\u0644 \u0645\u0630\u0627\u06A9\u0631\u0647";
+    relationship = "\u0634\u0631\u06CC\u06A9 \u062A\u062C\u0627\u0631\u06CC \u06CC\u0627 \u0647\u0645\u06A9\u0627\u0631";
+  } else if (item.id === "c2-chk-43") {
+    icon = "\u{1F3A4}";
+    category = "work";
+    userRole = "\u0627\u0631\u0627\u0626\u0647\u200C\u062F\u0647\u0646\u062F\u0647 \u062F\u0631 \u062C\u0644\u0633\u0647 \u062A\u06CC\u0645\u06CC";
+    aiRole = "\u0645\u062F\u06CC\u0631 \u0645\u062D\u0635\u0648\u0644 \u0648 \u062D\u0636\u0627\u0631";
+    relationship = "\u0627\u0631\u0627\u0626\u0647 \u0631\u0633\u0645\u06CC \u06A9\u0648\u062A\u0627\u0647 \u062F\u0631 \u0645\u062D\u06CC\u0637 \u06A9\u0627\u0631";
+  } else if (item.id === "c2-chk-41") {
+    icon = "\u2615";
+    category = "social";
+    userRole = "\u0647\u0645\u06A9\u0627\u0631 \u062C\u062F\u06CC\u062F \u062F\u0631 \u0622\u0634\u067E\u0632\u062E\u0627\u0646\u0647 \u0627\u062F\u0627\u0631\u06CC";
+    aiRole = "\u0647\u0645\u06A9\u0627\u0631 \u0622\u0645\u0631\u06CC\u06A9\u0627\u06CC\u06CC \u0627\u0647\u0644 \u06AF\u067E";
+    relationship = "\u0627\u0633\u0645\u0627\u0644\u200C\u062A\u0627\u06A9 \u0631\u0648\u0632\u0645\u0631\u0647 \u0642\u0628\u0644 \u0627\u0632 \u062C\u0644\u0633\u0647";
+  } else if (item.id === "c2-chk-42") {
+    icon = "\u{1F91D}";
+    category = "work";
+    userRole = "\u0645\u0634\u062A\u0631\u06CC \u06CC\u0627 \u0647\u0645\u06A9\u0627\u0631 \u0622\u0633\u06CC\u0628\u200C\u062F\u06CC\u062F\u0647 \u0627\u0632 \u062A\u0623\u062E\u06CC\u0631";
+    aiRole = "\u0645\u0633\u0626\u0648\u0644 \u067E\u0634\u062A\u06CC\u0628\u0627\u0646\u06CC / \u0637\u0631\u0641 \u0645\u0642\u0627\u0628\u0644";
+    relationship = "\u0639\u0630\u0631\u062E\u0648\u0627\u0647\u06CC \u0648 \u0634\u06A9\u0627\u06CC\u062A \u0633\u0627\u0632\u0646\u062F\u0647";
+  } else if (item.category === "discourse") {
+    icon = "\u{1F9E0}";
+    category = "social";
+    userRole = "\u062A\u062D\u0644\u06CC\u0644\u200C\u06AF\u0631 \u0648 \u0627\u0631\u0627\u0626\u0647\u200C\u062F\u0647\u0646\u062F\u0647";
+    aiRole = "\u067E\u0627\u0631\u062A\u0646\u0631 \u0645\u0628\u0627\u062D\u062B\u0647 \u0641\u06A9\u0631\u06CC";
+    relationship = "\u0647\u0645\u200C\u0635\u062D\u0628\u062A \u0635\u0627\u062D\u0628\u200C\u0646\u0638\u0631";
+  } else if (item.category === "listening") {
+    icon = "\u{1F3A7}";
+    category = "social";
+    userRole = "\u0634\u0646\u0648\u0646\u062F\u0647 \u0648 \u0647\u0645\u200C\u0635\u062D\u0628\u062A \u0641\u0639\u0627\u0644";
+    aiRole = "\u067E\u0627\u0631\u062A\u0646\u0631 \u06AF\u0641\u062A\u06AF\u0648\u06CC \u0633\u0631\u06CC\u0639 \u0646\u06CC\u062A\u06CC\u0648 \u0622\u0645\u0631\u06CC\u06A9\u0627\u06CC\u06CC";
+    relationship = "\u06AF\u0641\u062A\u06AF\u0648\u06CC \u0645\u062D\u0627\u0648\u0631\u0647\u200C\u0627\u06CC \u0628\u0627 \u0633\u0631\u0639\u062A \u0637\u0628\u06CC\u0639\u06CC";
+  }
+  let starter = `Hey there! We're focusing today on mastering "${item.titleEn}". Let's jump right in: how would you express this idea in natural conversation?`;
+  let starterFa = `\u062F\u0631\u0648\u062F! \u062A\u0645\u0631\u06A9\u0632 \u0627\u0645\u0631\u0648\u0632 \u0645\u0627 \u0631\u0648\u06CC \u062A\u0633\u0644\u0637 \u0628\u0631 \xAB${item.titleFa}\xBB \u0627\u0633\u062A. \u0628\u06CC\u0627\u06CC\u06CC\u062F \u0634\u0631\u0648\u0639 \u06A9\u0646\u06CC\u0645: \u0686\u0637\u0648\u0631 \u0627\u06CC\u0646 \u0645\u0641\u0647\u0648\u0645 \u0631\u0627 \u062F\u0631 \u06CC\u06A9 \u0645\u06A9\u0627\u0644\u0645\u0647 \u0637\u0628\u06CC\u0639\u06CC \u0628\u06CC\u0627\u0646 \u0645\u06CC\u200C\u06A9\u0646\u06CC\u062F\u061F`;
+  if (item.id === "c2-chk-01") {
+    starter = "I was just checking our team survey, and it says most people are deeply interested in remote work. What kinds of activities or hobbies are you genuinely interested in?";
+    starterFa = "\u062F\u0627\u0634\u062A\u0645 \u0646\u0638\u0631\u0633\u0646\u062C\u06CC \u062A\u06CC\u0645 \u0631\u0648 \u0645\u06CC\u200C\u062F\u06CC\u062F\u0645\u061B \u0646\u0648\u0634\u062A\u0647 \u0628\u06CC\u0634\u062A\u0631 \u0628\u0686\u0647\u200C\u0647\u0627 \u0639\u0644\u0627\u0642\u0647 \u0639\u0645\u06CC\u0642\u06CC \u0628\u0647 \u062F\u0648\u0631\u06A9\u0627\u0631\u06CC \u062F\u0627\u0631\u0646. \u062A\u0648 \u062E\u0648\u062F\u062A \u0642\u0644\u0628\u0627\u064B \u0628\u0647 \u0686\u0647 \u06A9\u0627\u0631\u0647\u0627 \u06CC\u0627 \u062A\u0641\u0631\u06CC\u062D\u0627\u062A\u06CC \u0639\u0644\u0627\u0642\u0647\u200C\u0645\u0646\u062F\u06CC\u061F";
+  } else if (item.id === "c2-chk-02") {
+    starter = "Some folks on our team think four-day work weeks boost productivity, while others disagree. What's your honest take\u2014do you agree with that policy?";
+    starterFa = "\u0628\u0639\u0636\u06CC \u0627\u0632 \u0647\u0645\u06A9\u0627\u0631\u0627 \u0645\u0639\u062A\u0642\u062F\u0646 \u0647\u0641\u062A\u0647\u200C\u0647\u0627\u06CC \u06A9\u0627\u0631\u06CC \u06F4 \u0631\u0648\u0632\u0647 \u0628\u0627\u0632\u062F\u0647\u06CC \u0631\u0648 \u0628\u0627\u0644\u0627 \u0645\u06CC\u200C\u0628\u0631\u0647\u060C \u0627\u0645\u0627 \u0628\u0639\u0636\u06CC\u0627 \u0645\u062E\u0627\u0644\u0641\u0646. \u0646\u0638\u0631 \u0648\u0627\u0642\u0639\u06CC \u062E\u0648\u062F\u062A \u0686\u06CC\u0647\u2014\u0622\u06CC\u0627 \u0628\u0627 \u0627\u06CC\u0646 \u0633\u06CC\u0627\u0633\u062A \u0645\u0648\u0627\u0641\u0642\u06CC\u061F";
+  } else if (item.id === "c2-chk-03") {
+    starter = "Hey! It's so hot outside today. Could I get you a cold bottle of water or something better from the cafe across the street?";
+    starterFa = "\u0633\u0644\u0627\u0645! \u0628\u06CC\u0631\u0648\u0646 \u062E\u06CC\u0644\u06CC \u06AF\u0631\u0645\u0647 \u0627\u0645\u0631\u0648\u0632. \u0628\u0631\u0627\u062A \u06CC\u0647 \u0628\u0637\u0631\u06CC \u0622\u0628 \u062E\u0646\u06A9 \u0628\u06AF\u06CC\u0631\u0645 \u06CC\u0627 \u0686\u06CC\u0632 \u0628\u0647\u062A\u0631\u06CC \u0627\u0632 \u06A9\u0627\u0641\u0647 \u0627\u0648\u0646\u200C\u0648\u0631 \u062E\u06CC\u0627\u0628\u0648\u0646 \u062F\u0648\u0633\u062A \u062F\u0627\u0631\u06CC\u061F";
+  } else if (item.id === "c2-chk-05") {
+    starter = "We were just reminiscing about crazy road trips. Tell me about a past vacation where something completely unexpected happened along the way!";
+    starterFa = "\u062F\u0627\u0634\u062A\u06CC\u0645 \u062E\u0627\u0637\u0631\u0627\u062A \u0633\u0641\u0631\u0647\u0627\u06CC \u062C\u0627\u062F\u0647\u200C\u0627\u06CC \u0639\u062C\u06CC\u0628 \u0631\u0648 \u0645\u0631\u0648\u0631 \u0645\u06CC\u200C\u06A9\u0631\u062F\u06CC\u0645. \u0627\u0632 \u06CC\u0647 \u0645\u0633\u0627\u0641\u0631\u062A \u06AF\u0630\u0634\u062A\u0647\u200C\u062A \u0628\u06AF\u0648 \u06A9\u0647 \u0648\u0633\u0637 \u0631\u0627\u0647 \u06CC\u0647 \u0627\u062A\u0641\u0627\u0642 \u06A9\u0627\u0645\u0644\u0627\u064B \u063A\u06CC\u0631\u0645\u0646\u062A\u0638\u0631\u0647 \u0627\u0641\u062A\u0627\u062F!";
+  } else if (item.id === "c2-chk-07") {
+    starter = "Excuse me, I'm a bit turned around in this huge building. Do you happen to know where the executive briefing room is?";
+    starterFa = "\u0628\u0628\u062E\u0634\u06CC\u062F\u060C \u0645\u0646 \u062A\u0648\u06CC \u0627\u06CC\u0646 \u0633\u0627\u062E\u062A\u0645\u0648\u0646 \u0628\u0632\u0631\u06AF \u06CC\u0647 \u06A9\u0645 \u0631\u0627\u0647\u0645\u0648 \u06AF\u0645 \u06A9\u0631\u062F\u0645. \u0634\u0645\u0627 \u062A\u0635\u0627\u062F\u0641\u0627\u064B \u0645\u06CC\u200C\u062F\u0648\u0646\u06CC\u062F \u0627\u062A\u0627\u0642 \u062C\u0644\u0633\u0627\u062A \u0645\u062F\u06CC\u0631\u0627\u0646 \u0627\u0631\u0634\u062F \u06A9\u062C\u0627\u0633\u062A\u061F";
+  } else if (item.id === "c2-chk-11") {
+    starter = "I'm facing a huge dilemma: I got offered an exciting startup role, but with lower pay. If you were in my shoes, what would you do?";
+    starterFa = "\u0633\u0631 \u06CC\u0647 \u062F\u0648\u200C\u0631\u0627\u0647\u06CC \u0628\u0632\u0631\u06AF \u06AF\u06CC\u0631 \u06A9\u0631\u062F\u0645: \u06CC\u0647 \u067E\u06CC\u0634\u0646\u0647\u0627\u062F \u06A9\u0627\u0631 \u0627\u0633\u062A\u0627\u0631\u062A\u0627\u067E\u06CC \u0647\u06CC\u062C\u0627\u0646\u200C\u0627\u0646\u06AF\u06CC\u0632 \u06AF\u0631\u0641\u062A\u0645 \u0648\u0644\u06CC \u062D\u0642\u0648\u0642\u0634 \u06A9\u0645\u062A\u0631\u0647. \u0627\u06AF\u0647 \u062A\u0648 \u062C\u0627\u06CC \u0645\u0646 \u0628\u0648\u062F\u06CC\u060C \u0686\u06CC\u06A9\u0627\u0631 \u0645\u06CC\u200C\u06A9\u0631\u062F\u06CC\u061F";
+  } else if (item.id === "c2-chk-14") {
+    starter = "I'm proposing we push back the entire project deadline by three months. What do you think of this approach?";
+    starterFa = "\u067E\u06CC\u0634\u0646\u0647\u0627\u062F \u0645\u0646 \u0627\u06CC\u0646\u0647 \u06A9\u0647 \u06A9\u0644 \u0645\u0647\u0644\u062A \u062A\u062D\u0648\u06CC\u0644 \u067E\u0631\u0648\u0698\u0647 \u0631\u0648 \u0633\u0647 \u0645\u0627\u0647 \u0639\u0642\u0628 \u0628\u0646\u062F\u0627\u0632\u06CC\u0645. \u0646\u0638\u0631\u062A \u062F\u0631\u0628\u0627\u0631\u0647 \u0627\u06CC\u0646 \u0631\u0648\u06CC\u06A9\u0631\u062F \u0686\u06CC\u0647\u061F";
+  }
+  return {
+    id,
+    dayIndex,
+    targetLevel: item.cefrLevel,
+    phaseTitleFa: item.tierNameFa,
+    title: `Targeting: ${item.titleEn}`,
+    titleFa: `\u0633\u0646\u0627\u0631\u06CC\u0648\u06CC ${dayIndex}: ${item.titleFa}`,
+    category,
+    context: `\u062A\u0645\u0631\u06A9\u0632 \u0648\u06CC\u0698\u0647 \u0628\u0631 \u0631\u0641\u0639 \u0646\u0642\u0637\u0647 \u0636\u0639\u0641 \u0639\u0644\u0645\u06CC: ${item.titleFa} \u0628\u0631 \u0645\u0628\u0646\u0627\u06CC \u0686\u06A9\u200C\u0644\u06CC\u0633\u062A C2 (${item.scientificReference})`,
+    relationship,
+    userRole,
+    aiRole,
+    icon,
+    starter,
+    starterFa,
+    targetGrammar: item.titleEn,
+    targetGrammarFa: `${item.titleFa} \u2014 ${item.descriptionFa}`,
+    targetCliches: [item.titleEn],
+    targetVocabulary: [item.titleEn, item.categoryFa],
+    targetPronunciation: item.category === "phonetics" ? item.titleFa : "\u062A\u0644\u0641\u0638 \u0631\u0648\u0627\u0646 \u0648 \u067E\u06CC\u0648\u0633\u062A\u0647 \u0646\u06CC\u062A\u06CC\u0648 \u0627\u0645\u0631\u06CC\u06A9\u0646",
+    activeWeaknessesInjected: [item.titleFa],
+    status: dayIndex === 1 ? "current" : "upcoming",
+    targetChecklistItemId: item.id,
+    cycleNumber
+  };
+}
+function generateTenScenariosForUntickedCohort(untickedItems, cycleNumber) {
+  return untickedItems.slice(0, 10).map((item, index) => {
+    return buildScenarioForChecklistItem(item, index + 1, cycleNumber);
+  });
+}
+function matchWeaknessToC2ChecklistItem(titleFa = "", category = "", descriptionFa = "") {
+  const text = `${titleFa} ${category} ${descriptionFa}`.toLowerCase();
+  if (text.includes("flap") || text.includes("\u0641\u0644\u067E") || text.includes("water") || text.includes("city") || text.includes("better")) {
+    return C2_SCIENTIFIC_CHECKLIST.find((i) => i.id === "c2-chk-03");
+  }
+  if (text.includes("agree") || text.includes("\u0645\u0648\u0627\u0641\u0642\u0645") || text.includes("i am agree") || text.includes("\u0641\u0639\u0644 \u062D\u0627\u0644\u062A\u06CC")) {
+    return C2_SCIENTIFIC_CHECKLIST.find((i) => i.id === "c2-chk-02");
+  }
+  if (text.includes("\u062D\u0631\u0641 \u0627\u0636\u0627\u0641\u0647") || text.includes("preposition") || text.includes("interested to") || text.includes("marry with") || text.includes("listen to")) {
+    return C2_SCIENTIFIC_CHECKLIST.find((i) => i.id === "c2-chk-01");
+  }
+  if (text.includes("w vs v") || text.includes("\u0635\u062F\u0627\u06CC w") || text.includes("\u063A\u0646\u0686\u0647") || text.includes("went") || text.includes("very")) {
+    return C2_SCIENTIFIC_CHECKLIST.find((i) => i.id === "c2-chk-06");
+  }
+  if (text.includes("\u06AF\u0630\u0634\u062A\u0647") || text.includes("\u062D\u0627\u0644 \u06A9\u0627\u0645\u0644") || text.includes("present perfect") || text.includes("past simple") || text.includes("ago")) {
+    return C2_SCIENTIFIC_CHECKLIST.find((i) => i.id === "c2-chk-04");
+  }
+  if (text.includes("glottal") || text.includes("\u0686\u0627\u06A9\u0646\u0627\u06CC\u06CC") || text.includes("button") || text.includes("mountain")) {
+    return C2_SCIENTIFIC_CHECKLIST.find((i) => i.id === "c2-chk-19");
+  }
+  if (text.includes("\u0634\u0631\u0637\u06CC") || text.includes("conditional") || text.includes("if i were")) {
+    return C2_SCIENTIFIC_CHECKLIST.find((i) => i.id === "c2-chk-08");
+  }
+  if (text.includes("\u063A\u06CC\u0631\u0645\u0633\u062A\u0642\u06CC\u0645") || text.includes("indirect question") || text.includes("do you know where")) {
+    return C2_SCIENTIFIC_CHECKLIST.find((i) => i.id === "c2-chk-07");
+  }
+  if (text.includes("\u067E\u06CC\u0648\u0633\u062A\u06AF\u06CC") || text.includes("linking") || text.includes("connected speech") || text.includes("\u0627\u0646\u0642\u0628\u0627\u0636")) {
+    return C2_SCIENTIFIC_CHECKLIST.find((i) => i.id === "c2-chk-10");
+  }
+  if (text.includes("\u0644\u062D\u0646") || text.includes("\u062A\u0639\u0627\u0631\u0641") || text.includes("\u0631\u0633\u0645\u06CC") || text.includes("register") || text.includes("softening") || text.includes("hedging")) {
+    return C2_SCIENTIFIC_CHECKLIST.find((i) => i.id === "c2-chk-14") || C2_SCIENTIFIC_CHECKLIST.find((i) => i.id === "c2-chk-20");
+  }
+  if (text.includes("\u0627\u0635\u0637\u0644\u0627\u062D") || text.includes("idiom") || text.includes("\u06A9\u0644\u06CC\u0634\u0647") || text.includes("\u06A9\u0627\u0644\u0648\u06A9\u06CC\u0634\u0646") || text.includes("collocation")) {
+    return C2_SCIENTIFIC_CHECKLIST.find((i) => i.id === "c2-chk-15") || C2_SCIENTIFIC_CHECKLIST.find((i) => i.id === "c2-chk-18");
+  }
+  if (text.includes("\u0631\u0648\u0627\u06CC\u062A") || text.includes("\u062F\u0627\u0633\u062A\u0627\u0646") || text.includes("\u062E\u0627\u0637\u0631\u0647") || text.includes("narrative")) {
+    return C2_SCIENTIFIC_CHECKLIST.find((i) => i.id === "c2-chk-05");
+  }
+  if (text.includes("\u0634\u0648\u0622") || text.includes("schwa") || text.includes("\u06A9\u0627\u0647\u0634 \u0648\u0627\u06A9\u0647") || text.includes("vowel reduction")) {
+    return C2_SCIENTIFIC_CHECKLIST.find((i) => i.id === "c2-chk-16");
+  }
+  if (category === "phonetics") {
+    return C2_SCIENTIFIC_CHECKLIST.find((i) => i.category === "phonetics");
+  }
+  if (category === "pragmatics") {
+    return C2_SCIENTIFIC_CHECKLIST.find((i) => i.category === "pragmatics");
+  }
+  if (category === "idioms") {
+    return C2_SCIENTIFIC_CHECKLIST.find((i) => i.category === "idioms");
+  }
+  return void 0;
+}
+function getC2CohortForWeaknesses(weaknesses, masteredIds = [], count = 10, allowRemasterDiagnosed = false) {
+  const masteredSet = new Set(masteredIds);
+  const selectedItems = [];
+  const selectedIds = /* @__PURE__ */ new Set();
+  const remasteredIds = [];
+  for (const w of weaknesses) {
+    let matchedItem;
+    if (w.checklistItemId) {
+      matchedItem = C2_SCIENTIFIC_CHECKLIST.find((i) => i.id === w.checklistItemId);
+    }
+    if (!matchedItem && w.titleFa) {
+      matchedItem = matchWeaknessToC2ChecklistItem(w.titleFa, w.category, w.descriptionFa);
+    }
+    if (!matchedItem || selectedIds.has(matchedItem.id)) continue;
+    const wasMastered = masteredSet.has(matchedItem.id);
+    if (wasMastered && !allowRemasterDiagnosed) continue;
+    if (wasMastered && allowRemasterDiagnosed) {
+      remasteredIds.push(matchedItem.id);
+    }
+    selectedItems.push(matchedItem);
+    selectedIds.add(matchedItem.id);
+    if (selectedItems.length >= count) break;
+  }
+  if (selectedItems.length < count) {
+    const remainingUnticked = C2_SCIENTIFIC_CHECKLIST.filter((item) => !masteredSet.has(item.id) && !selectedIds.has(item.id)).sort((a, b) => a.priorityOrder - b.priorityOrder);
+    for (const item of remainingUnticked) {
+      selectedItems.push(item);
+      selectedIds.add(item.id);
+      if (selectedItems.length >= count) break;
+    }
+  }
+  selectedItems.__remasteredIds = remasteredIds;
+  return selectedItems.slice(0, count);
+}
+
+// src/utils/c2ScenarioEngine.ts
+var SCENARIO_BLUEPRINTS = {
+  "c2-chk-01": {
+    title: "Discussing Hobbies & Interests at a Brooklyn Art Gallery",
+    titleFa: "\u06AF\u0641\u062A\u06AF\u0648 \u062F\u0631\u0628\u0627\u0631\u0647 \u0639\u0644\u0627\u06CC\u0642 \u0648 \u0647\u0646\u0631 \u062F\u0631 \u06AF\u0627\u0644\u0631\u06CC \u0628\u0631\u0648\u06A9\u0644\u06CC\u0646 (\u062D\u0630\u0641 \u062D\u0631\u0648\u0641 \u0627\u0636\u0627\u0641\u0647 \u0627\u0634\u062A\u0628\u0627\u0647)",
+    category: "social",
+    context: "Contemporary Art Gallery Opening in DUMBO, Brooklyn",
+    relationship: "Fellow Art Enthusiast / Peer",
+    userRole: "Gallery Visitor",
+    aiRole: "Local Artist & Curator (Maya)",
+    icon: "\u{1F3A8}",
+    starter: "Hey there! Are you also interested in modern abstract installations, or is this your first time at this gallery?",
+    starterFa: "\u0633\u0644\u0627\u0645! \u0634\u0645\u0627 \u0647\u0645 \u0628\u0647 \u0686\u06CC\u062F\u0645\u0627\u0646\u200C\u0647\u0627\u06CC \u0645\u062F\u0631\u0646 \u0622\u0628\u0633\u062A\u0631\u0647 \u0639\u0644\u0627\u0642\u0647\u200C\u0645\u0646\u062F\u06CC\u062F \u06CC\u0627 \u0627\u0648\u0644\u06CC\u0646 \u0628\u0627\u0631\u062A\u0648\u0646\u0647 \u0628\u0647 \u0627\u06CC\u0646 \u06AF\u0627\u0644\u0631\u06CC \u0645\u06CC\u0627\u06CC\u062F\u061F",
+    targetCliches: ["break the ice (\u0622\u0628 \u06A9\u0631\u062F\u0646 \u06CC\u062E \u0645\u06A9\u0627\u0644\u0645\u0647)", "take a keen interest in (\u0639\u0644\u0627\u0642\u0647\u200C\u0645\u0646\u062F \u0634\u062F\u0646 \u0639\u0645\u06CC\u0642)"],
+    targetVocabulary: ["interested in (\u0639\u0644\u0627\u0642\u0647\u200C\u0645\u0646\u062F \u0628\u0647)", "listen to (\u06AF\u0648\u0634 \u062F\u0627\u062F\u0646 \u0628\u0647)", "keen on (\u0645\u0634\u062A\u0627\u0642)"],
+    targetPronunciation: "\u062D\u0630\u0641 \u0635\u062F\u0627\u06CC \u0627\u0636\u0627\u0641\u0647 to \u0628\u0639\u062F \u0627\u0632 listen \u0648 \u062A\u0644\u0641\u0638 \u0631\u0648\u0627\u0646 interested in \u0628\u062F\u0648\u0646 \u0645\u06A9\u062B"
+  },
+  "c2-chk-02": {
+    title: "Debating Tech Workplace Policies with Team Lead",
+    titleFa: "\u0645\u0646\u0627\u0638\u0631\u0647 \u062F\u0631\u0628\u0627\u0631\u0647 \u0633\u06CC\u0627\u0633\u062A\u200C\u0647\u0627\u06CC \u06A9\u0627\u0631\u06CC \u0634\u0631\u06A9\u062A (\u062A\u0633\u0644\u0637 \u0628\u0631 \u0627\u0641\u0639\u0627\u0644 \u062D\u0627\u0644\u062A\u06CC \u0648 \u062D\u0630\u0641 I am agree)",
+    category: "work",
+    context: "Tech Startup Coffee Corner / Quick Sync",
+    relationship: "Engineering Lead / Senior Colleague",
+    userRole: "Software Developer",
+    aiRole: "Team Lead (David)",
+    icon: "\u{1F4BB}",
+    starter: "I personally feel four-day work weeks boost output by 20%. Do you agree, or do you have reservations?",
+    starterFa: "\u0645\u0646 \u0634\u062E\u0635\u0627\u064B \u062D\u0633 \u0645\u06CC\u200C\u06A9\u0646\u0645 \u0647\u0641\u062A\u0647\u200C\u0647\u0627\u06CC \u06A9\u0627\u0631\u06CC \u06F4 \u0631\u0648\u0632\u0647 \u0628\u0627\u0632\u062F\u0647\u06CC \u0631\u0648 \u06F2\u06F0 \u062F\u0631\u0635\u062F \u0628\u0627\u0644\u0627 \u0645\u06CC\u200C\u0628\u0631\u0647. \u0645\u0648\u0627\u0641\u0642\u06CC \u06CC\u0627 \u0645\u0644\u0627\u062D\u0638\u0627\u062A\u06CC \u062F\u0627\u0631\u06CC\u061F",
+    targetCliches: ["on the same page (\u0647\u0645\u200C\u0646\u0638\u0631 \u0628\u0648\u062F\u0646)", "see eye to eye (\u0627\u062A\u0641\u0627\u0642 \u0646\u0638\u0631 \u062F\u0627\u0634\u062A\u0646)"],
+    targetVocabulary: ["I completely agree (\u06A9\u0627\u0645\u0644\u0627\u064B \u0645\u0648\u0627\u0641\u0642\u0645)", "I respectfully disagree (\u0628\u0627 \u0627\u062D\u062A\u0631\u0627\u0645 \u0645\u062E\u0627\u0644\u0641\u0645)", "It depends on (\u0628\u0633\u062A\u06AF\u06CC \u062F\u0627\u0631\u062F \u0628\u0647)"],
+    targetPronunciation: "\u0627\u062F\u0627\u06CC \u0631\u0648\u0627\u0646 I agree \u0628\u062F\u0648\u0646 \u0627\u0636\u0627\u0641\u0647 \u06A9\u0631\u062F\u0646 am \u0648 \u0644\u062D\u0646 \u0645\u0635\u0645\u0645"
+  },
+  "c2-chk-03": {
+    title: "Ordering Fast-Casual Lunch in Downtown Chicago",
+    titleFa: "\u0633\u0641\u0627\u0631\u0634 \u0646\u0627\u0647\u0627\u0631 \u062F\u0631 \u0631\u0633\u062A\u0648\u0631\u0627\u0646 \u0634\u0644\u0648\u063A \u0634\u06CC\u06A9\u0627\u06AF\u0648 (\u062A\u0633\u0644\u0637 \u06A9\u0627\u0645\u0644 \u0628\u0631 Flap T)",
+    category: "daily",
+    context: "Busy Downtown Chicago Gourmet Deli",
+    relationship: "Cashier / Counter Staff",
+    userRole: "Hungry Customer on Lunch Break",
+    aiRole: "Fast-talking Chicago Cashier",
+    icon: "\u{1F96A}",
+    starter: "Next in line! What'll it be today? A bottle of water or iced tea with that sandwich combo?",
+    starterFa: "\u0646\u0641\u0631 \u0628\u0639\u062F! \u0627\u0645\u0631\u0648\u0632 \u0686\u06CC \u062A\u0642\u062F\u06CC\u0645 \u06A9\u0646\u0645\u061F \u0628\u0627 \u0633\u0627\u0646\u062F\u0648\u06CC\u0686 \u0628\u0637\u0631\u06CC \u0622\u0628 \u0645\u06CC\u0644 \u062F\u0627\u0631\u06CC\u062F \u06CC\u0627 \u0622\u06CC\u0633\u200C\u062A\u06CC\u061F",
+    targetCliches: ["grab a bite (\u0686\u06CC\u0632\u06CC \u0633\u0631\u067E\u0627\u06CC\u06CC \u062E\u0648\u0631\u062F\u0646)", "on the run (\u062F\u0631 \u062D\u0627\u0644 \u0639\u062C\u0644\u0647)"],
+    targetVocabulary: ["bottle of water (\u0628\u0637\u0631\u06CC \u0622\u0628)", "little better (\u06A9\u0645\u06CC \u0628\u0647\u062A\u0631)", "city center (\u0645\u0631\u06A9\u0632 \u0634\u0647\u0631)"],
+    targetPronunciation: "\u062A\u0644\u0641\u0638 Flap-T [\u027E] \u0646\u0631\u0645 \u062F\u0631 \u06A9\u0644\u0645\u0627\u062A water, bottle, better, city, meeting"
+  },
+  "c2-chk-04": {
+    title: "Planning a Road Trip Itinerary with a Friend",
+    titleFa: "\u0628\u0631\u0646\u0627\u0645\u0647\u200C\u0631\u06CC\u0632\u06CC \u0633\u0641\u0631 \u062C\u0627\u062F\u0647\u200C\u0627\u06CC \u06A9\u0627\u0644\u06CC\u0641\u0631\u0646\u06CC\u0627 (\u06A9\u0627\u0647\u0634 \u0622\u0648\u0627\u06CC\u06CC \u0634\u0648\u0622 \u062F\u0631 \u06A9\u0644\u0645\u0627\u062A \u06A9\u0645\u06A9\u06CC)",
+    category: "travel",
+    context: "Living Room Map Planning for Pacific Coast Highway",
+    relationship: "Close Travel Buddy",
+    userRole: "Road Trip Co-pilot",
+    aiRole: "Adventurous Friend (Chloe)",
+    icon: "\u{1F697}",
+    starter: "We can leave at dawn to beat the traffic, and I can drive for the first four hours. How does that sound?",
+    starterFa: "\u0645\u06CC\u200C\u062A\u0648\u0646\u06CC\u0645 \u0633\u067E\u06CC\u062F\u0647\u200C\u062F\u0645 \u0631\u0627\u0647 \u0628\u06CC\u0641\u062A\u06CC\u0645 \u062A\u0627 \u0628\u0647 \u062A\u0631\u0627\u0641\u06CC\u06A9 \u0646\u062E\u0648\u0631\u06CC\u0645\u060C \u0648 \u0645\u0646 \u0645\u06CC\u200C\u062A\u0648\u0646\u0645 \u06F4 \u0633\u0627\u0639\u062A \u0627\u0648\u0644 \u0631\u0648 \u0631\u0627\u0646\u0646\u062F\u06AF\u06CC \u06A9\u0646\u0645. \u0686\u0637\u0648\u0631\u0647\u061F",
+    targetCliches: ["hit the road (\u0632\u062F\u0646 \u0628\u0647 \u062F\u0644 \u062C\u0627\u062F\u0647)", "play it by ear (\u0641\u0639\u0644\u0627\u064B \u0642\u0637\u0639\u06CC \u0646\u06A9\u0631\u062F\u0646)"],
+    targetVocabulary: ["can /k\u0259n/ (\u062A\u0648\u0627\u0646\u0633\u062A\u0646)", "to /t\u0259/ (\u0628\u0647)", "for /f\u0259r/ (\u0628\u0631\u0627\u06CC)"],
+    targetPronunciation: "\u06A9\u0627\u0647\u0634 \u0645\u0635\u0648\u062A \u0628\u0647 \u0635\u062F\u0627\u06CC \u0634\u0648\u0622 [\u0259] \u062F\u0631 \u06A9\u0644\u0645\u0627\u062A \u06AF\u0631\u0627\u0645\u0631\u06CC to, for, can, and, of"
+  },
+  "c2-chk-05": {
+    title: "Recounting a Lost Passport Misadventure Abroad",
+    titleFa: "\u0631\u0648\u0627\u06CC\u062A \u062F\u0627\u0633\u062A\u0627\u0646 \u067E\u0627\u0633\u067E\u0648\u0631\u062A \u06AF\u0645\u200C\u0634\u062F\u0647 \u062F\u0631 \u0633\u0641\u0631 (\u062A\u0633\u0644\u0637 \u0628\u0631 \u0632\u0645\u0627\u0646\u200C\u0647\u0627\u06CC \u06AF\u0630\u0634\u062A\u0647)",
+    category: "travel",
+    context: "Hostel Lounge in Amsterdam sharing travel stories",
+    relationship: "Fellow World Traveler",
+    userRole: "Storyteller",
+    aiRole: "Engaged Traveler (Liam)",
+    icon: "\u2708\uFE0F",
+    starter: "You said you had a crazy incident on your trip last year. What actually happened when you realized it was gone?",
+    starterFa: "\u06AF\u0641\u062A\u06CC \u067E\u0627\u0631\u0633\u0627\u0644 \u062A\u0648 \u0633\u0641\u0631\u062A \u06CC\u0647 \u0645\u0627\u062C\u0631\u0627\u06CC \u0639\u062C\u06CC\u0628 \u067E\u06CC\u0634 \u0627\u0648\u0645\u062F. \u062F\u0642\u06CC\u0642\u0627\u064B \u0686\u06CC \u0634\u062F \u0648\u0642\u062A\u06CC \u0641\u0647\u0645\u06CC\u062F\u06CC \u06AF\u0645 \u0634\u062F\u0647\u061F",
+    targetCliches: ["out of the blue (\u0646\u0627\u06AF\u0647\u0627\u0646\u06CC \u0648 \u0628\u06CC\u200C\u0645\u0642\u062F\u0645\u0647)", "get to the bottom of (\u067E\u06CC \u0628\u0631\u062F\u0646 \u0628\u0647 \u0645\u0627\u062C\u0631\u0627)"],
+    targetVocabulary: ["had forgotten (\u0641\u0631\u0627\u0645\u0648\u0634 \u06A9\u0631\u062F\u0647 \u0628\u0648\u062F\u0645)", "was searching (\u062F\u0627\u0634\u062A\u0645 \u0645\u06CC\u200C\u06AF\u0634\u062A\u0645)", "eventually turned up (\u0628\u0627\u0644\u0627\u062E\u0631\u0647 \u067E\u06CC\u062F\u0627 \u0634\u062F)"],
+    targetPronunciation: "\u067E\u06CC\u0648\u0633\u062A\u06AF\u06CC \u0628\u06CC\u0627\u0646 \u06AF\u0630\u0634\u062A\u0647 \u0628\u062F\u0648\u0646 \u062A\u0648\u0642\u0641 \u0648 \u062A\u0644\u0641\u0638 \u0635\u062D\u06CC\u062D \u067E\u0633\u0648\u0646\u062F\u0647\u0627\u06CC -ed"
+  },
+  "c2-chk-06": {
+    title: "Weekend Mall Run & Outdoor Gear Shopping",
+    titleFa: "\u062E\u0631\u06CC\u062F \u062A\u062C\u0647\u06CC\u0632\u0627\u062A \u06A9\u0648\u0647\u0646\u0648\u0631\u062F\u06CC \u0622\u062E\u0631 \u0647\u0641\u062A\u0647 (\u062D\u0630\u0641 go to shopping)",
+    category: "daily",
+    context: "Outdoor Apparel & Equipment Store",
+    relationship: "Shopping Companion",
+    userRole: "Shopper looking for hiking boots",
+    aiRole: "Outdoor Enthusiast Friend (Sam)",
+    icon: "\u{1F6CD}\uFE0F",
+    starter: "I'm so glad we went shopping early! Do you want to go hiking this afternoon after we finish?",
+    starterFa: "\u062E\u06CC\u0644\u06CC \u062E\u0648\u0634\u062D\u0627\u0644\u0645 \u0632\u0648\u062F \u0627\u0648\u0645\u062F\u06CC\u0645 \u062E\u0631\u06CC\u062F! \u0628\u0639\u062F \u0627\u0632 \u0627\u062A\u0645\u0627\u0645\u060C \u067E\u0627\u06CC\u0647 \u0647\u0633\u062A\u06CC \u0628\u0639\u062F\u0627\u0632\u0638\u0647\u0631 \u0628\u0631\u06CC\u0645 \u06A9\u0648\u0647\u0646\u0648\u0631\u062F\u06CC\u061F",
+    targetCliches: ["shop around (\u0642\u06CC\u0645\u062A \u06AF\u0631\u0641\u062A\u0646 \u0627\u0632 \u062C\u0627\u0647\u0627\u06CC \u0645\u062E\u062A\u0644\u0641)", "cost an arm and a leg (\u062E\u06CC\u0644\u06CC \u06AF\u0631\u0627\u0646 \u0628\u0648\u062F\u0646)"],
+    targetVocabulary: ["went shopping (\u0631\u0641\u062A\u06CC\u0645 \u062E\u0631\u06CC\u062F)", "go hiking (\u0631\u0641\u062A\u0646 \u0628\u0647 \u06A9\u0648\u0647\u0646\u0648\u0631\u062F\u06CC)", "go camping (\u0631\u0641\u062A\u0646 \u0628\u0647 \u06A9\u0645\u067E)"],
+    targetPronunciation: "\u062D\u0630\u0641 \u06A9\u0627\u0645\u0644 \u06A9\u0644\u0645\u0647 to \u0628\u0639\u062F \u0627\u0632 go \u062F\u0631 \u0641\u0639\u0627\u0644\u06CC\u062A\u200C\u0647\u0627\u06CC \u062A\u0641\u0631\u06CC\u062D\u06CC \u0628\u0627 \u067E\u0633\u0648\u0646\u062F ing"
+  },
+  "c2-chk-07": {
+    title: "Navigating an Airport Terminal Dilemma with Gate Agent",
+    titleFa: "\u067E\u06CC\u06AF\u06CC\u0631\u06CC \u062A\u063A\u06CC\u06CC\u0631 \u06AF\u06CC\u062A \u067E\u0631\u0648\u0627\u0632 \u062F\u0631 \u0641\u0631\u0648\u062F\u06AF\u0627\u0647 (\u067E\u0631\u0633\u0634\u06AF\u0631\u06CC \u0645\u0624\u062F\u0628\u0627\u0646\u0647 \u0648 \u063A\u06CC\u0631\u0645\u0633\u062A\u0642\u06CC\u0645)",
+    category: "travel",
+    context: "JFK International Airport Terminal Gate Desk",
+    relationship: "Gate Agent / Airline Representative",
+    userRole: "Connecting Passenger",
+    aiRole: "Airline Customer Service Agent",
+    icon: "\u{1F3AB}",
+    starter: "Next customer please. How can I assist you with your connecting flight today?",
+    starterFa: "\u0645\u0633\u0627\u0641\u0631 \u0628\u0639\u062F\u06CC \u0644\u0637\u0641\u0627\u064B. \u0686\u0637\u0648\u0631 \u0645\u06CC\u200C\u062A\u0648\u0646\u0645 \u062F\u0631 \u0645\u0648\u0631\u062F \u067E\u0631\u0648\u0627\u0632 \u062A\u0631\u0627\u0646\u0632\u06CC\u062A\u200C\u062A\u0648\u0646 \u06A9\u0645\u06A9\u062A\u0648\u0646 \u06A9\u0646\u0645\u061F",
+    targetCliches: ["in a tight spot (\u062F\u0631 \u0645\u062E\u0645\u0635\u0647 \u0627\u0641\u062A\u0627\u062F\u0646)", "make matters worse (\u0627\u0648\u0636\u0627\u0639 \u0631\u0627 \u0628\u062F\u062A\u0631 \u06A9\u0631\u062F\u0646)"],
+    targetVocabulary: ["Do you happen to know...? (\u0622\u06CC\u0627 \u062A\u0635\u0627\u062F\u0641\u0627\u064B \u0645\u06CC\u200C\u062F\u0627\u0646\u06CC\u062F...)", "I was wondering if... (\u062F\u0627\u0634\u062A\u0645 \u0641\u06A9\u0631 \u0645\u06CC\u200C\u06A9\u0631\u062F\u0645 \u0622\u06CC\u0627...)", "Could you clarify...? (\u0645\u06CC\u0634\u0647 \u0634\u0641\u0627\u0641 \u0628\u0641\u0631\u0645\u0627\u06CC\u06CC\u062F...)"],
+    targetPronunciation: "\u0622\u0647\u0646\u06AF \u06A9\u0644\u0627\u0645\u06CC \u062E\u06CC\u0632\u0627\u0646 \u0648 \u0645\u0644\u0627\u06CC\u0645 \u062F\u0631 \u0633\u0648\u0627\u0644\u0627\u062A \u0645\u062D\u062A\u0631\u0645\u0627\u0646\u0647"
+  },
+  "c2-chk-08": {
+    title: "Discussing Career Aspirations over Morning Coffee",
+    titleFa: "\u0628\u062D\u062B \u062F\u0631\u0628\u0627\u0631\u0647 \u0627\u0647\u062F\u0627\u0641 \u0634\u063A\u0644\u06CC \u0648 \u0645\u0633\u06CC\u0631 \u0627\u0631\u062A\u0642\u0627 (\u062A\u0633\u0644\u0637 \u0628\u0631 R \u0627\u0645\u0631\u06CC\u06A9\u0646 \u0628\u062F\u0648\u0646 \u0644\u0631\u0632\u0634)",
+    category: "work",
+    context: "Office Terrace overlooking San Francisco skyline",
+    relationship: "Career Mentor / Trusted Advisor",
+    userRole: "Ambitious Professional",
+    aiRole: "Senior Vice President (Elena)",
+    icon: "\u{1F4C8}",
+    starter: "Your hard work on that quarterly report really turned heads. Where do you see your career heading next year?",
+    starterFa: "\u062A\u0644\u0627\u0634 \u0633\u062E\u062A\u062A \u0631\u0648\u06CC \u06AF\u0632\u0627\u0631\u0634 \u0641\u0635\u0644\u06CC \u062D\u0633\u0627\u0628\u06CC \u0628\u0647 \u0686\u0634\u0645 \u0627\u0648\u0645\u062F. \u0633\u0627\u0644 \u0622\u06CC\u0646\u062F\u0647 \u0645\u0633\u06CC\u0631 \u0634\u063A\u0644\u06CC\u062A \u0631\u0648 \u06A9\u062C\u0627 \u0645\u06CC\u200C\u0628\u06CC\u0646\u06CC\u061F",
+    targetCliches: ["raise the bar (\u0628\u0627\u0644\u0627 \u0628\u0631\u062F\u0646 \u0627\u0633\u062A\u0627\u0646\u062F\u0627\u0631\u062F)", "learn the ropes (\u0641\u0648\u062A \u0648 \u0641\u0646 \u06A9\u0627\u0631 \u0631\u0627 \u06CC\u0627\u062F \u06AF\u0631\u0641\u062A\u0646)"],
+    targetVocabulary: ["career trajectory (\u0645\u0633\u06CC\u0631 \u067E\u06CC\u0634\u0631\u0641\u062A \u0634\u063A\u0644\u06CC)", "hard work (\u0633\u062E\u062A\u200C\u06A9\u0648\u0634\u06CC)", "first priority (\u0627\u0648\u0644\u0648\u06CC\u062A \u0627\u0648\u0644)"],
+    targetPronunciation: "\u0635\u062F\u0627\u06CC R \u0639\u0645\u06CC\u0642 \u067E\u0633\u062A\u200C\u0622\u0644\u0648\u0626\u0648\u0644\u0627\u0631 \u062F\u0631 \u06A9\u0644\u0645\u0627\u062A career, hard, work, report \u0628\u062F\u0648\u0646 \u0644\u0631\u0632\u0634 \u0646\u0648\u06A9 \u0632\u0628\u0627\u0646"
+  },
+  "c2-chk-09": {
+    title: "Handling a Rapid-Fire Product Strategy Interview",
+    titleFa: "\u0645\u0635\u0627\u062D\u0628\u0647 \u0627\u0633\u062A\u0631\u0627\u062A\u0698\u06CC \u0645\u062D\u0635\u0648\u0644 \u0648 \u067E\u0627\u0633\u062E\u06AF\u0648\u06CC\u06CC \u0645\u0633\u0644\u0637 (\u0645\u062F\u06CC\u0631\u06CC\u062A \u0645\u06A9\u062B\u200C\u0647\u0627 \u0628\u0627 \u0641\u06CC\u0644\u0631)",
+    category: "work",
+    context: "Silicon Valley Product Manager Interview Session",
+    relationship: "Hiring Manager / Interviewer",
+    userRole: "Job Candidate",
+    aiRole: "VP of Product (Marcus)",
+    icon: "\u{1F3AF}",
+    starter: "Tell me about a time when a metric tanked unexpectedly. How did you react in the first forty-eight hours?",
+    starterFa: "\u0627\u0632 \u0632\u0645\u0627\u0646\u06CC \u0628\u06AF\u0648 \u06A9\u0647 \u06CC\u06A9\u06CC \u0627\u0632 \u0634\u0627\u062E\u0635\u200C\u0647\u0627 \u0627\u0641\u062A \u0634\u062F\u06CC\u062F\u06CC \u06A9\u0631\u062F. \u062F\u0631 \u06F4\u06F8 \u0633\u0627\u0639\u062A \u0627\u0648\u0644 \u0686\u0647 \u0648\u0627\u06A9\u0646\u0634\u06CC \u0646\u0634\u0648\u0646 \u062F\u0627\u062F\u06CC\u061F",
+    targetCliches: ["think on your feet (\u0641\u06CC\u200C\u0627\u0644\u0628\u062F\u0627\u0647\u0647 \u0641\u06A9\u0631 \u0648 \u0639\u0645\u0644 \u06A9\u0631\u062F\u0646)", "cut to the chase (\u0631\u0641\u062A\u0646 \u0633\u0631 \u0627\u0635\u0644 \u0645\u0637\u0644\u0628)"],
+    targetVocabulary: ["Well, to be fair... (\u0631\u0627\u0633\u062A\u0634 \u0627\u06AF\u0631 \u0628\u062E\u0648\u0627\u0645 \u0645\u0646\u0635\u0641 \u0628\u0627\u0634\u0645)", "Actually, what happened was... (\u062F\u0631 \u0648\u0627\u0642\u0639 \u0686\u06CC\u0632\u06CC \u06A9\u0647 \u0631\u062E \u062F\u0627\u062F...)", "You know, looking back... (\u0645\u06CC\u200C\u062F\u0648\u0646\u06CC\u060C \u0627\u06AF\u0631 \u0628\u0647 \u06AF\u0630\u0634\u062A\u0647 \u0646\u06AF\u0627\u0647 \u06A9\u0646\u0645...)"],
+    targetPronunciation: "\u062D\u0641\u0638 \u0622\u0647\u0646\u06AF \u06A9\u0644\u0627\u0645 \u0628\u062F\u0648\u0646 \u0633\u06A9\u0648\u062A\u200C\u0647\u0627\u06CC \u0646\u0627\u06AF\u0647\u0627\u0646\u06CC \u06CC\u0627 \u0635\u062F\u0627\u0647\u0627\u06CC \u0622\u0632\u0627\u0631\u062F\u0647\u0646\u062F\u0647"
+  },
+  "c2-chk-10": {
+    title: "Casual Weekend Brainstorming with Startup Co-founders",
+    titleFa: "\u0637\u0648\u0641\u0627\u0646 \u0641\u06A9\u0631\u06CC \u0622\u062E\u0631 \u0647\u0641\u062A\u0647 \u0628\u0627 \u0647\u0645\u200C\u0628\u0646\u06CC\u0627\u0646\u200C\u06AF\u0630\u0627\u0631\u0627\u0646 \u0627\u0633\u062A\u0627\u0631\u062A\u0627\u067E (\u06A9\u0644\u06CC\u0634\u0647\u200C\u0647\u0627\u06CC \u0645\u062D\u0627\u0648\u0631\u0647\u200C\u0627\u06CC)",
+    category: "social",
+    context: "Austin Backyard BBQ / Founder Ideation",
+    relationship: "Startup Co-founder & Longtime Friend",
+    userRole: "Technical Co-founder",
+    aiRole: "Commercial Co-founder (Jason)",
+    icon: "\u{1F680}",
+    starter: "Our beta users love the AI coach, but retention drops after day ten. What should we do next?",
+    starterFa: "\u06A9\u0627\u0631\u0628\u0631\u0627\u0646 \u0628\u062A\u0627 \u0639\u0627\u0634\u0642 \u0645\u0631\u0628\u06CC \u0647\u0648\u0634 \u0645\u0635\u0646\u0648\u0639\u06CC \u0634\u062F\u0646\u060C \u0627\u0645\u0627 \u0645\u0648\u0646\u062F\u06AF\u0627\u0631\u06CC \u0628\u0639\u062F \u0627\u0632 \u0631\u0648\u0632 \u062F\u0647\u0645 \u0627\u0641\u062A \u0645\u06CC\u200C\u06A9\u0646\u0647. \u0628\u0639\u062F\u0634 \u0686\u06CC\u06A9\u0627\u0631 \u06A9\u0646\u06CC\u0645\u061F",
+    targetCliches: ["touch base (\u0647\u0645\u0627\u0647\u0646\u06AF\u06CC \u0648 \u062C\u0644\u0633\u0647 \u06A9\u0648\u062A\u0627\u0647 \u062F\u0627\u0634\u062A\u0646)", "call it a day (\u06A9\u0627\u0631 \u0631\u0627 \u0628\u0631\u0627\u06CC \u0627\u0645\u0631\u0648\u0632 \u062A\u0639\u0637\u06CC\u0644 \u06A9\u0631\u062F\u0646)", "bite the bullet (\u062F\u0644 \u0628\u0647 \u062F\u0631\u06CC\u0627 \u0632\u062F\u0646)"],
+    targetVocabulary: ["play it by ear (\u0641\u0639\u0644\u0627\u064B \u0642\u0637\u0639\u06CC \u0646\u06A9\u0631\u062F\u0646)", "game plan (\u0628\u0631\u0646\u0627\u0645\u0647 \u0639\u0645\u0644\u06CC\u0627\u062A\u06CC)", "drop the ball (\u06A9\u0648\u062A\u0627\u0647\u06CC \u06A9\u0631\u062F\u0646)"],
+    targetPronunciation: "\u0644\u062D\u0646 \u0635\u0645\u06CC\u0645\u06CC \u0648 \u0633\u0631\u06CC\u0639 \u06A9\u0644\u0627\u0645 \u0628\u0627 \u0627\u062A\u0635\u0627\u0644\u0627\u062A \u0622\u0648\u0627\u06CC\u06CC \u0637\u0628\u06CC\u0639\u06CC"
+  }
+};
+function generate10ScenariosFromChecklistItems(items, cycleNumber = 1) {
+  const targetItems = items.slice(0, 10);
+  if (targetItems.length < 10) {
+    const existingIds = new Set(targetItems.map((i) => i.id));
+    for (const fallback of C2_SCIENTIFIC_CHECKLIST) {
+      if (!existingIds.has(fallback.id)) {
+        targetItems.push(fallback);
+        existingIds.add(fallback.id);
+        if (targetItems.length === 10) break;
+      }
+    }
+  }
+  return targetItems.map((item, idx) => {
+    const blueprint = SCENARIO_BLUEPRINTS[item.id] || {
+      title: `Mastering ${item.titleEn}`,
+      titleFa: `\u0633\u0646\u0627\u0631\u06CC\u0648\u06CC \u062A\u0633\u0644\u0637 \u0628\u0631: ${item.titleFa}`,
+      category: "work",
+      context: "Professional Collaborative Setting",
+      relationship: "Colleague / Conversational Partner",
+      userRole: "Professional Specialist",
+      aiRole: "American Conversational Partner",
+      icon: "\u{1F3AF}",
+      starter: `Let's discuss this matter directly. How do you view our path forward?`,
+      starterFa: `\u0628\u06CC\u0627 \u0645\u0633\u062A\u0642\u06CC\u0645\u0627\u064B \u062F\u0631\u0628\u0627\u0631\u0647 \u0627\u06CC\u0646 \u0645\u0648\u0636\u0648\u0639 \u0635\u062D\u0628\u062A \u06A9\u0646\u06CC\u0645. \u0645\u0633\u06CC\u0631 \u067E\u06CC\u0634\u200C\u0631\u0648 \u0631\u0648 \u0686\u0637\u0648\u0631 \u0645\u06CC\u200C\u0628\u06CC\u0646\u06CC\u061F`,
+      targetCliches: ["on the same page (\u0647\u0645\u200C\u0646\u0638\u0631 \u0628\u0648\u062F\u0646)", "bring to the table (\u0627\u0631\u0632\u0634 \u0627\u0641\u0632\u0648\u062F\u0646)"],
+      targetVocabulary: ["deliberate (\u0622\u06AF\u0627\u0647\u0627\u0646\u0647)", "perspective (\u062F\u06CC\u062F\u06AF\u0627\u0647)", "collaborate (\u0647\u0645\u06A9\u0627\u0631\u06CC \u06A9\u0631\u062F\u0646)"],
+      targetPronunciation: item.criteriaForMasteryFa
+    };
+    return {
+      id: `cal-c${cycleNumber}-${idx + 1}`,
+      dayIndex: idx + 1,
+      targetLevel: item.cefrLevel,
+      phaseTitleFa: item.tierNameFa,
+      targetChecklistItemId: item.id,
+      cycleNumber,
+      title: blueprint.title,
+      titleFa: blueprint.titleFa,
+      category: blueprint.category,
+      context: blueprint.context,
+      relationship: blueprint.relationship,
+      userRole: blueprint.userRole,
+      aiRole: blueprint.aiRole,
+      icon: blueprint.icon,
+      starter: blueprint.starter,
+      starterFa: blueprint.starterFa,
+      targetGrammar: item.titleEn,
+      targetGrammarFa: item.descriptionFa,
+      targetCliches: blueprint.targetCliches,
+      targetVocabulary: blueprint.targetVocabulary,
+      targetPronunciation: blueprint.targetPronunciation,
+      activeWeaknessesInjected: [item.titleFa],
+      status: idx === 0 ? "current" : "upcoming"
+    };
+  });
+}
+function formatChecklistItemsAsWeaknesses(items) {
+  return items.slice(0, 10).map((item, idx) => ({
+    id: `weak-${item.id}`,
+    category: item.category === "phonetics" ? "pronunciation" : item.category === "idioms" ? "vocabulary" : item.category === "pragmatics" ? "register_tone" : item.category === "discourse" ? "fluency" : "grammar",
+    titleFa: item.titleFa,
+    descriptionFa: item.descriptionFa,
+    examples: [item.exampleBad, `\u0627\u0635\u0644\u0627\u062D \u0628\u0648\u0645\u06CC: ${item.exampleGood}`],
+    severity: item.tier === 1 ? "high" : item.tier === 2 ? "medium" : "low",
+    frequency: 3,
+    firstObserved: (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
+    lastObserved: (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
+    status: "active",
+    successStreak: 0
+  }));
+}
 
 // src/utils/phoneticsStrictness.ts
 var PHONETICS_MIN_SCORE_WITH_AUDIO = 78;
+var PHONETICS_MIN_SCORE_SOFT = 70;
 var PHONETICS_OVERALL_CAP_IF_WEAK = 74;
 var FEATURE_KEYWORDS = [
   { key: "flapT", patterns: [/flap\s*t/i, /flap-t/i, /t̬/, /\[ɾ\]/, /intervocalic/i, /water|city|better|bottle/i] },
@@ -1123,6 +2321,37 @@ function enforcePhoneticsStrictness(analysis, opts) {
   }
   return next;
 }
+function phoneticsHintsFromAnalysis(analysis) {
+  if (!analysis) return void 0;
+  const score = analysis.pronunciationScore;
+  if (typeof score !== "number") return void 0;
+  const blob = JSON.stringify(analysis.voiceAnalysis || analysis.pronunciationIssues || "").toLowerCase();
+  const hints = {};
+  const base = Math.round(score);
+  FEATURE_KEYWORDS.forEach(({ key, patterns }) => {
+    const mentioned = patterns.some((p) => p.test(blob));
+    if (mentioned) {
+      hints[key] = Math.max(40, base - 8);
+    }
+  });
+  if (Object.keys(hints).length === 0) {
+    hints.flapT = base;
+    hints.retroflexR = base;
+    hints.wordStress = base;
+    hints.intonation = base;
+  }
+  return hints;
+}
+function passesPhoneticsGate(opts) {
+  const score = opts.pronunciationScore;
+  if (typeof score !== "number") {
+    return !(opts.hadAudio || opts.isPhoneticsLesson);
+  }
+  if (opts.isPhoneticsLesson || opts.hadAudio) {
+    return score >= PHONETICS_MIN_SCORE_WITH_AUDIO;
+  }
+  return score >= PHONETICS_MIN_SCORE_SOFT;
+}
 
 // src/utils/gapgptProvider.ts
 var GAPGPT_BASE_URL = (process.env.GAPGPT_BASE_URL || "https://api.gapgpt.app/v1").replace(/\/$/, "");
@@ -1139,6 +2368,45 @@ function getGapgptApiKey() {
 }
 function isGapgptConfigured() {
   return Boolean(getGapgptApiKey());
+}
+async function gapgptChatCompletion(opts) {
+  const key = getGapgptApiKey();
+  if (!key) return null;
+  const models = opts.model ? [opts.model, ...GAPGPT_CHAT_MODELS] : GAPGPT_CHAT_MODELS;
+  const unique = Array.from(new Set(models.filter(Boolean)));
+  for (const model of unique) {
+    try {
+      const body = {
+        model,
+        messages: opts.messages,
+        temperature: opts.temperature ?? 0.5
+      };
+      if (opts.responseFormatJson) {
+        body.response_format = { type: "json_object" };
+      }
+      const res = await fetch(`${GAPGPT_BASE_URL}/chat/completions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        const errText = await res.text().catch(() => "");
+        console.warn(`GapGPT chat ${model} failed:`, res.status, errText.slice(0, 180));
+        continue;
+      }
+      const data = await res.json();
+      const text = data?.choices?.[0]?.message?.content;
+      if (typeof text === "string" && text.trim()) {
+        return { text: text.trim(), model: `gapgpt:${model}` };
+      }
+    } catch (e) {
+      console.warn(`GapGPT chat ${model} exception:`, e);
+    }
+  }
+  return null;
 }
 async function gapgptSynthesizeSpeech(text, voice = "en-male-1") {
   const key = getGapgptApiKey();
@@ -1191,6 +2459,15 @@ async function gapgptSynthesizeSpeech(text, voice = "en-male-1") {
     return null;
   }
 }
+var GAPGPT_COMPATIBILITY = {
+  chatCompletions: true,
+  geminiMultimodalAudio: "unverified",
+  whisperStt: "unverified",
+  tts: true,
+  rialBilling: true,
+  docsUrl: "https://gapgpt.app/platform-v2",
+  apiBase: GAPGPT_BASE_URL
+};
 
 // src/utils/subtopicRotation.ts
 var REAL_LIFE_SITUATIONS = [
@@ -1928,10 +3205,10 @@ function trackConversationDriftAndRotateSubtopic(params) {
    - Craft your probing question in this new situation so that formulating a natural, native answer REQUIRES using the target grammar structure and offers a golden opportunity to produce "${primaryTargetCliche}".
    - DO NOT make it feel like a grammar drill\u2014it must flow as a realistic human dilemma in this new setting.
 
-5. SENTENCE PATTERNS TO MODEL & ELICIT IN THIS NEW SETTING:
-   Derive at least two of your returned "sentencePatterns" from how a native speaker would address this new challenge:
-   Pattern A: "${situation.sentencePatternTemplates[0]?.pattern || "X is gradually fading."}" (Persian: ${situation.sentencePatternTemplates[0]?.meaningFa || ""})
-   Pattern B: "${situation.sentencePatternTemplates[1]?.pattern || "X tries to steer clear of Y."}" (Persian: ${situation.sentencePatternTemplates[1]?.meaningFa || ""})
+5. STRICT ISOLATION OF "sentencePatterns" (\u0641\u0631\u0645\u0648\u0644\u200C\u0647\u0627\u06CC \u062C\u0645\u0644\u0647\u200C\u0633\u0627\u0632\u06CC \u0645\u0646\u062D\u0635\u0631\u0627\u064B \u0627\u0632 \u0645\u0641\u0647\u0648\u0645 \u06A9\u0627\u0631\u0628\u0631 \u0627\u0633\u062A\u062E\u0631\u0627\u062C \u0634\u0648\u0646\u062F):
+   - The returned "sentencePatterns" MUST ALWAYS BE DERIVED DIRECTLY FROM "nativeAlternative" (how a native speaker would express the exact thought and concept THE USER just uttered)!
+   - NEVER inject sentence patterns from the new rotated situation (e.g. do NOT give workout/gym patterns when the user was speaking about dog phobia, work, or priorities)!
+   - Sentence patterns are reusable grammatical/idiomatic frames (using X, Y, Z or [bracketed slots]) that empower the learner to reuse the native rewrite in various contexts.
 
 6. IN "inCharacterChallenge":
    - "probingQuestionEn": The sharp, immersive question in this NEW setting that demands an answer using the target grammar.
@@ -1955,2141 +3232,38 @@ Deepen the primary scenario setting ("${scenarioTitle}"). Keep your response cri
     promptInjectionDirective
   };
 }
-
-// server.app.ts
-dotenv.config();
-var __filename = fileURLToPath(import.meta.url);
-var __dirname = path.dirname(__filename);
-var app = express();
-app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, x-gemini-api-key, x-openai-api-key"
-  );
-  res.setHeader("Access-Control-Allow-Credentials", "true");
-  if (req.method === "OPTIONS") {
-    return res.status(204).end();
-  }
-  next();
-});
-app.use(express.json({ limit: "25mb" }));
-var defaultApiKey = process.env.GEMINI_API_KEY || "";
-var defaultAi = null;
-if (defaultApiKey) {
-  defaultAi = new GoogleGenAI({
-    apiKey: defaultApiKey,
-    httpOptions: {
-      headers: {
-        "User-Agent": "aistudio-build"
-      }
-    }
-  });
-}
-var CANDIDATE_GEMINI_MODELS = ["gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-3.8-flash"];
-function getAiClient(req) {
-  const customKey = (req?.headers?.["x-gemini-api-key"] || "").trim();
-  if (customKey) {
-    try {
-      return new GoogleGenAI({
-        apiKey: customKey,
-        httpOptions: {
-          headers: {
-            "User-Agent": "aistudio-build"
-          }
-        }
-      });
-    } catch (e) {
-      console.warn("Failed to initialize custom Gemini API key:", e);
-    }
-  }
-  return defaultAi;
-}
-function getOpenAiApiKey(req) {
-  const fromHeader = (req?.headers?.["x-openai-api-key"] || "").trim();
-  if (fromHeader) return fromHeader;
-  return (process.env.OPENAI_API_KEY || "").trim();
-}
-function sanitizeTranscriptText(raw, fallback = "") {
-  if (typeof raw !== "string") return fallback;
-  const trimmed = raw.trim();
-  if (!trimmed) return fallback;
-  if (trimmed.startsWith("data:") || trimmed.startsWith("blob:") || trimmed.includes("GkXfo") || trimmed.includes("AAAA") || trimmed.includes("base64") || trimmed.length > 50 && !trimmed.includes(" ") || /^[A-Za-z0-9+/=_\-\s]{60,}$/.test(trimmed)) {
-    return fallback;
-  }
-  return trimmed;
-}
-async function transcribeAudioBuffer(req, audioBase64, mimeType = "audio/webm", language = "en") {
-  if (!audioBase64) return { text: "", engine: "none" };
-  const openaiKey = getOpenAiApiKey(req);
-  if (openaiKey) {
-    try {
-      const binary = Buffer.from(audioBase64, "base64");
-      const ext = String(mimeType).includes("mp4") || String(mimeType).includes("m4a") ? "m4a" : String(mimeType).includes("ogg") ? "ogg" : String(mimeType).includes("wav") ? "wav" : "webm";
-      const form = new FormData();
-      const bytes = new Uint8Array(binary);
-      const fileBlob = new Blob([bytes], { type: mimeType || "audio/webm" });
-      form.append("file", fileBlob, `speech.${ext}`);
-      form.append("model", "whisper-1");
-      form.append("language", language || "en");
-      form.append("response_format", "json");
-      const whisperRes = await fetch("https://api.openai.com/v1/audio/transcriptions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${openaiKey}` },
-        body: form
-      });
-      if (whisperRes.ok) {
-        const data = await whisperRes.json();
-        const text = sanitizeTranscriptText(data.text);
-        if (text) return { text, engine: "whisper-1" };
-      } else {
-        const errText = await whisperRes.text().catch(() => "");
-        console.warn("Whisper STT failed:", whisperRes.status, errText.slice(0, 200));
-      }
-    } catch (whisperErr) {
-      console.warn("Whisper STT exception:", whisperErr);
-    }
-  }
-  const ai = getAiClient(req);
-  if (ai) {
-    const cleanMime = String(mimeType || "audio/webm").split(";")[0];
-    const prompt = "Transcribe this spoken English audio into plain text only. Return ONLY the transcript, no quotes or commentary. If unintelligible, return an empty string.";
-    for (const modelName of CANDIDATE_GEMINI_MODELS) {
-      try {
-        const response = await ai.models.generateContent({
-          model: modelName,
-          contents: [
-            { inlineData: { mimeType: cleanMime, data: audioBase64 } },
-            { text: prompt }
-          ],
-          config: { temperature: 0.1 }
-        });
-        const rawText = (response.text || "").trim().replace(/^["']|["']$/g, "");
-        const text = sanitizeTranscriptText(rawText);
-        if (text) return { text, engine: `gemini:${modelName}` };
-      } catch (e) {
-        console.warn(`Gemini STT ${modelName} failed:`, e);
-      }
-    }
-  }
-  return { text: "", engine: "unavailable" };
-}
-function safeJsonParse(rawText) {
-  if (!rawText) return {};
-  let cleaned = rawText.trim();
-  if (cleaned.startsWith("```json")) {
-    cleaned = cleaned.replace(/^```json\s*/i, "").replace(/\s*```$/, "");
-  } else if (cleaned.startsWith("```")) {
-    cleaned = cleaned.replace(/^```\s*/, "").replace(/\s*```$/, "");
-  }
-  try {
-    return JSON.parse(cleaned);
-  } catch (e) {
-    const firstBrace = cleaned.indexOf("{");
-    const lastBrace = cleaned.lastIndexOf("}");
-    if (firstBrace !== -1 && lastBrace > firstBrace) {
-      try {
-        return JSON.parse(cleaned.substring(firstBrace, lastBrace + 1));
-      } catch (err2) {
-      }
-    }
-    return {};
-  }
-}
-function analyzeLinguisticText(userText, scenarioTitle, relationship) {
-  const lower = userText.toLowerCase();
-  const grammarCorrections = [];
-  let persianTransferPitfall = null;
-  const pronunciationIssues = [];
-  if (lower.includes("go to shopping") || lower.includes("went to shopping")) {
-    grammarCorrections.push({
-      original: "go to shopping",
-      corrected: "go shopping",
-      explanationFa: "\u062F\u0631 \u0632\u0628\u0627\u0646 \u0627\u0646\u06AF\u0644\u06CC\u0633\u06CC \u0628\u0639\u062F \u0627\u0632 \u0641\u0639\u0644 go \u0628\u0631\u0627\u06CC \u0641\u0639\u0627\u0644\u06CC\u062A\u200C\u0647\u0627\u06CC \u062A\u0641\u0631\u06CC\u062D\u06CC \u0648 \u062E\u0631\u06CC\u062F \u0627\u0632 \u0641\u0631\u0645 ing \u0628\u062F\u0648\u0646 \u062D\u0631\u0641 \u0627\u0636\u0627\u0641\u0647 to \u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0645\u06CC\u200C\u0634\u0648\u062F (\u0645\u0627\u0646\u0646\u062F go shopping, go swimming)."
-    });
-    persianTransferPitfall = "\u062A\u0631\u062C\u0645\u0647 \u062A\u062D\u062A\u200C\u0627\u0644\u0644\u0641\u0638\u06CC \xAB\u0631\u0641\u062A\u0646 \u0628\u0647 \u062E\u0631\u06CC\u062F\xBB \u0627\u0632 \u0641\u0627\u0631\u0633\u06CC \u0628\u0647 \u0627\u0646\u06AF\u0644\u06CC\u0633\u06CC";
-  }
-  if (lower.includes("i am agree") || lower.includes("i'm agree")) {
-    grammarCorrections.push({
-      original: "I am agree",
-      corrected: "I agree",
-      explanationFa: "\u06A9\u0644\u0645\u0647 agree \u062F\u0631 \u0627\u0646\u06AF\u0644\u06CC\u0633\u06CC \u06CC\u06A9 \u0641\u0639\u0644 \u0627\u0633\u062A\u060C \u0646\u0647 \u0635\u0641\u062A. \u0628\u0646\u0627\u0628\u0631\u0627\u06CC\u0646 \u0646\u06CC\u0627\u0632\u06CC \u0628\u0647 \u0641\u0639\u0644 to be (am) \u0646\u062F\u0627\u0631\u062F."
-    });
-    persianTransferPitfall = "\u062A\u062F\u0627\u062E\u0644 \u0628\u0627 \u0633\u0627\u062E\u062A\u0627\u0631 \u0641\u0627\u0631\u0633\u06CC \xAB\u0645\u0646 \u0645\u0648\u0627\u0641\u0642 \u0647\u0633\u062A\u0645\xBB";
-  }
-  if (lower.includes("interested to")) {
-    grammarCorrections.push({
-      original: "interested to",
-      corrected: "interested in",
-      explanationFa: "\u0635\u0641\u062A interested \u0647\u0645\u06CC\u0634\u0647 \u0628\u0627 \u062D\u0631\u0641 \u0627\u0636\u0627\u0641\u0647 in \u0628\u0647 \u06A9\u0627\u0631 \u0645\u06CC\u200C\u0631\u0648\u062F (\u0645\u0627\u0646\u0646\u062F interested in art)."
-    });
-    persianTransferPitfall = "\u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0627\u0632 \u062D\u0631\u0641 \u0627\u0636\u0627\u0641\u0647 \u0627\u0634\u062A\u0628\u0627\u0647 \u0628\u0647 \u062F\u0644\u06CC\u0644 \u062A\u062F\u0627\u062E\u0644 \u0632\u0628\u0627\u0646 \u0645\u0627\u062F\u0631\u06CC";
-  }
-  if (lower.includes("marry with") || lower.includes("married with")) {
-    grammarCorrections.push({
-      original: "marry with",
-      corrected: "marry / married to",
-      explanationFa: "\u0641\u0639\u0644 marry \u0645\u0641\u0639\u0648\u0644 \u0645\u0633\u062A\u0642\u06CC\u0645 \u0645\u06CC\u200C\u06AF\u06CC\u0631\u062F (marry someone) \u06CC\u0627 \u062F\u0631 \u062D\u0627\u0644\u062A \u0645\u062C\u0647\u0648\u0644 \u0628\u0627 to \u0645\u06CC\u200C\u0622\u06CC\u062F (married to someone). \u062D\u0631\u0641 \u0627\u0636\u0627\u0641\u0647 with \u0627\u0634\u062A\u0628\u0627\u0647 \u0627\u0633\u062A."
-    });
-    persianTransferPitfall = "\u062A\u0631\u062C\u0645\u0647 \u0645\u0633\u062A\u0642\u06CC\u0645 \u0633\u0627\u062E\u062A\u0627\u0631 \xAB\u0627\u0632\u062F\u0648\u0627\u062C \u06A9\u0631\u062F\u0646 \u0628\u0627 \u06A9\u0633\u06CC\xBB \u0627\u0632 \u0641\u0627\u0631\u0633\u06CC";
-  }
-  if (lower.includes("explain about")) {
-    grammarCorrections.push({
-      original: "explain about",
-      corrected: "explain",
-      explanationFa: "\u0641\u0639\u0644 explain \u0646\u06CC\u0627\u0632\u06CC \u0628\u0647 \u062D\u0631\u0641 \u0627\u0636\u0627\u0641\u0647 about \u0646\u062F\u0627\u0631\u062F \u0648 \u0645\u0633\u062A\u0642\u06CC\u0645 \u0628\u0627 \u0645\u0641\u0639\u0648\u0644 \u0645\u06CC\u200C\u0622\u06CC\u062F (explain the situation)."
-    });
-  }
-  if ((lower.includes("have gone") || lower.includes("have seen") || lower.includes("haven't seen")) && lower.includes("ago")) {
-    grammarCorrections.push({
-      original: "have ... ago",
-      corrected: "went / saw ... ago",
-      explanationFa: "\u0647\u0646\u06AF\u0627\u0645 \u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0627\u0632 \u0642\u06CC\u062F \u0632\u0645\u0627\u0646 \u0645\u0634\u062E\u0635 \u062F\u0631 \u06AF\u0630\u0634\u062A\u0647 (ago) \u0628\u0627\u06CC\u062F \u0627\u0632 \u06AF\u0630\u0634\u062A\u0647 \u0633\u0627\u062F\u0647 (Simple Past) \u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u06A9\u0631\u062F\u060C \u0646\u0647 \u062D\u0627\u0644 \u06A9\u0627\u0645\u0644."
-    });
-    persianTransferPitfall = "\u062A\u062F\u0627\u062E\u0644 \u0633\u0627\u062E\u062A\u0627\u0631 \xAB\u0631\u0641\u062A\u0647\u200C\u0627\u0645\xBB \u0641\u0627\u0631\u0633\u06CC \u0628\u0627 \u06A9\u0627\u0631\u0628\u0631\u062F Present Perfect \u0627\u0646\u06AF\u0644\u06CC\u0633\u06CC";
-  }
-  if (lower.includes("water") || lower.includes("city") || lower.includes("better") || lower.includes("little")) {
-    pronunciationIssues.push({
-      wordOrSound: "Flap T in water/city/better",
-      phoneticTarget: "/\u02C8w\u0251\u02D0t\u032C\u0259r/",
-      whatWasHeardFa: "\u062A\u0644\u0641\u0638 T \u0627\u0646\u0641\u062C\u0627\u0631\u06CC \u062E\u0634\u06A9 \u0628\u0647 \u062C\u0627\u06CC Flap T \u0622\u0645\u0631\u06CC\u06A9\u0627\u06CC\u06CC",
-      tipFa: "\u062F\u0631 \u0644\u0647\u062C\u0647 \u0622\u0645\u0631\u06CC\u06A9\u0627\u06CC\u06CC \u0648\u0642\u062A\u06CC T \u0628\u06CC\u0646 \u062F\u0648 \u0645\u0635\u0648\u062A \u0627\u0633\u062A\u060C \u0632\u0628\u0627\u0646 \u0633\u0631\u06CC\u0639 \u0628\u0647 \u0633\u0642\u0641 \u062F\u0647\u0627\u0646 \u0636\u0631\u0628\u0647 \u0645\u06CC\u200C\u0632\u0646\u062F \u0648 \u0635\u062F\u0627\u06CC\u06CC \u0634\u0628\u06CC\u0647 D \u0633\u0631\u06CC\u0639 \u0648 \u0646\u0631\u0645 \u0627\u06CC\u062C\u0627\u062F \u0645\u06CC\u200C\u06A9\u0646\u062F.",
-      acousticFeature: "Flap T",
-      confidence: 85
-    });
-  }
-  if (lower.includes("went") || lower.includes("very") || lower.includes("want") || lower.includes("visit")) {
-    pronunciationIssues.push({
-      wordOrSound: "W vs V Contrast",
-      phoneticTarget: "/w/ vs /v/",
-      whatWasHeardFa: "\u063A\u0646\u0686\u0647 \u0646\u0634\u062F\u0646 \u06A9\u0627\u0645\u0644 \u0644\u0628\u200C\u0647\u0627 \u062F\u0631 \u0627\u062F\u0627\u06CC \u0635\u062F\u0627\u06CC W",
-      tipFa: "\u0628\u0631\u0627\u06CC \u0635\u062F\u0627\u06CC W \u0644\u0628\u200C\u0647\u0627 \u06A9\u0627\u0645\u0644\u0627\u064B \u06AF\u0631\u062F \u0648 \u063A\u0646\u0686\u0647 \u0645\u06CC\u200C\u0634\u0648\u0646\u062F \u0628\u062F\u0648\u0646 \u0644\u0645\u0633 \u062F\u0646\u062F\u0627\u0646. \u0628\u0631\u0627\u06CC V \u062F\u0646\u062F\u0627\u0646\u200C\u0647\u0627\u06CC \u0628\u0627\u0644\u0627 \u0631\u0648\u06CC \u0644\u0628 \u067E\u0627\u06CC\u06CC\u0646 \u0642\u0631\u0627\u0631 \u0645\u06CC\u200C\u06AF\u06CC\u0631\u0646\u062F.",
-      acousticFeature: "W vs V",
-      confidence: 80
-    });
-  }
-  if (lower.includes("mountain") || lower.includes("button") || lower.includes("important")) {
-    pronunciationIssues.push({
-      wordOrSound: "Glottal Stop before N",
-      phoneticTarget: "[\u0294n]",
-      whatWasHeardFa: "\u062A\u0644\u0641\u0638 T \u06A9\u0627\u0645\u0644 \u0628\u0647 \u062C\u0627\u06CC \u0642\u0637\u0639 \u0647\u0648\u0627 \u062F\u0631 \u062D\u0646\u062C\u0631\u0647",
-      tipFa: "\u062F\u0631 \u0622\u0645\u0631\u06CC\u06A9\u0627\u06CC\u06CC \u0642\u0628\u0644 \u0627\u0632 \u0647\u062C\u0627\u06CC N\u060C \u062D\u0631\u0641 T \u062A\u0644\u0641\u0638 \u0646\u0645\u06CC\u200C\u0634\u0648\u062F \u0648 \u062C\u0631\u06CC\u0627\u0646 \u0647\u0648\u0627 \u0628\u0631\u0627\u06CC \u06CC\u06A9 \u0644\u062D\u0638\u0647 \u06A9\u0648\u062A\u0627\u0647 \u062F\u0631 \u06AF\u0644\u0648 \u0642\u0637\u0639 \u0645\u06CC\u200C\u0634\u0648\u062F.",
-      acousticFeature: "Glottal Stop",
-      confidence: 82
-    });
-  }
-  let nativeAlternative = "I'm definitely looking forward to checking that out.";
-  let nativeAlternativeFa = "\u0642\u0637\u0639\u0627\u064B \u0645\u0634\u062A\u0627\u0642\u0645 \u06A9\u0647 \u0628\u0631\u0645 \u0648 \u0628\u0628\u06CC\u0646\u0645\u0634.";
-  let nativeCliche = "check out";
-  let nativeClicheMeaningFa = "\u062F\u06CC\u062F\u0646 \u0648 \u0628\u0631\u0631\u0633\u06CC \u06A9\u0631\u062F\u0646 \u0686\u06CC\u0632\u06CC";
-  if (lower.includes("coffee") || lower.includes("drink") || lower.includes("order")) {
-    nativeAlternative = "Can I just grab a medium iced latte with oat milk, to go?";
-    nativeAlternativeFa = "\u0645\u06CC\u200C\u062A\u0648\u0646\u0645 \u06CC\u0647 \u0644\u0627\u062A\u0647 \u0645\u062A\u0648\u0633\u0637 \u06CC\u062E\u0686\u0627\u0644\u06CC \u0628\u0627 \u0634\u06CC\u0631 \u062C\u0648 \u062F\u0648\u0633\u0631\u060C \u0628\u06CC\u0631\u0648\u0646\u200C\u0628\u0631 \u0628\u06AF\u06CC\u0631\u0645\u061F";
-    nativeCliche = "grab a coffee";
-    nativeClicheMeaningFa = "\u0642\u0647\u0648\u0647 \u06AF\u0631\u0641\u062A\u0646 / \u0646\u0648\u0634\u06CC\u062F\u0646 \u0633\u0631\u06CC\u0639 \u0642\u0647\u0648\u0647";
-  } else if (lower.includes("shop") || lower.includes("buy") || lower.includes("mall") || lower.includes("store")) {
-    nativeAlternative = "I'm actually gonna hit the stores this afternoon to pick up a few things.";
-    nativeAlternativeFa = "\u0645\u0646 \u062F\u0631 \u0648\u0627\u0642\u0639 \u0627\u0645\u0631\u0648\u0632 \u0628\u0639\u062F\u0627\u0632\u0638\u0647\u0631 \u0645\u06CC\u200C\u062E\u0648\u0627\u0645 \u0628\u0631\u0645 \u0641\u0631\u0648\u0634\u06AF\u0627\u0647\u200C\u0647\u0627 \u062A\u0627 \u0686\u0646\u062F \u062A\u0627 \u0686\u06CC\u0632 \u0628\u0631\u062F\u0627\u0631\u0645.";
-    nativeCliche = "hit the stores";
-    nativeClicheMeaningFa = "\u0631\u0641\u062A\u0646 \u0628\u0647 \u0628\u0627\u0632\u0627\u0631 \u06CC\u0627 \u0641\u0631\u0648\u0634\u06AF\u0627\u0647 \u0628\u0631\u0627\u06CC \u062E\u0631\u06CC\u062F";
-  } else if (lower.includes("work") || lower.includes("project") || lower.includes("deadline") || lower.includes("meeting")) {
-    nativeAlternative = "Let's touch base tomorrow morning so we can stay on the same page.";
-    nativeAlternativeFa = "\u0628\u06CC\u0627 \u0641\u0631\u062F\u0627 \u0635\u0628\u062D \u06CC\u0647 \u0647\u0645\u0627\u0647\u0646\u06AF\u06CC \u06A9\u0648\u062A\u0627\u0647 \u0628\u06A9\u0646\u06CC\u0645 \u062A\u0627 \u0647\u0645\u0627\u0647\u0646\u06AF \u0648 \u0647\u0645\u200C\u0646\u0638\u0631 \u0628\u0645\u0648\u0646\u06CC\u0645.";
-    nativeCliche = "touch base";
-    nativeClicheMeaningFa = "\u062A\u0645\u0627\u0633 \u06AF\u0631\u0641\u062A\u0646 \u0648 \u0647\u0645\u0627\u0647\u0646\u06AF \u0634\u062F\u0646 \u0645\u062E\u062A\u0635\u0631";
-  } else if (lower.includes("remember") || lower.includes("memory") || lower.includes("childhood") || lower.includes("past")) {
-    nativeAlternative = "Man, that really brings back memories\u2014those were the good old days!";
-    nativeAlternativeFa = "\u067E\u0633\u0631\u060C \u0648\u0627\u0642\u0639\u0627\u064B \u06A9\u0644\u06CC \u062E\u0627\u0637\u0631\u0647 \u0632\u0646\u062F\u0647 \u06A9\u0631\u062F\u2014\u0639\u062C\u0628 \u0631\u0648\u0632\u0647\u0627\u06CC \u062E\u0648\u0628\u06CC \u0628\u0648\u062F\u0646!";
-    nativeCliche = "brings back memories";
-    nativeClicheMeaningFa = "\u0632\u0646\u062F\u0647 \u06A9\u0631\u062F\u0646 \u0648 \u062A\u062F\u0627\u0639\u06CC \u062E\u0627\u0637\u0631\u0627\u062A \u0634\u06CC\u0631\u06CC\u0646";
-  } else if (lower.includes("agree") || lower.includes("think") || lower.includes("opinion")) {
-    nativeAlternative = "I'm totally with you on that; you hit the nail right on the head.";
-    nativeAlternativeFa = "\u0645\u0646 \u06A9\u0627\u0645\u0644\u0627\u064B \u062F\u0631 \u0627\u06CC\u0646 \u0645\u0648\u0631\u062F \u0628\u0627\u0647\u0627\u062A \u0645\u0648\u0627\u0641\u0642\u0645\u061B \u062F\u0642\u06CC\u0642\u0627\u064B \u0632\u062F\u06CC \u0628\u0647 \u062E\u0627\u0644.";
-    nativeCliche = "hit the nail on the head";
-    nativeClicheMeaningFa = "\u062F\u0642\u06CC\u0642\u0627\u064B \u062F\u0631\u0633\u062A \u06AF\u0641\u062A\u0646 \u0648 \u0628\u0647 \u0647\u062F\u0641 \u0632\u062F\u0646";
-  } else if (lower.includes("travel") || lower.includes("flight") || lower.includes("airport") || lower.includes("trip")) {
-    nativeAlternative = "I'm just visiting for a couple of weeks to do some sightseeing.";
-    nativeAlternativeFa = "\u0645\u0646 \u0635\u0631\u0641\u0627\u064B \u0628\u0631\u0627\u06CC \u062F\u0648 \u0647\u0641\u062A\u0647 \u0627\u0648\u0645\u062F\u0645 \u062A\u0627 \u0686\u0646\u062F \u062A\u0627 \u062C\u0627\u06CC \u062F\u06CC\u062F\u0646\u06CC \u0631\u0648 \u0628\u06AF\u0631\u062F\u0645.";
-    nativeCliche = "do some sightseeing";
-    nativeClicheMeaningFa = "\u06AF\u0634\u062A\u200C\u0648\u06AF\u0630\u0627\u0631 \u0648 \u062F\u06CC\u062F\u0646 \u062C\u0627\u0647\u0627\u06CC \u062F\u06CC\u062F\u0646\u06CC";
-  }
-  const errorCount = grammarCorrections.length;
-  const grammarScore = Math.max(70, 95 - errorCount * 12);
-  const nativeScore = Math.max(68, 88 - (persianTransferPitfall ? 10 : 0));
-  const pronunciationScore = Math.max(72, 86 - pronunciationIssues.length * 5);
-  const overallScore = Math.round((grammarScore + nativeScore + pronunciationScore) / 3);
-  const isFormal = relationship.toLowerCase().includes("formal") || relationship.toLowerCase().includes("professional");
-  return {
-    overallScore,
-    grammarScore,
-    nativeScore,
-    pronunciationScore,
-    persianTransferPitfall,
-    grammarCorrections,
-    socialTone: {
-      register: isFormal ? "formal" : "casual",
-      registerFa: isFormal ? "\u0631\u0633\u0645\u06CC \u0648 \u0627\u062F\u0627\u0631\u06CC" : "\u0645\u062D\u0627\u0648\u0631\u0647\u200C\u0627\u06CC \u062F\u0648\u0633\u062A\u0627\u0646\u0647",
-      politenessLevel: 4,
-      formalityLevel: isFormal ? 4 : 2,
-      appropriatenessVerdictFa: isFormal ? `\u0644\u062D\u0646 \u0634\u0645\u0627 \u0628\u0631\u0627\u06CC \u06CC\u06A9 \u0645\u0648\u0642\u0639\u06CC\u062A \u0631\u0633\u0645\u06CC \u0648 \u0631\u0627\u0628\u0637\u0647 \xAB${relationship}\xBB \u0645\u0646\u0627\u0633\u0628 \u0627\u0633\u062A.` : `\u0644\u062D\u0646 \u0634\u0645\u0627 \u062E\u0648\u062F\u0645\u0627\u0646\u06CC \u0648 \u0645\u062A\u0646\u0627\u0633\u0628 \u0628\u0627 \u06AF\u0641\u062A\u06AF\u0648 \u0628\u0627 \u06CC\u06A9 \xAB${relationship}\xBB \u0627\u0633\u062A.`,
-      culturalEtiquetteTipFa: isFormal ? "\u062F\u0631 \u0645\u062D\u06CC\u0637\u200C\u0647\u0627\u06CC \u06A9\u0627\u0631\u06CC \u0622\u0645\u0631\u06CC\u06A9\u0627 \u0628\u0647 \u062C\u0627\u06CC \u062A\u0639\u0627\u0631\u0641\u060C \u0635\u0631\u0627\u062D\u062A \u0645\u0648\u062F\u0628\u0627\u0646\u0647 \u0648 \u067E\u0627\u0633\u062E \u0645\u0633\u062A\u0642\u06CC\u0645 \u0628\u0627 \u0644\u0628\u062E\u0646\u062F \u0627\u0631\u0632\u0634 \u0628\u0627\u0644\u0627\u06CC\u06CC \u062F\u0627\u0631\u062F." : "\u062F\u0631 \u0645\u06A9\u0627\u0644\u0645\u0647 \u0628\u0627 \u062F\u0648\u0633\u062A\u0627\u0646 \u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0627\u0632 \u0639\u0628\u0627\u0631\u0627\u062A \u06A9\u0648\u062A\u0627\u0647 \u0648 \u06A9\u0627\u0647\u0634\u200C\u0647\u0627 \u0645\u062B\u0644 gonna/wanna \u062D\u0633 \u0646\u0632\u062F\u06CC\u06A9\u06CC \u0627\u06CC\u062C\u0627\u062F \u0645\u06CC\u200C\u06A9\u0646\u062F."
-    },
-    nativeAlternative,
-    nativeAlternativeFa,
-    nativeCliche,
-    nativeClicheMeaningFa,
-    repetitionChallengePromptFa: `\u062D\u0627\u0644\u0627 \u0633\u0639\u06CC \u06A9\u0646 \u0628\u0627 \u0647\u0645\u06CC\u0646 \u06A9\u0644\u06CC\u0634\u0647 \u0646\u06CC\u062A\u06CC\u0648 (\xAB${nativeCliche}\xBB) \u062F\u0648\u0628\u0627\u0631\u0647 \u067E\u0627\u0633\u062E \u0631\u0648 \u0628\u06AF\u06CC \u06CC\u0627 \u062F\u06CC\u0627\u0644\u0648\u06AF \u0631\u0648 \u0627\u062F\u0627\u0645\u0647 \u0628\u062F\u0647.`,
-    pronunciationIssues,
-    accentTips: pronunciationIssues.map((p) => ({
-      word: p.wordOrSound,
-      phonetic: p.phoneticTarget,
-      tipFa: p.tipFa,
-      soundRule: p.acousticFeature
-    })),
-    newWeaknessIdentified: grammarCorrections.length > 0 ? {
-      category: "grammar",
-      titleFa: grammarCorrections[0].original,
-      descriptionFa: grammarCorrections[0].explanationFa
-    } : null,
-    weaknessImprovementNoted: null
-  };
-}
-app.post("/api/verify-keys", async (req, res) => {
-  const geminiKey = String(
-    req.body?.geminiApiKey || req.headers["x-gemini-api-key"] || ""
-  ).trim();
-  const openaiKey = String(
-    req.body?.openaiApiKey || req.headers["x-openai-api-key"] || ""
-  ).trim();
-  const result = {
-    gemini: { ok: false, skipped: !geminiKey },
-    openai: { ok: false, skipped: !openaiKey }
-  };
-  if (geminiKey) {
-    try {
-      const ai = new GoogleGenAI({
-        apiKey: geminiKey,
-        httpOptions: { headers: { "User-Agent": "aistudio-build" } }
-      });
-      let verified = false;
-      let usedModel = "";
-      let lastErr = "";
-      for (const model of CANDIDATE_GEMINI_MODELS) {
-        try {
-          const response = await ai.models.generateContent({
-            model,
-            contents: [{ text: "Reply with exactly: OK" }],
-            config: { temperature: 0 }
-          });
-          const text = (response.text || "").trim();
-          if (text) {
-            verified = true;
-            usedModel = model;
-            break;
-          }
-        } catch (e) {
-          lastErr = e?.message || String(e);
-          console.warn(`verify-keys Gemini ${model} failed:`, lastErr.slice(0, 160));
-        }
-      }
-      if (verified) {
-        result.gemini = { ok: true, model: usedModel };
-      } else {
-        const msg = lastErr.toLowerCase();
-        let friendly = lastErr || "\u0627\u062A\u0635\u0627\u0644 \u0628\u0647 Gemini \u0628\u0631\u0642\u0631\u0627\u0631 \u0646\u0634\u062F";
-        if (msg.includes("api key") || msg.includes("invalid") || msg.includes("403") || msg.includes("401")) {
-          friendly = "\u06A9\u0644\u06CC\u062F Gemini \u0646\u0627\u0645\u0639\u062A\u0628\u0631 \u0627\u0633\u062A \u06CC\u0627 \u062F\u0633\u062A\u0631\u0633\u06CC \u0646\u062F\u0627\u0631\u062F. \u0627\u0632 AI Studio \u06CC\u06A9 \u06A9\u0644\u06CC\u062F \u062C\u062F\u06CC\u062F \u0628\u0633\u0627\u0632\u06CC\u062F.";
-        } else if (msg.includes("quota") || msg.includes("429")) {
-          friendly = "\u0633\u0647\u0645\u06CC\u0647 Gemini \u062A\u0645\u0627\u0645 \u0634\u062F\u0647 \u06CC\u0627 \u0645\u062D\u062F\u0648\u062F \u0634\u062F\u0647. \u06A9\u0645\u06CC \u0628\u0639\u062F \u062F\u0648\u0628\u0627\u0631\u0647 \u0627\u0645\u062A\u062D\u0627\u0646 \u06A9\u0646\u06CC\u062F.";
-        }
-        result.gemini = { ok: false, error: friendly };
-      }
-    } catch (e) {
-      result.gemini = { ok: false, error: e?.message || "\u062E\u0637\u0627 \u062F\u0631 \u0628\u0631\u0631\u0633\u06CC Gemini" };
-    }
-  }
-  if (openaiKey) {
-    try {
-      const modelsRes = await fetch("https://api.openai.com/v1/models", {
-        method: "GET",
-        headers: { Authorization: `Bearer ${openaiKey}` }
-      });
-      if (modelsRes.ok) {
-        result.openai = { ok: true };
-      } else {
-        const errBody = await modelsRes.text().catch(() => "");
-        let friendly = `OpenAI \u067E\u0627\u0633\u062E ${modelsRes.status} \u062F\u0627\u062F`;
-        if (modelsRes.status === 401 || modelsRes.status === 403) {
-          friendly = "\u06A9\u0644\u06CC\u062F OpenAI \u0646\u0627\u0645\u0639\u062A\u0628\u0631 \u0627\u0633\u062A. \u0627\u0632 platform.openai.com \u06CC\u06A9 \u06A9\u0644\u06CC\u062F \u062C\u062F\u06CC\u062F \u0628\u0633\u0627\u0632\u06CC\u062F.";
-        } else if (modelsRes.status === 429) {
-          friendly = "\u0633\u0647\u0645\u06CC\u0647 \u06CC\u0627 \u0646\u0631\u062E \u062F\u0631\u062E\u0648\u0627\u0633\u062A OpenAI \u0645\u062D\u062F\u0648\u062F \u0634\u062F\u0647. \u06A9\u0645\u06CC \u0628\u0639\u062F \u062F\u0648\u0628\u0627\u0631\u0647 \u0627\u0645\u062A\u062D\u0627\u0646 \u06A9\u0646\u06CC\u062F.";
-        } else if (errBody) {
-          friendly = errBody.slice(0, 180);
-        }
-        result.openai = { ok: false, error: friendly };
-      }
-    } catch (e) {
-      result.openai = { ok: false, error: e?.message || "\u062E\u0637\u0627 \u062F\u0631 \u0628\u0631\u0631\u0633\u06CC OpenAI" };
-    }
-  }
-  const geminiRequiredOk = !geminiKey ? false : result.gemini.ok;
-  const openaiOkIfProvided = !openaiKey ? true : result.openai.ok;
-  const allOk = geminiRequiredOk && openaiOkIfProvided;
-  return res.status(allOk ? 200 : 400).json({
-    ok: allOk,
-    gemini: result.gemini,
-    openai: result.openai
-  });
-});
-app.post("/api/chat", async (req, res) => {
-  try {
-    const {
-      scenarioId,
-      scenarioTitle = "Daily Conversation",
-      context = "Casual Conversation",
-      relationship = "Friend / Peer",
-      userRole = "Learner",
-      aiRole = "Conversational Partner",
-      userMessage = "",
-      userAudioBase64,
-      chatHistory = [],
-      targetWords = [],
-      targetGrammar = "",
-      targetGrammarFa = "",
-      targetCliches = [],
-      targetPronunciation = "",
-      activeWeaknesses = [],
-      weaknessesItems = [],
-      cefrLevel = "B1",
-      targetLevel = "B2",
-      turnNumber = 1,
-      persona = { name: "Sam", accent: "American (California)", tone: "Friendly and conversational" }
-    } = req.body;
-    const messageToAnalyze = userMessage.trim();
-    const effectiveTargetCliches = targetCliches && targetCliches.length > 0 ? targetCliches : targetWords;
-    const formattedWeaknesses = Array.isArray(weaknessesItems) && weaknessesItems.length > 0 ? weaknessesItems.map(
-      (w) => typeof w === "string" ? w : `[${w.category || "grammar"} - ${w.severity || "medium"} priority] ${w.titleFa}: ${w.descriptionFa || ""}${w.examples?.length ? ` (e.g. ${w.examples.join("; ")})` : ""}`
-    ).join("\n") : (activeWeaknesses || []).join(", ") || "No specific previous weaknesses logged yet";
-    const effectiveTurnNumber = Number(turnNumber) || (chatHistory ? Math.floor(chatHistory.length / 2) + 1 : 1);
-    const rotationResult = trackConversationDriftAndRotateSubtopic({
-      turnNumber: effectiveTurnNumber,
-      chatHistory,
-      targetGrammar,
-      targetGrammarFa,
-      targetCliches: effectiveTargetCliches,
-      scenarioTitle,
-      baseContext: context,
-      cefrLevel
-    });
-    const ai = getAiClient(req);
-    if (ai) {
-      const candidateModels = CANDIDATE_GEMINI_MODELS;
-      const textPrompt = `
-You are "${persona.name}", an elite American English speaking coach and conversational partner.
-You are roleplaying as "${aiRole}" in this scenario:
-- Scenario Title: "${scenarioTitle}"
-- Context: "${context}"
-- Relationship: "${relationship}"
-- User Role: "${userRole}"
-- AI Persona: "${persona.name}" (${persona.accent}, ${persona.tone})
-- CURRENT CONVERSATION TURN: #${effectiveTurnNumber}
-${chatHistory && chatHistory.length > 0 ? `Recent dialogue:
-${chatHistory.map((m) => `${m.role === "user" ? "User" : "Coach"}: ${m.text}`).join("\n")}` : ""}
-
-${rotationResult.promptInjectionDirective}
-
-PEDAGOGICAL & PROBING MISSION (\u0645\u0631\u0628\u06CC\u200C\u06AF\u0631\u06CC \u0647\u0648\u0634\u0645\u0646\u062F \u062A\u0627 \u062A\u062D\u0642\u0642 \u06A9\u0627\u0645\u0644 \u0627\u0647\u062F\u0627\u0641 \u062F\u0631\u0633 \u0648 \u0628\u0627\u0632 \u0634\u062F\u0646 \u0632\u0628\u0627\u0646 \u06A9\u0627\u0631\u0628\u0631):
-- STUDENT'S ASSESSED CEFR LEVEL: "${cefrLevel}" | SCENARIO TARGET LEVEL: "${targetLevel}"
-- PRIMARY LESSON GRAMMAR GOAL: "${targetGrammar || "Spoken grammar fluency"}" (${targetGrammarFa || ""})
-- PRIMARY TARGET NATIVE CLICH\xC9S TO MASTER: ${effectiveTargetCliches.join(", ") || "Authentic American idiomatic chunks"}
-- STUDENT'S LOGGED WEAKNESS DATABASE (\u062A\u0645\u0631\u06CC\u0646 \u062A\u0644\u0641\u06CC\u0642\u06CC \u0648 \u0631\u0641\u0639 \u062A\u062F\u0631\u06CC\u062C\u06CC \u0646\u0642\u0627\u0637 \u0636\u0639\u0641 \u06A9\u0627\u0631\u0628\u0631 \u062F\u0631 \u0644\u0627\u0628\u0644\u0627\u06CC \u0645\u06A9\u0627\u0644\u0645\u0647):
-${formattedWeaknesses}
-
-MANDATORY STEP 5 REMEDIATION PROTOCOL (\u0647\u0645\u200C\u0632\u0645\u0627\u0646\u200C\u0633\u0627\u0632\u06CC \u067E\u06CC\u0634\u0628\u0631\u062F \u0633\u0646\u0627\u0631\u06CC\u0648 \u0628\u0627 \u062A\u0631\u0645\u06CC\u0645 \u0636\u0639\u0641\u200C\u0647\u0627\u06CC \u062F\u06CC\u062A\u0627\u0628\u06CC\u0633 \u06A9\u0627\u0631\u0628\u0631):
-You MUST simultaneously:
-1. Advance the primary scenario goal and encourage the learner to produce the target clich\xE9s.
-2. Select ONE specific weakness from the STUDENT'S LOGGED WEAKNESS DATABASE above, and subtly craft your dialogue/probing question in a way that creates a natural conversational necessity for the learner to practice and repair that weakness.
-3. If the learner successfully produces the correct construction without their usual mistake, return "weaknessImprovementNoted": "<exact titleFa of the weakness>".
-
-THE USER JUST SAID:
-"${messageToAnalyze || "(Audio message)"}"
-${userAudioBase64 ? "(Audio of the user saying this is attached. Transcribe and evaluate their spoken English.)" : ""}
-
-CRITICAL RULES:
-1. ZERO HALLUCINATION / ZERO COPY-PASTING OF PREVIOUS EXAMPLES:
-   Every single comment, strength, issue, correction, voice note, and rewrite MUST BE 100% SPECIFIC TO WHAT THE USER ACTUALLY SAID: "${messageToAnalyze}".
-
-2. DEMANDING COACHING & DYNAMIC REAL-LIFE SUBTOPIC ROTATION (\u0686\u0631\u062E\u0634 \u067E\u0648\u06CC\u0627\u06CC \u0645\u0648\u0636\u0648\u0639 \u0648 \u062C\u0644\u0648\u06AF\u06CC\u0631\u06CC \u0642\u0637\u0639\u06CC \u0627\u0632 \u06AF\u06CC\u0631 \u06A9\u0631\u062F\u0646 \u0631\u0648\u06CC \u06CC\u06A9 \u0633\u0648\u0698\u0647 \u062E\u0627\u0635):
-   - CRITICAL REQUIREMENT: Follow the CONVERSATION DRIFT TRIGGER & SUBTOPIC ROTATION DIRECTIVE above!
-   - Every 2 to 3 user turns, you MUST rotate to a completely different real-life situation from our extensive catalog (such as being at an airport, in a restaurant, in a business meeting, in a real estate negotiation, working as a product salesperson, checking out at a store, at home, interacting with a spouse, talking to a child, spending time with a girlfriend, at a doctor's clinic, at a car repair shop, etc.).
-   - CURRENT DIRECTIVE FOR THIS TURN:
-     * ROTATION TRIGGERED: ${rotationResult.isRotationTriggered ? `YES -> Pivot immediately to "${rotationResult.situation.titleFa}"` : "NO -> Deepen initial scenario"}
-     * NEW REAL-LIFE SETTING: "${rotationResult.situation.titleFa}" (${rotationResult.situation.settingEn})
-   - NON-NEGOTIABLE PEDAGOGICAL TETHERING (\u0647\u062F\u0641 \u0627\u0635\u0644\u06CC \u062F\u0631\u0633 \u0647\u0631\u06AF\u0632 \u0641\u0631\u0627\u0645\u0648\u0634 \u0646\u0634\u0648\u062F):
-     * While diversifying the conversation and exposing the user to different real-life situations, YOU MUST NEVER LOSE SIGHT OF THE LESSON'S PRIMARY LEARNING OBJECTIVE.
-     * Every transition, question, and conversational exchange MUST reinforce:
-       -> PRIMARY GRAMMAR TARGET: "${targetGrammar || "target structure"}" (${targetGrammarFa || ""})
-       -> PRIMARY TARGET CLICH\xC9: "${effectiveTargetCliches[0] || "target idiom"}"
-     * Subtly guide the user toward speaking in a way that aligns with this learning objective in context without making it feel forced.
-   - STRICTLY ZERO CHIT-CHAT OR VERBOSE CONVERSATIONAL FILLER IN "reply":
-     * Do NOT write long personal stories, polite fluff, or rambling pleasantries!
-     * Keep the partner's "reply" direct, crisp, and concise (MAXIMUM 1 TO 2 SHORT SENTENCES).
-     * Structure: [Short acknowledging reaction (max 1 clause)] + [Direct bridge into the new real-life situation demanding the target grammar].
-   - In "inCharacterChallenge":
-     - probingQuestionEn: The new, fresh pivot question in "${rotationResult.situation.titleFa}" demanding the target grammar.
-     - probingQuestionFa: \u0631\u0648\u0627\u0646\u200C\u062A\u0631\u06CC\u0646 \u062A\u0631\u062C\u0645\u0647 \u0641\u0627\u0631\u0633\u06CC \u0627\u06CC\u0646 \u0633\u0648\u0627\u0644 \u062C\u062F\u06CC\u062F \u0628\u0631\u0627\u06CC \u0631\u0627\u0647\u0646\u0645\u0627\u06CC\u06CC \u0630\u0647\u0646 \u06A9\u0627\u0631\u0628\u0631.
-     - coachingGoalFa: \u062F\u0633\u062A\u0648\u0631 \u0622\u0645\u0648\u0632\u0634\u06CC \u0645\u0633\u062A\u0642\u06CC\u0645 \u0645\u0631\u0628\u06CC \u0628\u0647 \u0641\u0627\u0631\u0633\u06CC \u0628\u0631\u0627\u06CC \u0646\u0648\u0628\u062A \u0628\u0639\u062F \u0628\u0627 \u0627\u0635\u0637\u0644\u0627\u062D \u06CC\u0627 \u06AF\u0631\u0627\u0645\u0631 \u0647\u062F\u0641 \u062F\u0631 \u0627\u06CC\u0646 \u0632\u0645\u06CC\u0646\u0647 \u062A\u0627\u0632\u0647.
-
-3. STRICT 80% LESSON MASTERY THRESHOLD (Requirement 4) \u2014 soft AI signal only:
-   - The client enforces QUANTITATIVE mastery (\u22653 strong turns + target clich\xE9 coverage). Your lessonProgress is advisory.
-   - Evaluate whether THIS response used target grammar/clich\xE9s correctly.
-   - Return "lessonProgress":
-     - progressPercent: Number from 10 to 100 for THIS turn's contribution toward the lesson goal.
-     - isGoalSatisfied: true only if this utterance independently shows confident correct use of targets (client still requires N strong turns).
-     - unmetGoalsFa: Array of Persian descriptions of what still needs work.
-     - coachingFeedbackFa: Energetic coaching tip on how to break free of Persian translation.
-   - ALSO return top-level analysis fields:
-     - "usedTargetClichesCorrectly": string[] of target clich\xE9s the user correctly produced in THIS utterance (empty if none).
-     - "turnQuality": "strong" | "ok" | "weak"
-
-4. WEAKNESS DATABASE LOGGING & REMEDIATION:
-   - "newWeaknessIdentified": If user exhibits a recurring Persian transfer mistake (like "I go to shopping", "explain for me", missing Flap T, or hyper-formal textbook tone), return { "category": "grammar"|"pronunciation"|"register_tone"|"fluency", "titleFa": "\u0639\u0646\u0648\u0627\u0646 \u0627\u06CC\u0631\u0627\u062F", "descriptionFa": "\u062A\u0648\u0636\u06CC\u062D \u06A9\u0627\u0645\u0644 \u0628\u0647 \u0641\u0627\u0631\u0633\u06CC", "severity": "high"|"medium"|"low", "example": "\u0646\u0645\u0648\u0646\u0647 \u0627\u0634\u062A\u0628\u0627\u0647" }.
-   - "weaknessImprovementNoted": If user successfully overcame or improved on any of their active weaknesses, return the exact title string.
-
-5. PRECISE MEANING-PRESERVING NATIVE REWRITE & SENTENCE PATTERNS (\u0627\u0644\u06AF\u0648\u0647\u0627 \u0648 \u0641\u0631\u0645\u0648\u0644\u200C\u0647\u0627\u06CC \u062C\u0645\u0644\u0647\u200C\u0633\u0627\u0632\u06CC \u0646\u06CC\u062A\u06CC\u0648):
-   - Provide "nativeAlternative": Rephrase EXACTLY what the user wanted to say in authentic American English.
-   - Provide "nativeAlternativesList": 2-3 stylistic options (natural/standard, professional, casual).
-   - Provide "nativeCliche": A key natural American collocation or phrase suitable for this context, with its Persian meaning.
-   - MANDATORY "sentencePatterns": Extract 2 to 4 reusable American "Sentence Patterns" (\u0627\u0644\u06AF\u0648\u0647\u0627 \u0648 \u0641\u0631\u0645\u0648\u0644\u200C\u0647\u0627\u06CC \u06A9\u0627\u0631\u0628\u0631\u062F\u06CC \u062C\u0645\u0644\u0647\u200C\u0633\u0627\u0632\u06CC) directly derived from "nativeAlternative" and the concept the user tried to express.
-     Format each pattern with variables (X, Y, Z or [bracketed slots]) so the learner can reuse the exact grammatical/idiomatic frame in different situations!
-     Example:
-     [
-       { "pattern": "X is gradually fading.", "meaningFa": "\u0686\u06CC\u0632\u06CC \u0631\u0641\u062A\u0647\u200C\u0631\u0641\u062A\u0647 \u062F\u0631 \u062D\u0627\u0644 \u0645\u062D\u0648 \u06CC\u0627 \u06A9\u0645\u200C\u0631\u0646\u06AF \u0634\u062F\u0646 \u0627\u0633\u062A", "slotExplanation": "X: \u062A\u0631\u0633\u060C \u062F\u0631\u062F\u060C \u0627\u062D\u0633\u0627\u0633\u060C \u06CC\u0627 \u062E\u0627\u0637\u0631\u0647" },
-       { "pattern": "X is still more [adjective] than Y.", "meaningFa": "\u0627\u06CC\u06A9\u0633 \u0647\u0645\u0686\u0646\u0627\u0646 \u0627\u0632 \u0648\u0627\u06CC \u0641\u0644\u0627\u0646\u200C\u0635\u0641\u062A\u200C\u062A\u0631 \u0627\u0633\u062A", "slotExplanation": "\u0628\u0631\u0627\u06CC \u0645\u0642\u0627\u06CC\u0633\u0647 \u0627\u0633\u062A\u0645\u0631\u0627\u0631 \u06CC\u06A9 \u0648\u0636\u0639\u06CC\u062A" },
-       { "pattern": "X is more sensitive to Y than Z.", "meaningFa": "\u062D\u0633\u0627\u0633\u200C\u062A\u0631 \u0628\u0648\u062F\u0646 \u0646\u0633\u0628\u062A \u0628\u0647 \u06CC\u06A9 \u0645\u0648\u0636\u0648\u0639 \u06CC\u0627 \u0645\u062D\u0631\u06A9", "slotExplanation": "Y: \u0645\u062D\u0631\u06A9 \u06CC\u0627 \u0639\u0627\u0645\u0644 \u062D\u0633\u0627\u0633\u06CC\u062A" },
-       { "pattern": "X tries to steer clear of Y.", "meaningFa": "\u062A\u0644\u0627\u0634 \u0628\u0631\u0627\u06CC \u062F\u0648\u0631\u06CC \u06AF\u0632\u06CC\u062F\u0646 \u0648 \u0641\u0627\u0635\u0644\u0647 \u06AF\u0631\u0641\u062A\u0646 \u0627\u0632 \u0686\u06CC\u0632\u06CC \u06CC\u0627 \u06A9\u0633\u06CC", "slotExplanation": "Y: \u0641\u0631\u062F\u060C \u062E\u0637\u0631\u060C \u06CC\u0627 \u0645\u0648\u0642\u0639\u06CC\u062A \u0646\u0627\u062E\u0648\u0634\u0627\u06CC\u0646\u062F" }
-     ]
-
-6. SIX-DIMENSION SPEAKING RUBRIC (calibrate to CEFR ${cefrLevel}; be strict but actionable for Persian L1):
-   Score each 0\u2013100 and cite concrete evidence from THIS utterance only:
-   - grammarScore: Grammar & Structure (syntax, tense, agreement, articles)
-   - nativeScore: Naturalness & Word Choice (idioms, collocations, vs textbook Persian calques)
-   - contextScore: Context & Pragmatics (register vs relationship "${relationship}", politeness, formality mismatch)
-   - communicationScore: Communication & Completeness (answered the prompt fully? clear intent?)
-   - pronunciationScore: Pronunciation & Accent (Flap-T, Rhotic R, schwa, linking \u2014 from audio if present)
-   - fluencyScore: Fluency & Delivery (hesitation, repairs, pacing, chunking)
-   overallScore = weighted blend emphasizing the PRIMARY LESSON GOAL above.
-
-7. STRICT AMERICAN PHONETICS PROTOCOL (mandatory when audio is attached; still apply text-based stress/rhythm tips otherwise):
-   - Be HARSH on Persian L1 transfers: tapped/trilled R, aspirated T instead of Flap [\u027E], full vowels instead of schwa, syllable-timed rhythm, W/V confusion, missing linking.
-   - Lesson pronunciation focus: "${targetPronunciation || "General American clarity"}". Prioritize issues that block THIS focus.
-   - If audio is present: NEVER give pronunciationScore \u2265 88 unless you list at least one concrete strength AND the speech truly sounds near-native. Typical B1\u2013B2 Persian speakers should land 65\u201382.
-   - Always fill voiceAnalysis.phonemeIssues / wordStressIssues / intonation / drillSequenceFa with actionable Persian coaching when anything is off.
-   - If pronunciationScore < 78, set overallScore \u2264 74 even if grammar is strong (accent gates fluency mastery).
-
-Return ONLY a valid JSON object matching this structure:
-{
-  "reply": "English reply as ${aiRole}",
-  "persianTranslation": "\u062A\u0631\u062C\u0645\u0647 \u0641\u0627\u0631\u0633\u06CC \u0631\u0648\u0627\u0646 \u067E\u0627\u0633\u062E",
-  "transcribedUserText": "${messageToAnalyze ? messageToAnalyze.replace(/"/g, '\\"') : "Spoken English words transcribed from audio (DO NOT output base64)"}",
-  "analysis": {
-    "overallScore": 85,
-    "grammarScore": 88,
-    "nativeScore": 82,
-    "contextScore": 80,
-    "communicationScore": 84,
-    "pronunciationScore": 84,
-    "fluencyScore": 78,
-    "userSpokenTranscript": "${messageToAnalyze ? messageToAnalyze.replace(/"/g, '\\"') : "Spoken English words (DO NOT output base64)"}",
-    "strengths": ["\u0646\u0642\u0637\u0647 \u0642\u0648\u062A \u0645\u0634\u062E\u0635 \u062F\u0631 \u062C\u0645\u0644\u0647 \u06A9\u0627\u0631\u0628\u0631"],
-    "categorizedIssues": [
-      {
-        "category": "grammar",
-        "categoryFa": "\u0633\u0627\u062E\u062A\u0627\u0631 \u06AF\u0631\u0627\u0645\u0631\u06CC",
-        "titleFa": "\u0639\u0646\u0648\u0627\u0646 \u0627\u06CC\u0631\u0627\u062F",
-        "originalSnippet": "\u0628\u062E\u0634\u06CC \u0627\u0632 \u062C\u0645\u0644\u0647 \u06A9\u0627\u0631\u0628\u0631",
-        "correctedSnippet": "\u0634\u06A9\u0644 \u0635\u062D\u06CC\u062D \u0646\u06CC\u062A\u06CC\u0648",
-        "explanationFa": "\u062A\u0648\u0636\u06CC\u062D \u0641\u0627\u0631\u0633\u06CC...",
-        "whyItMattersFa": "\u0686\u0631\u0627 \u0645\u0647\u0645 \u0627\u0633\u062A...",
-        "howToFixFa": "\u0631\u0648\u0634 \u0627\u0635\u0644\u0627\u062D..."
-      }
-    ],
-    "voiceAnalysis": {
-      "strengthsFa": ["\u0648\u0636\u0648\u062D \u0635\u062F\u0627 \u0648 \u0628\u06CC\u0627\u0646..."],
-      "phonemeIssues": [
-        {
-          "soundOrWord": "\u06A9\u0644\u0645\u0647 \u06CC\u0627 \u0635\u062F\u0627\u06CC \u0645\u0631\u0628\u0648\u0637\u0647",
-          "targetPhonetic": "/.../",
-          "whatWasHeardFa": "\u0622\u0646\u0686\u0647 \u0645\u0639\u0645\u0648\u0644\u0627\u064B \u0627\u0634\u062A\u0628\u0627\u0647 \u0627\u062F\u0627 \u0645\u06CC\u200C\u0634\u0648\u062F",
-          "whyItMattersFa": "\u0627\u0647\u0645\u06CC\u062A \u0635\u062F\u0627",
-          "howToFixFa": "\u0631\u0648\u0634 \u062A\u0645\u0631\u06CC\u0646"
-        }
-      ],
-      "wordStressIssues": [
-        {
-          "word": "\u06A9\u0644\u0645\u0647 \u0686\u0646\u062F\u0628\u062E\u0634\u06CC",
-          "targetStress": "SYL-la-ble",
-          "whyItMattersFa": "\u0627\u0647\u0645\u06CC\u062A \u062A\u06A9\u06CC\u0647",
-          "howToFixFa": "\u0631\u0648\u0634 \u0627\u0635\u0644\u0627\u062D"
-        }
-      ],
-      "sentenceRhythm": {
-        "highlightedPattern": "\u062C\u0645\u0644\u0647 \u06A9\u0627\u0631\u0628\u0631 \u0628\u0627 \u062D\u0631\u0648\u0641 \u0628\u0632\u0631\u06AF \u0631\u0648\u06CC \u06A9\u0644\u0645\u0627\u062A \u062A\u0627\u06A9\u06CC\u062F\u06CC",
-        "whyItMattersFa": "\u062A\u0648\u0636\u06CC\u062D \u0631\u06CC\u062A\u0645",
-        "howToFixFa": "\u0631\u0648\u0634 \u062A\u0645\u0631\u06CC\u0646 \u0631\u06CC\u062A\u0645"
-      },
-      "thoughtGroups": {
-        "suggestedChunking": "\u0628\u062E\u0634\u200C\u0628\u0646\u062F\u06CC \u062C\u0645\u0644\u0647 \u06A9\u0627\u0631\u0628\u0631 \u0628\u0627 \u0639\u0644\u0627\u0645\u062A /",
-        "whyItMattersFa": "\u0627\u0647\u0645\u06CC\u062A \u06AF\u0631\u0648\u0647\u200C\u0628\u0646\u062F\u06CC \u0645\u0639\u0646\u0627\u06CC\u06CC",
-        "howToFixFa": "\u0646\u062D\u0648\u0647 \u0645\u06A9\u062B \u0635\u062D\u06CC\u062D"
-      },
-      "intonation": {
-        "observationFa": "\u0622\u0647\u0646\u06AF \u062C\u0645\u0644\u0647 \u06A9\u0627\u0631\u0628\u0631",
-        "whyItMattersFa": "\u062A\u0623\u062B\u06CC\u0631 \u0644\u062D\u0646 \u0628\u0631 \u0634\u0646\u0648\u0646\u062F\u0647",
-        "howToFixFa": "\u0646\u062D\u0648\u0647 \u0641\u0631\u0648\u062F \u06CC\u0627 \u0627\u0648\u062C \u0635\u062F\u0627"
-      },
-      "drillSequenceFa": ["\u06AF\u0627\u0645 \u06F1", "\u06AF\u0627\u0645 \u06F2", "\u06AF\u0627\u0645 \u06F3"]
-    },
-    "socialTone": {
-      "register": "casual",
-      "registerFa": "\u0645\u062D\u0627\u0648\u0631\u0647\u200C\u0627\u06CC",
-      "politenessLevel": 4,
-      "formalityLevel": 2,
-      "appropriatenessVerdictFa": "\u0628\u0631\u0631\u0633\u06CC \u0644\u062D\u0646 \u0628\u0627 \u0645\u0648\u0642\u0639\u06CC\u062A",
-      "culturalEtiquetteTipFa": "\u0627\u062A\u06CC\u06A9\u062A \u0641\u0631\u0647\u0646\u06AF\u06CC \u0622\u0645\u0631\u06CC\u06A9\u0627"
-    },
-    "nativeAlternative": "\u0628\u0627\u0632\u0646\u0648\u06CC\u0633\u06CC \u0646\u06CC\u062A\u06CC\u0648 \u062F\u0642\u06CC\u0642 \u0645\u0641\u0647\u0648\u0645 \u06A9\u0627\u0631\u0628\u0631",
-    "nativeAlternativeFa": "\u062A\u0631\u062C\u0645\u0647 \u0641\u0627\u0631\u0633\u06CC \u0628\u0627\u0632\u0646\u0648\u06CC\u0633\u06CC",
-    "nativeAlternativesList": [
-      {
-        "type": "exact_meaning",
-        "labelFa": "\u0628\u06CC\u0627\u0646 \u0637\u0628\u06CC\u0639\u06CC \u0648 \u0645\u062A\u062F\u0627\u0648\u0644",
-        "english": "\u062C\u0645\u0644\u0647 \u0627\u0646\u06AF\u0644\u06CC\u0633\u06CC",
-        "persian": "\u062A\u0631\u062C\u0645\u0647 \u0641\u0627\u0631\u0633\u06CC"
-      }
-    ],
-    "nativeCliche": "${effectiveTargetCliches[0] || "\u0627\u0635\u0637\u0644\u0627\u062D \u06A9\u0644\u06CC\u062F\u06CC"}",
-    "nativeClicheMeaningFa": "\u0645\u0639\u0646\u06CC \u0627\u0635\u0637\u0644\u0627\u062D",
-    "sentencePatterns": [
-      {
-        "pattern": "X is gradually fading.",
-        "meaningFa": "\u0686\u06CC\u0632\u06CC \u0631\u0641\u062A\u0647\u200C\u0631\u0641\u062A\u0647 \u062F\u0631 \u062D\u0627\u0644 \u0645\u062D\u0648 \u06CC\u0627 \u06A9\u0645\u200C\u0631\u0646\u06AF \u0634\u062F\u0646 \u0627\u0633\u062A",
-        "slotExplanation": "X: \u062A\u0631\u0633\u060C \u062F\u0631\u062F\u060C \u0627\u062D\u0633\u0627\u0633\u060C \u06CC\u0627 \u062E\u0627\u0637\u0631\u0647"
-      },
-      {
-        "pattern": "X tries to steer clear of Y.",
-        "meaningFa": "\u062A\u0644\u0627\u0634 \u0628\u0631\u0627\u06CC \u062F\u0648\u0631\u06CC \u06AF\u0632\u06CC\u062F\u0646 \u0648 \u067E\u0631\u0647\u06CC\u0632 \u0627\u0632 \u0686\u06CC\u0632\u06CC \u06CC\u0627 \u06A9\u0633\u06CC",
-        "slotExplanation": "Y: \u062E\u0637\u0631\u060C \u0641\u0631\u062F\u060C \u06CC\u0627 \u0645\u0648\u0642\u0639\u06CC\u062A \u0646\u0627\u062E\u0648\u0634\u0627\u06CC\u0646\u062F"
-      }
-    ],
-    "repetitionChallengePromptFa": "\u062F\u0639\u0648\u062A \u0628\u0647 \u062A\u06A9\u0631\u0627\u0631 \u0628\u0627 \u0639\u0628\u0627\u0631\u062A \u062C\u062F\u06CC\u062F",
-    "inCharacterChallenge": {
-      "probingQuestionEn": "\u067E\u0631\u0633\u0634 \u0686\u0627\u0644\u0634\u06CC \u0645\u0631\u0628\u06CC \u062F\u0631 \u0646\u0642\u0634 \u062E\u0648\u062F",
-      "probingQuestionFa": "\u062A\u0631\u062C\u0645\u0647 \u067E\u0631\u0633\u0634 \u0686\u0627\u0644\u0634\u06CC",
-      "coachingGoalFa": "\u062F\u0633\u062A\u0648\u0631 \u0645\u0631\u0628\u06CC \u0628\u0631\u0627\u06CC \u0646\u0648\u0628\u062A \u0628\u0639\u062F \u062C\u0647\u062A \u0628\u0627\u0632 \u0634\u062F\u0646 \u0632\u0628\u0627\u0646"
-    },
-    "lessonProgress": {
-      "progressPercent": 40,
-      "isGoalSatisfied": false,
-      "unmetGoalsFa": ["\u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0627\u0632 \u0627\u0635\u0637\u0644\u0627\u062D \u0647\u062F\u0641 \u062F\u0631 \u062C\u0645\u0644\u0647 \u06A9\u0627\u0645\u0644"],
-      "coachingFeedbackFa": "\u067E\u0627\u0633\u062E \u0627\u0648\u0644\u06CC\u0647 \u062E\u0648\u0628 \u0628\u0648\u062F\u060C \u062D\u0627\u0644\u0627 \u0628\u0627 \u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0627\u0632 \u0627\u0635\u0637\u0644\u0627\u062D \u0647\u062F\u0641 \u0632\u0628\u0627\u0646\u062A \u0631\u0648 \u0628\u0627\u0632 \u06A9\u0646 \u0648 \u06A9\u0627\u0645\u0644\u200C\u062A\u0631 \u0628\u06AF\u0648."
-    },
-    "usedTargetClichesCorrectly": [],
-    "turnQuality": "ok",
-    "newWeaknessIdentified": null,
-    "weaknessImprovementNoted": null
-  }
-}
-`;
-      let contentsPayload = textPrompt;
-      if (userAudioBase64) {
-        const cleanMime = (req.body.userAudioMimeType || "audio/webm").split(";")[0];
-        contentsPayload = [
-          { inlineData: { mimeType: cleanMime, data: userAudioBase64 } },
-          { text: textPrompt }
-        ];
-      }
-      for (const modelName of candidateModels) {
-        try {
-          const response = await ai.models.generateContent({
-            model: modelName,
-            contents: contentsPayload,
-            config: {
-              responseMimeType: "application/json",
-              temperature: 0.5
-            }
-          });
-          const parsed = safeJsonParse(response.text);
-          if (parsed.reply && parsed.analysis) {
-            parsed.transcribedUserText = sanitizeTranscriptText(
-              parsed.transcribedUserText,
-              messageToAnalyze || "\u0635\u062F\u0627\u06CC \u0636\u0628\u0637\u200C\u0634\u062F\u0647 \u0634\u0645\u0627"
-            );
-            parsed.analysis.userSpokenTranscript = sanitizeTranscriptText(
-              parsed.analysis.userSpokenTranscript,
-              parsed.transcribedUserText
-            );
-            parsed.analysis.isEstimatedOfflineAnalysis = false;
-            parsed.analysis.analysisEngineSource = userAudioBase64 ? "gemini_multimodal_audio" : "gemini_text_only";
-            parsed.analysis = enforcePhoneticsStrictness(parsed.analysis, {
-              hadAudio: Boolean(userAudioBase64),
-              targetPronunciation: req.body.targetPronunciation || "",
-              targetGrammar: targetGrammar || ""
-            });
-            return res.json(parsed);
-          }
-        } catch (modelError) {
-          console.warn(`Model ${modelName} failed (${modelError.message?.slice(0, 80)}), trying next candidate...`);
-        }
-      }
-    }
-    const localResult = evaluateSpeakingTextLocally(
-      messageToAnalyze,
-      {
-        id: scenarioId || "daily-chat",
-        title: scenarioTitle,
-        titleFa: scenarioTitle,
-        relationship,
-        userRole,
-        aiRole,
-        category: "daily",
-        starter: "",
-        starterFa: "",
-        icon: "\u{1F4AC}",
-        descriptionFa: "",
-        clicheTag: "",
-        recommendedRegister: relationship.toLowerCase().includes("formal") ? "formal" : "casual"
-      },
-      persona
-    );
-    localResult.analysis.isEstimatedOfflineAnalysis = true;
-    localResult.analysis.analysisEngineSource = "local_linguistic_estimate";
-    localResult.analysis = enforcePhoneticsStrictness(localResult.analysis, {
-      hadAudio: Boolean(userAudioBase64),
-      targetPronunciation: targetPronunciation || "",
-      targetGrammar: targetGrammar || ""
-    });
-    if (rotationResult.isRotationTriggered && localResult) {
-      const sit = rotationResult.situation;
-      localResult.reply = `${sit.bridgeTransitions[0]} ${sit.settingEn}`;
-      localResult.persianTranslation = `\u0686\u0631\u062E\u0634 \u0628\u0647 \u0645\u0648\u0642\u0639\u06CC\u062A \u062C\u062F\u06CC\u062F: ${sit.titleFa}. ${sit.settingFa}`;
-      if (localResult.analysis?.inCharacterChallenge) {
-        localResult.analysis.inCharacterChallenge.probingQuestionEn = `In this situation (${sit.settingEn}), how would you express yourself using ${targetGrammar || "the target structure"}?`;
-        localResult.analysis.inCharacterChallenge.probingQuestionFa = `\u062F\u0631 \u0627\u06CC\u0646 \u0645\u0648\u0642\u0639\u06CC\u062A \u062C\u062F\u06CC\u062F (${sit.titleFa})\u060C \u0686\u0637\u0648\u0631 \u0646\u0638\u0631\u062A\u0627\u0646 \u0631\u0627 \u0628\u0627 \u0633\u0627\u062E\u062A\u0627\u0631 \u06AF\u0631\u0627\u0645\u0631\u06CC ${targetGrammarFa || targetGrammar} \u0628\u06CC\u0627\u0646 \u0645\u06CC\u200C\u06A9\u0646\u06CC\u062F\u061F`;
-        localResult.analysis.inCharacterChallenge.coachingGoalFa = `\u062D\u0627\u0644\u0627 \u062F\u0631 \u0645\u0648\u0642\u0639\u06CC\u062A ${sit.titleFa}\u060C \u0633\u0639\u06CC \u06A9\u0646\u06CC\u062F \u0628\u0627 \u06AF\u0631\u0627\u0645\u0631 \u0647\u062F\u0641 \u062C\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06CC\u062F \u062A\u0627 \u062F\u0627\u06CC\u0631\u0647 \u0648\u0627\u0698\u06AF\u0627\u0646\u062A\u0627\u0646 \u062F\u0631 \u0628\u0633\u062A\u0631\u0647\u0627\u06CC \u0645\u062E\u062A\u0644\u0641 \u062A\u0642\u0648\u06CC\u062A \u0634\u0648\u062F.`;
-      }
-      if (sit.sentencePatternTemplates && sit.sentencePatternTemplates.length > 0) {
-        localResult.analysis.sentencePatterns = sit.sentencePatternTemplates;
-      }
-    }
-    res.json({
-      reply: localResult.reply,
-      persianTranslation: localResult.persianTranslation,
-      transcribedUserText: messageToAnalyze,
-      analysis: localResult.analysis
-    });
-  } catch (err) {
-    console.error("Error in /api/chat:", err);
-    res.status(500).json({ error: "Failed to process chat", details: err.message });
-  }
-});
-app.post("/api/practice-generate-situation", async (req, res) => {
-  try {
-    const {
-      cliche,
-      meaningFa,
-      context: originalContext = "",
-      regenerate = false,
-      scenarioIndex = 0,
-      currentTitle = ""
-    } = req.body;
-    if (!cliche) return res.status(400).json({ error: "cliche is required" });
-    const ai = getAiClient(req);
-    if (ai) {
-      try {
-        const prompt = `
-You are a senior American conversational designer.
-Generate an engaging, realistic American conversational practice task for the American clich\xE9: "${cliche}" (Persian meaning: ${meaningFa || "\u0627\u0635\u0637\u0644\u0627\u062D \u06A9\u0627\u0631\u0628\u0631\u062F\u06CC"}).
-${regenerate || currentTitle ? `CRITICAL INSTRUCTION: The user is clicking "Generate New Scenario". They already practiced a scenario titled: "${currentTitle}". Do NOT repeat that context. Generate a COMPLETELY DIFFERENT, FRESH setting (e.g., choose among: airport, coffee shop, job interview, salary negotiation, road trip with friends, gym workout, urgent tech crisis, home renovation, doctor's clinic) with a distinct relationship and conflict.` : ""}
-
-Return ONLY valid JSON matching this schema:
-{
-  "targetCliche": "${cliche}",
-  "situationTitleFa": "\u0639\u0646\u0648\u0627\u0646 \u062C\u0630\u0627\u0628 \u0648 \u0645\u062A\u0645\u0627\u06CC\u0632 \u0645\u0648\u0642\u0639\u06CC\u062A \u0628\u0647 \u0641\u0627\u0631\u0633\u06CC",
-  "situationContextFa": "\u0634\u0631\u062D \u062F\u0642\u06CC\u0642 \u06F2-\u06F3 \u062E\u0637\u06CC \u0627\u0632 \u0632\u0645\u06CC\u0646\u0647 \u0648 \u0634\u0631\u0627\u06CC\u0637 \u0645\u06A9\u0627\u0644\u0645\u0647 \u0628\u0647 \u0641\u0627\u0631\u0633\u06CC",
-  "relationship": "\u0631\u0627\u0628\u0637\u0647 \u0637\u0631\u0641\u06CC\u0646 (\u0645\u062B\u0644\u0627\u064B: \u0647\u0645\u06A9\u0627\u0631 \u062F\u0631 \u067E\u0631\u0648\u0698\u0647\u060C \u062F\u0648\u0633\u062A \u0635\u0645\u06CC\u0645\u06CC\u060C \u0645\u062F\u06CC\u0631 \u0634\u0631\u06A9\u062A\u060C \u0641\u0631\u0648\u0634\u0646\u062F\u0647)",
-  "conversationalPrompt": "Realistic, natural conversation starter said by the partner in American English",
-  "conversationalPromptFa": "\u062A\u0631\u062C\u0645\u0647 \u0631\u0648\u0627\u0646 \u0641\u0627\u0631\u0633\u06CC \u062C\u0645\u0644\u0647 \u0634\u0631\u06CC\u06A9 \u0645\u06A9\u0627\u0644\u0645\u0647",
-  "hint": "\u0631\u0627\u0647\u0646\u0645\u0627\u06CC \u06A9\u0644\u06CC \u0628\u0631\u0627\u06CC \u0627\u06CC\u062F\u0647 \u0627\u0648\u0644\u06CC\u0647 \u067E\u0627\u0633\u062E",
-  "guidance": {
-    "approachFa": "\u0631\u0627\u0647\u0646\u0645\u0627\u06CC \u06AF\u0627\u0645\u200C\u0628\u0647\u200C\u06AF\u0627\u0645 \u0646\u062D\u0648\u0647 \u067E\u0627\u0633\u062E\u200C\u062F\u0647\u06CC \u0648 \u0645\u0648\u0636\u0639\u200C\u06AF\u06CC\u0631\u06CC \u062F\u0631 \u0627\u06CC\u0646 \u0645\u0648\u0642\u0639\u06CC\u062A \u0628\u0647 \u0641\u0627\u0631\u0633\u06CC",
-    "suggestedPattern": "\u0633\u0627\u062E\u062A\u0627\u0631 \u067E\u06CC\u0634\u0646\u0647\u0627\u062F\u06CC \u0633\u0627\u062E\u062A \u062C\u0645\u0644\u0647 (Sentence Blueprint) \u0628\u0627 \u062C\u0627\u06CC\u06AF\u0630\u0627\u0631\u06CC \u06A9\u0644\u06CC\u0634\u0647",
-    "keyCollocations": ["\u06A9\u0627\u0644\u0648\u06A9\u06CC\u0634\u0646 \u06F1", "\u06A9\u0627\u0644\u0648\u06A9\u06CC\u0634\u0646 \u06F2", "\u06A9\u0627\u0644\u0648\u06A9\u06CC\u0634\u0646 \u06F3"],
-    "culturalTipFa": "\u0646\u06A9\u062A\u0647 \u0641\u0631\u0647\u0646\u06AF\u06CC \u0648 \u0627\u062A\u06CC\u06A9\u062A \u06AF\u0641\u062A\u0627\u0631\u06CC \u062F\u0631 \u0645\u06A9\u0627\u0644\u0645\u0647 \u0628\u0648\u0645\u06CC \u0622\u0645\u0631\u06CC\u06A9\u0627\u06CC\u06CC"
-  },
-  "idealSampleResponse": "Ideal natural native response including ${cliche}",
-  "idealSampleResponseFa": "\u062A\u0631\u062C\u0645\u0647 \u062F\u0642\u06CC\u0642 \u0648 \u0631\u0648\u0627\u0646 \u0641\u0627\u0631\u0633\u06CC"
-}
-`;
-        const candidateModels = CANDIDATE_GEMINI_MODELS;
-        for (const model of candidateModels) {
-          try {
-            const response = await ai.models.generateContent({
-              model,
-              contents: prompt,
-              config: { responseMimeType: "application/json", temperature: 0.85 }
-            });
-            const parsed = safeJsonParse(response.text);
-            if (parsed && parsed.situationTitleFa) {
-              return res.json(parsed);
-            }
-          } catch (mErr) {
-            console.warn(`Model ${model} failed for practice situation, trying next:`, mErr.message);
-          }
-        }
-      } catch (e) {
-        console.warn("Gemini practice situation failed, using linguistic engine fallback:", e.message);
-      }
-    }
-    const local = generateSituationForCliche(cliche, meaningFa, scenarioIndex);
-    res.json(local);
-  } catch (err) {
-    console.error("Error in /api/practice-generate-situation:", err);
-    res.status(500).json({ error: "Failed to generate situation", details: err.message });
-  }
-});
-app.post("/api/practice-evaluate", async (req, res) => {
-  try {
-    const {
-      targetCliche,
-      situationContextFa,
-      conversationalPrompt,
-      userResponse = "",
-      userAudioBase64,
-      userAudioMimeType
-    } = req.body;
-    const cleanUser = (userResponse || "").trim();
-    const linguisticAnalysis = analyzeLinguisticText(
-      cleanUser,
-      situationContextFa || "Practice Scenario",
-      "Conversational Partner"
-    );
-    const ai = getAiClient(req);
-    if (ai) {
-      try {
-        const evalPrompt = `
-You are a senior American English linguistic evaluator, phonetics expert, and accent coach.
-The student is practicing the American clich\xE9: "${targetCliche}".
-Context: ${situationContextFa || "Daily conversational situation"}
-Partner asked: "${conversationalPrompt || "What do you think?"}"
-Student's response: "${cleanUser || "[Spoken Audio Attached]"}"
-
-Perform a thorough, authentic linguistic and pedagogical evaluation in Persian (Farsi), matching the high-end analysis of an IELTS/Native coaching breakdown.
-CRITICAL EVALUATION REQUIREMENTS:
-1. Did the student use the target clich\xE9 accurately? (usedTargetCliche: boolean, accuracyScore: 0-100)
-2. americanConceptModel: Explain how a native American would express this exact concept:
-   - expression: "The authentic sentence an American native would say in this exact spot"
-   - expressionFa: "\u062A\u0631\u062C\u0645\u0647 \u0631\u0648\u0627\u0646 \u0641\u0627\u0631\u0633\u06CC"
-   - clicheUsed: "The exact clich\xE9/idiom used by the native"
-   - clicheMeaningFa: "\u0645\u0639\u0646\u06CC \u0631\u0648\u0627\u0646 \u0641\u0627\u0631\u0633\u06CC \u06A9\u0644\u06CC\u0634\u0647"
-   - whyItIsNativeFa: "\u062A\u0648\u0636\u06CC\u062D \u0639\u0645\u06CC\u0642 \u0686\u0631\u0627 \u06CC\u06A9 \u0622\u0645\u0631\u06CC\u06A9\u0627\u06CC\u06CC \u0628\u0647 \u062C\u0627\u06CC \u062A\u0631\u062C\u0645\u0647 \u06A9\u0644\u0645\u0647 \u0628\u0647 \u06A9\u0644\u0645\u0647 \u0641\u0627\u0631\u0633\u06CC \u0627\u0632 \u0627\u06CC\u0646 \u0633\u0627\u062E\u062A\u0627\u0631 \u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0645\u06CC\u200C\u06A9\u0646\u062F"
-3. categorizedIssues: List real linguistic, grammar, punctuation, word choice or completeness errors in student's response. If no errors, provide empty array.
-4. voiceAnalysis: Acoustic & pronunciation breakdown (sensitive American phonemes like Flap T /t\u032C/, American /r/, W vs V contrast, Glottal stop before /n/, word stress for multisyllabic words, thought groups, intonation, speech rate, 3-step drill sequence).
-5. transcribedUserText: If audio is provided, output the exact transcribed English words spoken by the user.
-
-Return ONLY valid JSON matching this schema:
-{
-  "usedTargetCliche": boolean,
-  "accuracyScore": number,
-  "verdictFa": "\u0646\u062A\u06CC\u062C\u0647\u200C\u06AF\u06CC\u0631\u06CC \u0627\u0631\u0632\u06CC\u0627\u0628\u06CC \u0628\u0647 \u0641\u0627\u0631\u0633\u06CC",
-  "transcribedUserText": "${cleanUser}",
-  "analysis": {
-    "overallScore": number,
-    "grammarScore": number,
-    "nativeScore": number,
-    "pronunciationScore": number,
-    "speechRateWpm": 115,
-    "userSpokenTranscript": "${cleanUser}",
-    "strengths": ["\u0646\u0642\u0637\u0647 \u0642\u0648\u062A \u06F1 \u0628\u0647 \u0641\u0627\u0631\u0633\u06CC", "\u0646\u0642\u0637\u0647 \u0642\u0648\u062A \u06F2 \u0628\u0647 \u0641\u0627\u0631\u0633\u06CC"],
-    "categorizedIssues": [
-      {
-        "category": "grammar",
-        "categoryFa": "\u062F\u0633\u062A\u0647\u200C\u0628\u0646\u062F\u06CC \u062E\u0637\u0627 \u0628\u0647 \u0641\u0627\u0631\u0633\u06CC",
-        "titleFa": "\u0639\u0646\u0648\u0627\u0646 \u062E\u0637\u0627",
-        "originalSnippet": "\u0628\u062E\u0634 \u062F\u0627\u0631\u0627\u06CC \u0627\u0634\u06A9\u0627\u0644",
-        "correctedSnippet": "\u0634\u06A9\u0644 \u0635\u062D\u06CC\u062D",
-        "explanationFa": "\u0634\u0631\u062D \u062F\u0642\u06CC\u0642 \u062E\u0637\u0627\u06CC \u06AF\u0631\u0627\u0645\u0631\u06CC \u06CC\u0627 \u0633\u0627\u062E\u062A\u0627\u0631\u06CC",
-        "whyItMattersFa": "\u0686\u0631\u0627 \u0627\u06CC\u0646 \u0645\u0648\u0636\u0648\u0639 \u0628\u0631\u0627\u06CC \u0634\u0646\u0648\u0646\u062F\u0647 \u0628\u0648\u0645\u06CC \u0645\u0647\u0645 \u0627\u0633\u062A",
-        "howToFixFa": "\u0631\u0648\u0634 \u062A\u0645\u0631\u06CC\u0646 \u0648 \u0627\u0635\u0644\u0627\u062D"
-      }
-    ],
-    "voiceAnalysis": {
-      "strengthsFa": ["\u0648\u0636\u0648\u062D \u0648 \u067E\u06CC\u0648\u0633\u062A\u06AF\u06CC \u06AF\u0641\u062A\u0627\u0631"],
-      "phonemeIssues": [
-        {
-          "soundOrWord": "\u06A9\u0644\u0645\u0647 \u06CC\u0627 \u0641\u0648\u0646\u0645 \u062D\u0633\u0627\u0633 (\u0645\u062B\u0644\u0627\u064B Flap T \u062F\u0631 water)",
-          "targetPhonetic": "/\u02C8w\u0251\u02D0t\u032C\u0259r/",
-          "whatWasHeardFa": "\u0622\u0646\u0686\u0647 \u0634\u0646\u06CC\u062F\u0647 \u0634\u062F",
-          "whyItMattersFa": "\u0627\u0647\u0645\u06CC\u062A \u0627\u062F\u0627\u06CC \u0635\u062D\u06CC\u062D \u062F\u0631 \u0627\u06A9\u0633\u0646\u062A \u0622\u0645\u0631\u06CC\u06A9\u0627\u06CC\u06CC",
-          "howToFixFa": "\u0631\u0648\u0634 \u062A\u0648\u0644\u06CC\u062F \u0635\u062F\u0627 \u0628\u0627 \u0646\u0648\u06A9 \u0632\u0628\u0627\u0646 \u06CC\u0627 \u0644\u0628\u200C\u0647\u0627"
-        }
-      ],
-      "wordStressIssues": [
-        {
-          "word": "\u06A9\u0644\u0645\u0647",
-          "targetStress": "SYL-la-ble",
-          "whyItMattersFa": "\u0627\u0647\u0645\u06CC\u062A \u062A\u06A9\u06CC\u0647 \u0647\u062C\u0627 \u062F\u0631 \u062F\u0631\u06A9 \u0634\u0646\u0648\u0646\u062F\u0647 \u0628\u0648\u0645\u06CC",
-          "howToFixFa": "\u0631\u0648\u0634 \u0627\u062F\u0627\u06CC \u0647\u062C\u0627\u06CC \u0642\u0648\u06CC\u200C\u062A\u0631"
-        }
-      ],
-      "sentenceRhythm": {
-        "highlightedPattern": "HIGHLIGHTED content words in sentence",
-        "whyItMattersFa": "\u062A\u06A9\u06CC\u0647 \u0628\u0631 \u06A9\u0644\u0645\u0627\u062A \u0645\u062D\u062A\u0648\u0627\u06CC\u06CC \u0648 \u0631\u06CC\u062A\u0645 \u0645\u0648\u0632\u0648\u0646 \u06AF\u0641\u062A\u0627\u0631 \u0622\u0645\u0631\u06CC\u06A9\u0627\u06CC\u06CC",
-        "howToFixFa": "\u0631\u0627\u0647\u0646\u0645\u0627\u06CC \u0631\u06CC\u062A\u0645"
-      },
-      "thoughtGroups": {
-        "suggestedChunking": "Chunk 1 / Chunk 2 / Chunk 3",
-        "whyItMattersFa": "\u062F\u0633\u062A\u0647\u200C\u0628\u0646\u062F\u06CC \u0645\u0639\u0646\u0627\u06CC\u06CC \u0648 \u0645\u06A9\u062B \u062F\u0631 \u0645\u062D\u0644 \u0645\u0646\u0627\u0633\u0628",
-        "howToFixFa": "\u0631\u0627\u0647\u0646\u0645\u0627\u06CC \u0645\u06A9\u062B"
-      },
-      "intonation": {
-        "observationFa": "\u062A\u062D\u0644\u06CC\u0644 \u0622\u0647\u0646\u06AF \u0635\u0639\u0648\u062F\u06CC \u06CC\u0627 \u0641\u0631\u0648\u062F\u06CC",
-        "whyItMattersFa": "\u0627\u0644\u0642\u0627\u06CC \u0627\u0639\u062A\u0645\u0627\u062F\u0628\u0647\u200C\u0646\u0641\u0633 \u0648 \u0627\u0637\u0645\u06CC\u0646\u0627\u0646",
-        "howToFixFa": "\u0631\u0627\u0647\u0646\u0645\u0627\u06CC \u062A\u0646\u0638\u06CC\u0645 \u0632\u06CC\u0631 \u0648 \u0628\u0645 \u0635\u062F\u0627"
-      },
-      "drillSequenceFa": [
-        "\u06AF\u0627\u0645 \u06F1 \u062A\u0645\u0631\u06CC\u0646 \u062F\u0647\u0627\u0646 \u0648 \u0632\u0628\u0627\u0646",
-        "\u06AF\u0627\u0645 \u06F2 \u062A\u0645\u0631\u06CC\u0646 \u062F\u0647\u0627\u0646 \u0648 \u0632\u0628\u0627\u0646",
-        "\u06AF\u0627\u0645 \u06F3 \u062A\u0645\u0631\u06CC\u0646 \u062F\u0647\u0627\u0646 \u0648 \u0632\u0628\u0627\u0646"
-      ]
-    },
-    "socialTone": {
-      "register": "casual",
-      "registerFa": "\u0644\u062D\u0646 \u062B\u0628\u062A\u200C\u0634\u062F\u0647",
-      "politenessLevel": 4,
-      "formalityLevel": 3,
-      "appropriatenessVerdictFa": "\u062A\u0637\u0627\u0628\u0642 \u0644\u062D\u0646 \u0628\u0627 \u0645\u0648\u0642\u0639\u06CC\u062A",
-      "culturalEtiquetteTipFa": "\u0646\u06A9\u062A\u0647 \u0627\u062A\u06CC\u06A9\u062A \u0648 \u0638\u0631\u0627\u0641\u062A \u0641\u0631\u0647\u0646\u06AF\u06CC \u062F\u0631 \u0622\u0645\u0631\u06CC\u06A9\u0627"
-    },
-    "nativeAlternative": "Native expression",
-    "nativeAlternativeFa": "\u062A\u0631\u062C\u0645\u0647 \u0641\u0627\u0631\u0633\u06CC"
-  },
-  "americanConceptModel": {
-    "expression": "Native expression",
-    "expressionFa": "\u062A\u0631\u062C\u0645\u0647 \u0641\u0627\u0631\u0633\u06CC",
-    "clicheUsed": "${targetCliche}",
-    "clicheMeaningFa": "\u0645\u0639\u0646\u06CC \u0641\u0627\u0631\u0633\u06CC \u06A9\u0644\u06CC\u0634\u0647",
-    "whyItIsNativeFa": "\u062A\u0648\u0636\u06CC\u062D \u062A\u0641\u0627\u0648\u062A \u0646\u06AF\u0627\u0647 \u0628\u0648\u0645\u06CC \u0622\u0645\u0631\u06CC\u06A9\u0627\u06CC\u06CC \u0628\u0627 \u062A\u0631\u062C\u0645\u0647 \u062A\u062D\u062A\u200C\u0627\u0644\u0644\u0641\u0638\u06CC"
-  },
-  "idealSampleResponse": "Ideal response",
-  "idealSampleResponseFa": "\u062A\u0631\u062C\u0645\u0647 \u0641\u0627\u0631\u0633\u06CC"
-}
-`;
-        const candidateModels = CANDIDATE_GEMINI_MODELS;
-        for (const model of candidateModels) {
-          try {
-            const contents = [];
-            if (userAudioBase64) {
-              contents.push({
-                inlineData: {
-                  data: userAudioBase64,
-                  mimeType: userAudioMimeType || "audio/webm"
-                }
-              });
-            }
-            contents.push({ text: evalPrompt });
-            const response = await ai.models.generateContent({
-              model,
-              contents,
-              config: { responseMimeType: "application/json", temperature: 0.4 }
-            });
-            const parsed = safeJsonParse(response.text);
-            if (parsed && parsed.analysis && parsed.americanConceptModel) {
-              if (linguisticAnalysis.grammarCorrections.length > 0) {
-                const existingIssues = parsed.analysis.categorizedIssues || [];
-                linguisticAnalysis.grammarCorrections.forEach((gc) => {
-                  if (!existingIssues.some((ei) => ei.originalSnippet?.includes(gc.original))) {
-                    existingIssues.unshift({
-                      category: "grammar",
-                      categoryFa: "\u062A\u062F\u0627\u062E\u0644 \u062A\u0631\u062C\u0645\u0647 \u0632\u0628\u0627\u0646 \u0645\u0627\u062F\u0631\u06CC",
-                      titleFa: `\u0627\u0634\u06A9\u0627\u0644 \u062F\u0631 \u0639\u0628\u0627\u0631\u062A \xAB${gc.original}\xBB`,
-                      originalSnippet: gc.original,
-                      correctedSnippet: gc.corrected,
-                      explanationFa: gc.explanationFa,
-                      whyItMattersFa: "\u062A\u0631\u062C\u0645\u0647 \u062A\u062D\u062A\u200C\u0627\u0644\u0644\u0641\u0638\u06CC \u0641\u0627\u0631\u0633\u06CC \u0628\u0647 \u0627\u0646\u06AF\u0644\u06CC\u0633\u06CC \u0628\u0627\u0639\u062B \u0627\u062D\u0633\u0627\u0633 \u063A\u06CC\u0631\u0637\u0628\u06CC\u0639\u06CC \u0628\u0648\u062F\u0646 \u062C\u0645\u0644\u0647 \u0628\u0631\u0627\u06CC \u0646\u06CC\u062A\u06CC\u0648\u0647\u0627 \u0645\u06CC\u200C\u0634\u0648\u062F.",
-                      howToFixFa: `\u0628\u0647 \u062C\u0627\u06CC \xAB${gc.original}\xBB \u0627\u0632 \u0634\u06A9\u0644 \u0637\u0628\u06CC\u0639\u06CC \xAB${gc.corrected}\xBB \u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0641\u0631\u0645\u0627\u06CC\u06CC\u062F.`
-                    });
-                  }
-                });
-                parsed.analysis.categorizedIssues = existingIssues;
-              }
-              parsed.analysis = enforcePhoneticsStrictness(parsed.analysis, {
-                hadAudio: Boolean(userAudioBase64),
-                targetPronunciation: `American pronunciation of clich\xE9 "${targetCliche}"`,
-                targetGrammar: targetCliche
-              });
-              return res.json(parsed);
-            }
-          } catch (mErr) {
-            console.warn(`Model ${model} failed for practice evaluate, trying next:`, mErr.message);
-          }
-        }
-      } catch (geminiErr) {
-        console.warn("Gemini practice evaluate failed, falling back to linguistic engine:", geminiErr.message);
-      }
-    }
-    const localResult = evaluatePracticeResponseLocally(
-      targetCliche,
-      cleanUser,
-      situationContextFa,
-      conversationalPrompt
-    );
-    if (linguisticAnalysis.grammarCorrections.length > 0 && localResult.analysis) {
-      if (!localResult.analysis.categorizedIssues) {
-        localResult.analysis.categorizedIssues = [];
-      }
-      linguisticAnalysis.grammarCorrections.forEach((gc) => {
-        localResult.analysis.categorizedIssues.unshift({
-          category: "grammar",
-          categoryFa: "\u062A\u062F\u0627\u062E\u0644 \u062A\u0631\u062C\u0645\u0647 \u0632\u0628\u0627\u0646 \u0645\u0627\u062F\u0631\u06CC",
-          titleFa: `\u0627\u0634\u06A9\u0627\u0644 \u062F\u0631 \u0639\u0628\u0627\u0631\u062A \xAB${gc.original}\xBB`,
-          originalSnippet: gc.original,
-          correctedSnippet: gc.corrected,
-          explanationFa: gc.explanationFa,
-          whyItMattersFa: "\u062A\u0631\u062C\u0645\u0647 \u062A\u062D\u062A\u200C\u0627\u0644\u0644\u0641\u0638\u06CC \u0641\u0627\u0631\u0633\u06CC \u0628\u0647 \u0627\u0646\u06AF\u0644\u06CC\u0633\u06CC \u0628\u0627\u0639\u062B \u0627\u062D\u0633\u0627\u0633 \u063A\u06CC\u0631\u0637\u0628\u06CC\u0639\u06CC \u0628\u0648\u062F\u0646 \u062C\u0645\u0644\u0647 \u0628\u0631\u0627\u06CC \u0646\u06CC\u062A\u06CC\u0648\u0647\u0627 \u0645\u06CC\u200C\u0634\u0648\u062F.",
-          howToFixFa: `\u0628\u0647 \u062C\u0627\u06CC \xAB${gc.original}\xBB \u0627\u0632 \u0634\u06A9\u0644 \u0637\u0628\u06CC\u0639\u06CC \xAB${gc.corrected}\xBB \u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0641\u0631\u0645\u0627\u06CC\u06CC\u062F.`
-        });
-      });
-    }
-    res.json(localResult);
-  } catch (err) {
-    console.error("Error in /api/practice-evaluate:", err);
-  }
-});
-app.post("/api/assess-task-voice", async (req, res) => {
-  try {
-    const {
-      taskIndex = 1,
-      question = "",
-      promptFa = "",
-      audioBase64,
-      audioMimeType = "audio/webm",
-      userText = ""
-    } = req.body;
-    if (!audioBase64 && !String(userText || "").trim()) {
-      return res.status(400).json({
-        error: "audio_or_text_required",
-        details: "\u0628\u0631\u0627\u06CC \u062A\u062D\u0644\u06CC\u0644 \u062A\u0639\u06CC\u06CC\u0646 \u0633\u0637\u062D \u0628\u0627\u06CC\u062F \u0648\u06CC\u0633 \u06CC\u0627 \u0645\u062A\u0646 \u0627\u0631\u0633\u0627\u0644 \u0634\u0648\u062F."
-      });
-    }
-    let transcript = String(userText || "").trim();
-    let sttEngine = transcript ? "client-text" : "none";
-    if (audioBase64) {
-      const stt = await transcribeAudioBuffer(req, audioBase64, audioMimeType, "en");
-      if (stt.text) {
-        transcript = stt.text;
-        sttEngine = stt.engine;
-      }
-    }
-    if (!transcript) {
-      return res.status(422).json({
-        error: "transcription_failed",
-        details: "\u0646\u062A\u0648\u0627\u0646\u0633\u062A\u06CC\u0645 \u0648\u06CC\u0633 \u0631\u0627 \u0628\u0647 \u0645\u062A\u0646 \u062A\u0628\u062F\u06CC\u0644 \u06A9\u0646\u06CC\u0645. \u0644\u0637\u0641\u0627\u064B \u062F\u0648\u0628\u0627\u0631\u0647 \u0628\u0627 \u0635\u062F\u0627\u06CC \u0648\u0627\u0636\u062D\u200C\u062A\u0631 \u0648 \u062D\u062F\u0627\u0642\u0644 \u06F8\u2013\u06F1\u06F0 \u062B\u0627\u0646\u06CC\u0647 \u0635\u062D\u0628\u062A \u0636\u0628\u0637 \u06A9\u0646\u06CC\u062F. \u06A9\u0644\u06CC\u062F OpenAI (Whisper) \u062F\u0642\u062A \u0631\u0627 \u0628\u0627\u0644\u0627 \u0645\u06CC\u200C\u0628\u0631\u062F.",
-        sttEngine
-      });
-    }
-    const ai = getAiClient(req);
-    if (!ai) {
-      return res.status(503).json({
-        error: "gemini_key_missing",
-        details: "\u06A9\u0644\u06CC\u062F Gemini \u0628\u0631\u0627\u06CC \u062A\u062D\u0644\u06CC\u0644 \u0639\u0645\u06CC\u0642 \u0648\u06CC\u0633 \u0627\u0644\u0632\u0627\u0645\u06CC \u0627\u0633\u062A.",
-        transcription: transcript,
-        sttEngine
-      });
-    }
-    const cleanMime = (audioMimeType || "audio/webm").split(";")[0];
-    const taskPrompt = `
-You are a Senior Phonetician, Applied Linguist, and American Accent Diagnostic Specialist for CEFR placement examinations.
-A Persian speaker is completing Task ${taskIndex} of their Speaking Placement Test.
-Task Question: "${question}"
-Persian Context: "${promptFa}"
-Verified Speech-to-Text transcript (engine=${sttEngine}): "${transcript}"
-
-${audioBase64 ? "REAL AUDIO is attached. Listen to the audio AND use the transcript." : "No audio \u2014 analyze the transcript only."}
-
-YOUR MISSION (be strict and specific \u2014 no generic praise):
-1. Set "transcription" to the exact spoken words (prefer the verified transcript; correct only obvious STT typos).
-2. Deep acoustic & phonetic analysis grounded in THIS sample:
-   - Flap T [\u027E] vs aspirated Persian/British [t\u02B0]
-   - American Rhotic R vs Persian tapped [r]
-   - Vowel reduction / schwa on function words
-   - Stress-timed vs syllable-timed rhythm, hesitations, WPM
-3. Detect Persian L1 transfer (go to shopping, I am agree, interested to, give me, etc.).
-4. nativeAlternative + nativeAlternativeFa for a natural American rewrite of THEIR meaning.
-5. 2\u20133 concrete strengthsFa and corrections with original/corrected/explanationFa.
-6. Scores 0\u2013100 must reflect THIS sample \u2014 do not default everyone to ~75.
-
-Return ONLY valid JSON:
-{
-  "taskIndex": ${taskIndex},
-  "transcription": "...",
-  "scores": { "grammar": 0, "pronunciation": 0, "fluency": 0, "accent": 0 },
-  "wpm": 0,
-  "acousticFeedback": {
-    "flapT": "...",
-    "rhoticR": "...",
-    "vowelReduction": "...",
-    "rhythm": "...",
-    "summaryFa": "..."
-  },
-  "persianTransferFound": "..." or null,
-  "nativeAlternative": "...",
-  "nativeAlternativeFa": "...",
-  "strengthsFa": ["...", "..."],
-  "corrections": [{ "original": "...", "corrected": "...", "explanationFa": "..." }]
-}
-`;
-    const contents = [];
-    if (audioBase64) {
-      contents.push({ inlineData: { mimeType: cleanMime, data: audioBase64 } });
-    }
-    contents.push({ text: taskPrompt });
-    for (const model of CANDIDATE_GEMINI_MODELS) {
-      try {
-        const response = await ai.models.generateContent({
-          model,
-          contents,
-          config: { responseMimeType: "application/json", temperature: 0.25 }
-        });
-        const parsed = safeJsonParse(response.text);
-        if (parsed && (parsed.transcription || parsed.acousticFeedback)) {
-          if (!parsed.transcription || !String(parsed.transcription).trim()) {
-            parsed.transcription = transcript;
-          }
-          parsed.sttEngine = sttEngine;
-          parsed.analyzedFromAudio = Boolean(audioBase64);
-          return res.json(parsed);
-        }
-      } catch (modelErr) {
-        console.warn(`Model ${model} task voice assessment attempt failed:`, modelErr.message);
-      }
-    }
-    return res.status(503).json({
-      error: "voice_analysis_unavailable",
-      details: "\u0645\u062F\u0644\u200C\u0647\u0627\u06CC Gemini \u0645\u0648\u0642\u062A\u0627\u064B \u067E\u0627\u0633\u062E \u0646\u062F\u0627\u062F\u0646\u062F. \u0645\u062A\u0646 \u0648\u06CC\u0633 \u0627\u0633\u062A\u062E\u0631\u0627\u062C \u0634\u062F\u061B \u0644\u0637\u0641\u0627\u064B \u0686\u0646\u062F \u062B\u0627\u0646\u06CC\u0647 \u0628\u0639\u062F \u062F\u0648\u0628\u0627\u0631\u0647 \u062A\u062D\u0644\u06CC\u0644 \u0631\u0627 \u0627\u0645\u062A\u062D\u0627\u0646 \u06A9\u0646\u06CC\u062F.",
-      transcription: transcript,
-      sttEngine
-    });
-  } catch (err) {
-    console.error("Error in /api/assess-task-voice:", err);
-    res.status(500).json({ error: "Task voice assessment failed", details: err.message });
-  }
-});
-function calibrateCefrAssessment(rawParsed, enrichedAnswers) {
-  const answerTexts = (enrichedAnswers || []).map((a) => String(a.responseText || "").trim());
-  const wordsPerAnswer = answerTexts.map((txt) => txt ? txt.split(/\s+/).filter(Boolean).length : 0);
-  const totalWords = wordsPerAnswer.reduce((acc, w) => acc + w, 0);
-  const avgWords = wordsPerAnswer.length > 0 ? totalWords / wordsPerAnswer.length : 0;
-  let level = String(rawParsed.cefrLevel || rawParsed.level || rawParsed.cefr || "").toUpperCase().trim();
-  const match = level.match(/\b(A1|A2|B1|B2|C1|C2)\b/i);
-  level = match ? match[1].toUpperCase() : "B1";
-  if (totalWords < 25 || avgWords < 7) {
-    level = "A1";
-    rawParsed.grammarScore = Math.min(rawParsed.grammarScore || 52, 58);
-    rawParsed.fluencyScore = Math.min(rawParsed.fluencyScore || 48, 52);
-    rawParsed.pronunciationScore = Math.min(rawParsed.pronunciationScore || 54, 58);
-    rawParsed.vocabularyScore = Math.min(rawParsed.vocabularyScore || 50, 56);
-    rawParsed.accentScore = Math.min(rawParsed.accentScore || 46, 54);
-    rawParsed.wpm = Math.min(rawParsed.wpm || 70, 75);
-    rawParsed.levelDescriptionFa = "\u0633\u0637\u062D \u0645\u0642\u062F\u0645\u0627\u062A\u06CC (A1): \u067E\u0627\u0633\u062E\u200C\u0647\u0627 \u062F\u0631 \u062D\u062F \u062C\u0645\u0644\u0627\u062A \u0628\u0633\u06CC\u0627\u0631 \u06A9\u0648\u062A\u0627\u0647 \u06CC\u0627 \u0633\u0627\u062E\u062A\u0627\u0631\u0647\u0627\u06CC \u067E\u0627\u06CC\u0647 \u0632\u0645\u0627\u0646 \u062D\u0627\u0644 \u0633\u0627\u062F\u0647 \u0647\u0633\u062A\u0646\u062F. \u0627\u0648\u0644\u0648\u06CC\u062A \u0622\u0645\u0648\u0632\u0634\u06CC: \u06CC\u0627\u062F\u06AF\u06CC\u0631\u06CC \u0633\u0627\u062E\u062A\u0627\u0631\u0647\u0627\u06CC \u0627\u0633\u0627\u0633\u06CC \u0645\u0639\u0631\u0641\u06CC\u060C \u06AF\u0633\u062A\u0631\u0634 \u062C\u0645\u0644\u0647\u200C\u0633\u0627\u0632\u06CC \u0645\u0633\u062A\u0642\u06CC\u0645 \u0648 \u0634\u06A9\u0633\u062A\u0646 \u0633\u062F \u0645\u06A9\u0627\u0644\u0645\u0647.";
-  } else if (totalWords < 50 || avgWords < 13) {
-    level = "A2";
-    rawParsed.grammarScore = Math.min(rawParsed.grammarScore || 64, 68);
-    rawParsed.fluencyScore = Math.min(rawParsed.fluencyScore || 62, 66);
-    rawParsed.pronunciationScore = Math.min(rawParsed.pronunciationScore || 65, 69);
-    rawParsed.vocabularyScore = Math.min(rawParsed.vocabularyScore || 62, 67);
-    rawParsed.accentScore = Math.min(rawParsed.accentScore || 60, 65);
-    rawParsed.wpm = Math.min(rawParsed.wpm || 90, 95);
-    rawParsed.levelDescriptionFa = "\u0633\u0637\u062D \u067E\u06CC\u0634\u200C\u0645\u062A\u0648\u0633\u0637 (A2): \u062A\u0648\u0627\u0646\u0627\u06CC\u06CC \u0628\u06CC\u0627\u0646 \u0645\u0641\u0627\u0647\u06CC\u0645 \u0648 \u0646\u06CC\u0627\u0632\u0647\u0627\u06CC \u0631\u0648\u0632\u0645\u0631\u0647 \u0628\u0627 \u062C\u0645\u0644\u0627\u062A \u06A9\u0648\u062A\u0627\u0647\u060C \u0627\u0645\u0627 \u062A\u06A9\u06CC\u0647 \u0628\u0631 \u0633\u0627\u062E\u062A\u0627\u0631\u0647\u0627\u06CC \u0633\u0631\u0631\u0627\u0633\u062A \u0627\u0633\u062A \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644\u200C\u0647\u0627\u06CC \u0639\u0645\u06CC\u0642 \u0647\u0646\u0648\u0632 \u0634\u06A9\u0644 \u0646\u06AF\u0631\u0641\u062A\u0647 \u0627\u0633\u062A. \u0627\u0648\u0644\u0648\u06CC\u062A: \u062A\u0633\u0644\u0637 \u0628\u0631 \u0632\u0645\u0627\u0646\u200C\u0647\u0627\u06CC \u06AF\u0630\u0634\u062A\u0647\u060C \u0627\u0641\u0639\u0627\u0644 \u062A\u0641\u0631\u06CC\u062D\u06CC \u0648 \u062D\u0631\u0648\u0641 \u0627\u0636\u0627\u0641\u0647 \u0635\u062D\u06CC\u062D.";
-  } else if (totalWords < 95 || avgWords < 24) {
-    if (["C1", "C2", "B2"].includes(level)) {
-      level = totalWords > 70 ? "B1" : "A2";
-    }
-    rawParsed.grammarScore = Math.min(rawParsed.grammarScore || 74, 78);
-    rawParsed.fluencyScore = Math.min(rawParsed.fluencyScore || 72, 76);
-    rawParsed.pronunciationScore = Math.min(rawParsed.pronunciationScore || 72, 78);
-    rawParsed.vocabularyScore = Math.min(rawParsed.vocabularyScore || 73, 78);
-    rawParsed.accentScore = Math.min(rawParsed.accentScore || 68, 74);
-    rawParsed.wpm = Math.min(rawParsed.wpm || 110, 120);
-    rawParsed.levelDescriptionFa = "\u0633\u0637\u062D \u0645\u062A\u0648\u0633\u0637 \u0627\u0633\u062A\u0627\u0646\u062F\u0627\u0631\u062F (B1): \u0627\u0646\u062A\u0642\u0627\u0644 \u0645\u0648\u0641\u0642 \u067E\u06CC\u0627\u0645 \u062F\u0631 \u0645\u0648\u0636\u0648\u0639\u0627\u062A \u0622\u0634\u0646\u0627\u060C \u0627\u0645\u0627 \u0628\u0627 \u062A\u062F\u0627\u062E\u0644 \u062C\u0632\u0626\u06CC \u062F\u0633\u062A\u0648\u0631 \u0632\u0628\u0627\u0646 \u0645\u0627\u062F\u0631\u06CC \u0648 \u0627\u062D\u062A\u06CC\u0627\u0637 \u062F\u0631 \u0635\u062D\u0628\u062A. \u0627\u0648\u0644\u0648\u06CC\u062A: \u062F\u0631\u0648\u0646\u06CC\u200C\u0633\u0627\u0632\u06CC \u06A9\u0644\u06CC\u0634\u0647\u200C\u0647\u0627\u06CC \u0646\u06CC\u062A\u06CC\u0648\u060C \u062D\u0630\u0641 \u062A\u0631\u062C\u0645\u0647 \u062A\u062D\u062A\u200C\u0627\u0644\u0644\u0641\u0638\u06CC \u0648 \u062A\u0642\u0648\u06CC\u062A Flap T \u0627\u0645\u0631\u06CC\u06A9\u0646.";
-  } else if (totalWords < 150 || avgWords < 38) {
-    if (level === "C2") {
-      level = "B2";
-    }
-    if (level === "C1" && totalWords < 125) {
-      level = "B2";
-    }
-  }
-  if (level === "C2" && totalWords < 160) {
-    level = "C1";
-  }
-  rawParsed.cefrLevel = level;
-  return rawParsed;
-}
-app.post("/api/initial-assessment", async (req, res) => {
-  try {
-    const { answers = [] } = req.body;
-    const enrichedAnswers = [];
-    for (let i = 0; i < answers.length; i++) {
-      const a = answers[i] || {};
-      let responseText = String(a.responseText || "").trim();
-      let sttEngine = a.sttEngine || (responseText ? "client" : "none");
-      if (a.audioBase64 && (!responseText || responseText === "\u0635\u0648\u062A \u0636\u0628\u0637\u200C\u0634\u062F\u0647 \u062F\u0631\u06CC\u0627\u0641\u062A \u0634\u062F" || responseText.includes("\u067E\u0627\u0633\u062E \u0635\u0648\u062A\u06CC \u0636\u0628\u0637\u200C\u0634\u062F\u0647"))) {
-        const stt = await transcribeAudioBuffer(req, a.audioBase64, a.audioMimeType || "audio/webm", "en");
-        if (stt.text) {
-          responseText = stt.text;
-          sttEngine = stt.engine;
-        }
-      }
-      enrichedAnswers.push({ ...a, responseText, sttEngine });
-    }
-    const combinedText = enrichedAnswers.map((a, i) => `Q${i + 1}: ${a.question}
-A${i + 1}: ${a.responseText || "(missing)"}`).join("\n\n");
-    const hasAudio = enrichedAnswers.some((a) => !!a.audioBase64);
-    const hasAnyTranscript = enrichedAnswers.some((a) => String(a.responseText || "").trim().length > 0);
-    if (hasAudio && !hasAnyTranscript) {
-      return res.status(422).json({
-        error: "transcription_failed",
-        details: "\u0647\u06CC\u0686 \u0648\u06CC\u0633\u06CC \u0642\u0627\u0628\u0644 \u062A\u0628\u062F\u06CC\u0644 \u0628\u0647 \u0645\u062A\u0646 \u0646\u0628\u0648\u062F. \u0644\u0637\u0641\u0627\u064B \u0647\u0631 \u0628\u062E\u0634 \u0631\u0627 \u062F\u0648\u0628\u0627\u0631\u0647 \u0628\u0627 \u0635\u062F\u0627\u06CC \u0648\u0627\u0636\u062D \u0636\u0628\u0637 \u06A9\u0646\u06CC\u062F. \u0627\u0641\u0632\u0648\u062F\u0646 \u06A9\u0644\u06CC\u062F OpenAI \u062F\u0642\u062A Whisper \u0631\u0627 \u0628\u0627\u0644\u0627 \u0645\u06CC\u200C\u0628\u0631\u062F."
-      });
-    }
-    const ai = getAiClient(req);
-    if (!ai && hasAudio) {
-      return res.status(503).json({
-        error: "gemini_key_missing",
-        details: "\u06A9\u0644\u06CC\u062F Gemini \u0628\u0631\u0627\u06CC \u0622\u0646\u0627\u0644\u06CC\u0632 \u062A\u0639\u06CC\u06CC\u0646 \u0633\u0637\u062D \u0627\u0644\u0632\u0627\u0645\u06CC \u0627\u0633\u062A."
-      });
-    }
-    if (ai) {
-      try {
-        const assessmentPrompt = `
-You are a distinguished Senior CEFR English Language Assessment Examiner, Applied Linguist, and American Accent Diagnostic Specialist.
-A Persian speaker is taking their Speaking Placement Test for American English proficiency.
-
-There are 4 progressive assessment tasks evaluated:
-1. Task 1: Self-introduction, routine, and daily fluency.
-2. Task 2: Phonetic articulation, Flap-T, Rhotic R, and American accent reading.
-3. Task 3: Past narrative, storytelling, and memories without native Persian tense interference.
-4. Task 4: Professional opinion, argumentation, and abstract trade-offs.
-
-${hasAudio ? "CRITICAL: REAL SPOKEN AUDIO is attached for one or more tasks. You MUST listen to every audio clip, map weaknesses to what you hear (not generic Persian-learner tropes), and ground CEFR scores in this sample only." : ""}
-Verified transcripts per task are included \u2014 use them with the audio.
-
-CRITICAL ASSESSMENT CRITERIA & CEFR CALIBRATION:
-1. Honest, Strict, and Accurate CEFR Placement (A1, A2, B1, B2, C1, C2):
-   - CRITICAL: DO NOT INFLATE SCORES OR LEVELS! Evaluate the candidate strictly on what is observed in their actual words.
-   - If the learner gives very short, elementary 1-sentence answers (e.g. 5-10 words per answer), they are demonstrating A1 or A2 level! Mark them as A1 or A2.
-   - A1 (Breakthrough): 1 isolated short sentence, very simple words, present simple, no complex connectors (< 25 words total across 4 tasks). Scores: 45-56.
-   - A2 (Waystage): Simple sentences with elementary connectors (and, because), everyday routine, limited vocabulary (< 50 words total). Scores: 58-68.
-   - B1 (Threshold): Moderate length, can narrate past events, noticeable Persian transfer errors, lack of idiomatic chunks (< 95 words total). Scores: 68-78.
-   - B2 (Vantage): Detailed multi-sentence responses, good vocabulary, discussing trade-offs, some minor errors (95-150 words). Scores: 78-86.
-   - C1 (Effective Proficiency): Extended discourse, complex syntax, conditionals, natural American idioms (120+ words). Scores: 87-93.
-   - C2 (Mastery): Near-native American fluency, subtle stylistic control, effortless rhythm and idioms (160+ words). Scores: 94-100.
-   - NEVER give C1 or C2 to short, elementary, or safe 1-sentence responses!
-2. Detailed Sub-scores (0-100):
-   - grammarScore: Syntactic accuracy, complex structures, elimination of Persian transfer errors.
-   - fluencyScore: Smoothness, speech rate (WPM), cadence, pausing, lack of hesitation.
-   - pronunciationScore: Phonetic clarity, American English sound production.
-   - vocabularyScore: Lexical range, natural collocations, avoidance of literal translation.
-   - accentScore: Likeness to General American English (Flap T, Rhotic R, vowel reductions, linking).
-3. Scientific C2 Checklist Mapping & Exact 10 Prioritized Weaknesses (Requirement 2 & 3):
-   Based on the user's spoken audio/text, diagnose which items from the scientific C2 Reference Standards (c2-chk-01 to c2-chk-40) the learner has NOT yet mastered.
-   Select EXACTLY 10 prioritized weaknesses/unticked items ordered by urgency (highest priority first) that need remediation in this cycle.
-   Each weakness MUST have:
-   - checklistItemId: The exact matching item ID from the C2 Reference Checklist (e.g. "c2-chk-01", "c2-chk-02", ..., "c2-chk-40")
-   - id: e.g. "weak-1" through "weak-10"
-   - category: 'grammar' | 'phonetics' | 'vocabulary' | 'fluency' | 'register_tone' | 'pragmatics' | 'discourse' | 'listening'
-   - titleFa: Short Persian title of the weakness
-   - descriptionFa: Detailed pedagogical explanation in Persian
-   - severity: 'high' | 'medium' | 'low'
-   - examples: Array of error vs corrected usage (e.g. ["interested to -> interested in"])
-
-4. Exact 10 Progressive Scenario Curriculum for Current Cycle (10 Scenarios for the 10 Unticked Items):
-   Design an exact cohort of 10 rich, highly realistic, conversational scenarios\u2014each one specifically structured to teach, practice, and eliminate one of the 10 identified weaknesses:
-   - Exactly 10 scenarios (dayIndex 1 to 10).
-   - Each scenario must have an active target goal, grammar objective, and cliches.
-   - Scenario 1 has status: "current", scenarios 2 to 10 have status: "upcoming".
-   - The user must practice each scenario with the AI Coach until achieving >= 80% mastery.
-   - After completing all 10 scenarios, a fresh comprehensive diagnostic will re-assess the learner and generate the next 10 scenarios for remaining unticked items until all 40 C2 checklist competencies are mastered across 4 cohorts (40 total scenarios).
-
-   FOR EACH of the 10 scenarios, provide:
-   - id: "cal-1" through "cal-10"
-   - dayIndex: 1 to 10
-   - targetLevel: Assessed CEFR level (e.g. "B1", "B2", "C1", or "C2")
-   - targetChecklistItemId: The checklist item ID (e.g. "c2-chk-01") targeted by this lesson
-   - phaseTitleFa: Title of the curriculum phase in Persian
-   - title: English scenario title
-   - titleFa: Persian scenario title
-   - category: 'daily' | 'work' | 'travel' | 'social' | 'emergency' | 'personal'
-   - context: Clear context description
-   - relationship: Relationship between learner and AI partner
-   - userRole: Learner's role
-   - aiRole: AI partner's role
-   - icon: Relevant emoji
-   - starter: Realistic opening line in English
-   - starterFa: Persian translation of starter
-   - targetGrammar: Educational grammar objective in English
-   - targetGrammarFa: \u062A\u0648\u0636\u06CC\u062D \u0641\u0627\u0631\u0633\u06CC \u062F\u0642\u06CC\u0642 \u0647\u062F\u0641 \u0622\u0645\u0648\u0632\u0634\u06CC \u06AF\u0631\u0627\u0645\u0631\u06CC
-   - targetCliches: Array of 2-3 key American native idioms/clich\xE9s with Persian meanings
-   - targetVocabulary: Array of 3-4 essential collocations/words with Persian meanings
-   - targetPronunciation: American accent & pronunciation focus in Persian (e.g. Flap T, Linking, American R)
-   - activeWeaknessesInjected: Array containing the specific weakness title addressed in this scenario
-   - status: "current" for day 1, "upcoming" for the rest.
-
-Return ONLY valid JSON matching this schema:
-{
-  "cefrLevel": "B2",
-  "levelDescriptionFa": "\u062A\u0648\u0636\u06CC\u062D \u06A9\u0627\u0645\u0644 \u0648 \u062D\u0631\u0641\u0647\u200C\u0627\u06CC \u0633\u0637\u062D \u0628\u0647 \u0641\u0627\u0631\u0633\u06CC (\u062D\u062A\u0645\u0627\u064B \u0633\u0637\u062D \u0630\u06A9\u0631 \u0634\u062F\u0647 \u0628\u0627 cefrLevel \u0647\u0645\u0627\u0647\u0646\u06AF \u0628\u0627\u0634\u062F)...",
-  "grammarScore": 75,
-  "fluencyScore": 72,
-  "pronunciationScore": 70,
-  "vocabularyScore": 74,
-  "accentScore": 68,
-  "wpm": 115,
-  "acousticFeedback": {
-    "flapT": "\u062A\u0648\u0636\u06CC\u062D \u0648\u0636\u0639\u06CC\u062A \u062A\u0644\u0641\u0638 Flap T \u0628\u0647 \u0641\u0627\u0631\u0633\u06CC",
-    "rhoticR": "\u062A\u0648\u0636\u06CC\u062D \u0648\u0636\u0639\u06CC\u062A \u0635\u062F\u0627\u06CC R \u0627\u0645\u0631\u06CC\u06A9\u0646 \u0628\u0647 \u0641\u0627\u0631\u0633\u06CC",
-    "vowelReduction": "\u062A\u0648\u0636\u06CC\u062D \u06A9\u0627\u0647\u0634 \u0648\u0627\u06A9\u0647\u200C\u0647\u0627 \u0648 \u0634\u0648\u0622 \u0628\u0647 \u0641\u0627\u0631\u0633\u06CC",
-    "rhythm": "\u062A\u0648\u0636\u06CC\u062D \u0631\u06CC\u062A\u0645 \u062A\u06A9\u06CC\u0647\u200C\u0627\u06CC \u0648 \u067E\u06CC\u0648\u0633\u062A\u06AF\u06CC \u06AF\u0641\u062A\u0627\u0631 \u0628\u0647 \u0641\u0627\u0631\u0633\u06CC",
-    "summaryFa": "\u062E\u0644\u0627\u0635\u0647 \u0648\u0636\u0639\u06CC\u062A \u0622\u06A9\u0648\u0633\u062A\u06CC\u06A9 \u0648 \u0644\u0647\u062C\u0647 \u06A9\u0627\u0631\u0628\u0631 \u0628\u0647 \u0641\u0627\u0631\u0633\u06CC"
-  },
-  "initialWeaknesses": [
-    {
-      "checklistItemId": "c2-chk-01",
-      "category": "grammar",
-      "titleFa": "\u0639\u0646\u0648\u0627\u0646 \u0636\u0639\u0641",
-      "descriptionFa": "\u062A\u0648\u0636\u06CC\u062D \u06A9\u0627\u0645\u0644 \u0628\u0647 \u0641\u0627\u0631\u0633\u06CC...",
-      "severity": "high",
-      "examples": ["\u0646\u0645\u0648\u0646\u0647 \u062E\u0637\u0627 \u0648 \u0627\u0635\u0644\u0627\u062D \u0622\u0646"]
-    }
-  ],
-  "totalRoadmapScenarios": 40,
-  "targetMasteryLevel": "C2 Mastery (40 Scientific Checkpoints)",
-  "calendarScenarios": [
-    {
-      "id": "cal-1",
-      "dayIndex": 1,
-      "targetLevel": "B2",
-      "phaseTitleFa": "\u0641\u0627\u0632 \u06F1: \u062A\u062B\u0628\u06CC\u062A \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u0631\u0648\u0632\u0645\u0631\u0647 \u0648 \u0631\u0641\u0639 \u062A\u062F\u0627\u062E\u0644\u0627\u062A \u0632\u0628\u0627\u0646 \u0645\u0627\u062F\u0631\u06CC",
-      "title": "Scenario Title",
-      "titleFa": "\u0639\u0646\u0648\u0627\u0646 \u0633\u0646\u0627\u0631\u06CC\u0648",
-      "category": "daily",
-      "context": "Context description",
-      "relationship": "Colleague / Peer",
-      "userRole": "Your Role",
-      "aiRole": "AI Role",
-      "icon": "\u2615",
-      "starter": "Starter dialogue in English",
-      "starterFa": "\u062A\u0631\u062C\u0645\u0647 \u0627\u0633\u062A\u0627\u0631\u062A\u0631",
-      "targetGrammar": "Grammar Objective in English",
-      "targetGrammarFa": "\u0647\u062F\u0641 \u0622\u0645\u0648\u0632\u0634\u06CC \u06AF\u0631\u0627\u0645\u0631\u06CC \u0628\u0647 \u0641\u0627\u0631\u0633\u06CC",
-      "targetCliches": ["cliche 1 (\u0645\u0639\u0646\u06CC)", "cliche 2 (\u0645\u0639\u0646\u06CC)"],
-      "targetVocabulary": ["word 1 (\u0645\u0639\u0646\u06CC)", "word 2 (\u0645\u0639\u0646\u06CC)"],
-      "targetPronunciation": "\u062A\u0645\u0631\u06A9\u0632 \u062A\u0644\u0641\u0638 \u0648 \u0644\u0647\u062C\u0647 \u0627\u0645\u0631\u06CC\u06A9\u0646 \u0628\u0647 \u0641\u0627\u0631\u0633\u06CC",
-      "activeWeaknessesInjected": ["\u0636\u0639\u0641 \u06F1"],
-      "status": "current"
-    }
-  ]
-}
-`;
-        const contents = [];
-        for (let i = 0; i < enrichedAnswers.length; i++) {
-          const a = enrichedAnswers[i];
-          contents.push({
-            text: `Task ${i + 1}: ${a.question || `Prompt ${i + 1}`}
-Prompt Persian: ${a.promptFa || ""}
-STT engine: ${a.sttEngine || "n/a"}`
-          });
-          if (a.audioBase64) {
-            const cleanMime = (a.audioMimeType || "audio/webm").split(";")[0];
-            contents.push({
-              inlineData: {
-                mimeType: cleanMime,
-                data: a.audioBase64
-              }
-            });
-          }
-          if (a.responseText) {
-            contents.push({ text: `Verified transcription: "${a.responseText}"` });
-          }
-        }
-        contents.push({ text: assessmentPrompt });
-        const candidateModels = CANDIDATE_GEMINI_MODELS;
-        for (const model of candidateModels) {
-          try {
-            const response = await ai.models.generateContent({
-              model,
-              contents,
-              config: { responseMimeType: "application/json", temperature: 0.35 }
-            });
-            const parsed = safeJsonParse(response.text);
-            if (parsed && (parsed.cefrLevel || parsed.level || parsed.cefr) && parsed.calendarScenarios && parsed.calendarScenarios.length > 0) {
-              const calibrated = calibrateCefrAssessment(parsed, enrichedAnswers);
-              calibrated.usedFallback = false;
-              calibrated.analyzedFromAudio = hasAudio;
-              calibrated.calendarScenarios = (calibrated.calendarScenarios || []).filter(
-                (sc) => sc && sc.id !== "airport-customs" && !sc.titleFa?.includes("\u06AF\u06CC\u062A \u0628\u0627\u0632\u0631\u0633\u06CC") && !sc.titleFa?.includes("\u06A9\u0646\u062A\u0631\u0644 \u06AF\u0630\u0631\u0646\u0627\u0645\u0647")
-              ).map((sc, idx) => ({
-                ...sc,
-                dayIndex: sc.dayIndex || idx + 1,
-                targetLevel: sc.targetLevel || calibrated.cefrLevel || "B2"
-              }));
-              return res.json(calibrated);
-            }
-          } catch (modelErr) {
-            console.warn(`Model ${model} assessment attempt failed:`, modelErr.message);
-          }
-        }
-      } catch (e) {
-        console.warn("Gemini assessment failed:", e.message);
-      }
-    }
-    if (hasAudio) {
-      return res.status(503).json({
-        error: "assessment_analysis_unavailable",
-        details: "\u0622\u0646\u0627\u0644\u06CC\u0632 \u0639\u0645\u06CC\u0642 \u0648\u06CC\u0633 \u0628\u0627 Gemini \u06A9\u0627\u0645\u0644 \u0646\u0634\u062F. \u0644\u0637\u0641\u0627\u064B \u0686\u0646\u062F \u062B\u0627\u0646\u06CC\u0647 \u0628\u0639\u062F \u062F\u0648\u0628\u0627\u0631\u0647 \u0627\u0645\u062A\u062D\u0627\u0646 \u06A9\u0646\u06CC\u062F \u0648 \u0645\u0637\u0645\u0626\u0646 \u0634\u0648\u06CC\u062F \u06A9\u0644\u06CC\u062F Gemini \u0645\u0639\u062A\u0628\u0631 \u0627\u0633\u062A."
-      });
-    }
-    const totalWords = enrichedAnswers.reduce(
-      (sum, a) => sum + String(a.responseText || "").trim().split(/\s+/).filter(Boolean).length,
-      0
-    );
-    let cefrLevel = "B1";
-    let levelDesc = "\u0633\u0637\u062D \u0645\u062A\u0648\u0633\u0637 \u0627\u0633\u062A\u0627\u0646\u062F\u0627\u0631\u062F (B1): \u0642\u0627\u062F\u0631 \u0628\u0647 \u0627\u0646\u062A\u0642\u0627\u0644 \u0645\u0641\u0647\u0648\u0645 \u0648 \u0628\u06CC\u0627\u0646 \u06A9\u0644\u06CC\u060C \u0627\u0645\u0627 \u0646\u06CC\u0627\u0632\u0645\u0646\u062F \u062A\u0633\u0644\u0637 \u0628\u0631 \u067E\u06CC\u0648\u0633\u062A\u06AF\u06CC \u0622\u0648\u0627\u06CC\u06CC\u060C \u062D\u0630\u0641 \u062A\u0631\u062C\u0645\u0647 \u062A\u062D\u062A\u200C\u0627\u0644\u0644\u0641\u0638\u06CC \u0641\u0627\u0631\u0633\u06CC \u0648 \u062F\u0631\u0648\u0646\u06CC\u200C\u0633\u0627\u0632\u06CC \u06A9\u0644\u06CC\u0634\u0647\u200C\u0647\u0627\u06CC \u0646\u06CC\u062A\u06CC\u0648 \u0622\u0645\u0631\u06CC\u06A9\u0627\u06CC\u06CC.";
-    let grammarScore = 72;
-    let fluencyScore = 70;
-    let pronunciationScore = 71;
-    let vocabularyScore = 72;
-    let accentScore = 67;
-    let wpm = 110;
-    if (totalWords < 25) {
-      cefrLevel = "A1";
-      levelDesc = "\u0633\u0637\u062D \u0645\u0642\u062F\u0645\u0627\u062A\u06CC (A1): \u067E\u0627\u0633\u062E\u200C\u0647\u0627 \u0628\u0633\u06CC\u0627\u0631 \u06A9\u0648\u062A\u0627\u0647 \u0648 \u062F\u0631 \u062D\u062F \u06A9\u0644\u0645\u0627\u062A \u0648 \u062C\u0645\u0644\u0627\u062A \u0628\u0633\u06CC\u0627\u0631 \u0633\u0627\u062F\u0647 \u0627\u0648\u0644\u06CC\u0647 \u0647\u0633\u062A\u0646\u062F. \u0627\u0648\u0644\u0648\u06CC\u062A: \u0627\u0644\u06AF\u0648\u0647\u0627\u06CC \u067E\u0627\u06CC\u0647 \u0645\u06A9\u0627\u0644\u0645\u0647\u060C \u0645\u0639\u0631\u0641\u06CC \u062E\u0648\u062F \u0648 \u0634\u0631\u0648\u0639 \u062C\u0645\u0644\u0647\u200C\u0633\u0627\u0632\u06CC \u0641\u0639\u0627\u0644.";
-      grammarScore = 52;
-      fluencyScore = 48;
-      pronunciationScore = 54;
-      vocabularyScore = 50;
-      accentScore = 46;
-      wpm = 70;
-    } else if (totalWords < 55) {
-      cefrLevel = "A2";
-      levelDesc = "\u0633\u0637\u062D \u067E\u06CC\u0634\u200C\u0645\u062A\u0648\u0633\u0637 (A2): \u0633\u0627\u062E\u062A\u0627\u0631\u0647\u0627\u06CC \u067E\u0627\u06CC\u0647 \u0634\u06A9\u0644 \u06AF\u0631\u0641\u062A\u0647 \u0627\u0645\u0627 \u062C\u0645\u0644\u0627\u062A \u06A9\u0648\u062A\u0627\u0647 \u0647\u0633\u062A\u0646\u062F \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644\u200C\u0647\u0627\u06CC \u0639\u0645\u06CC\u0642 \u0647\u0646\u0648\u0632 \u0634\u06A9\u0644 \u0646\u06AF\u0631\u0641\u062A\u0647 \u0627\u0633\u062A\u061B \u0646\u06CC\u0627\u0632\u0645\u0646\u062F \u06A9\u0644\u06CC\u0634\u0647\u200C\u0647\u0627\u06CC \u0631\u0648\u0632\u0645\u0631\u0647 \u0648 \u062A\u0645\u0631\u06CC\u0646\u200C\u0647\u0627\u06CC \u062A\u0644\u0641\u0638\u06CC \u062C\u0647\u062A \u0635\u0639\u0648\u062F \u0628\u0647 B1.";
-      grammarScore = 64;
-      fluencyScore = 61;
-      pronunciationScore = 63;
-      vocabularyScore = 62;
-      accentScore = 60;
-      wpm = 85;
-    } else if (totalWords > 130) {
-      cefrLevel = "B2";
-      levelDesc = "\u0633\u0637\u062D \u0645\u062A\u0648\u0633\u0637 \u0631\u0648 \u0628\u0647 \u0628\u0627\u0644\u0627 (B2): \u0627\u0639\u062A\u0645\u0627\u062F\u0628\u0647\u200C\u0646\u0641\u0633 \u062E\u0648\u0628 \u0648 \u062A\u0633\u0644\u0637 \u0628\u0631 \u0648\u0627\u0698\u06AF\u0627\u0646 \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644\u200C\u0647\u0627\u06CC \u0686\u0646\u062F\u062C\u0645\u0644\u0647\u200C\u0627\u06CC\u061B \u0627\u0648\u0644\u0648\u06CC\u062A \u0627\u0635\u0644\u06CC \u0627\u0631\u062A\u0642\u0627\u060C \u0638\u0631\u0627\u0641\u062A\u200C\u0647\u0627\u06CC \u0644\u062D\u0646 \u062D\u0631\u0641\u0647\u200C\u0627\u06CC/\u062F\u0648\u0633\u062A\u0627\u0646\u0647\u060C \u062A\u0644\u0641\u0638 Flap T \u0648 \u0631\u0648\u0627\u0646\u200C\u0633\u0627\u0632\u06CC \u0631\u06CC\u062A\u0645 \u06AF\u0641\u062A\u0627\u0631 \u0628\u0631\u0627\u06CC \u062A\u0633\u0644\u0637 \u0628\u06CC\u0634\u062A\u0631 \u0627\u0633\u062A.";
-      grammarScore = 82;
-      fluencyScore = 80;
-      pronunciationScore = 78;
-      vocabularyScore = 83;
-      accentScore = 76;
-      wpm = 135;
-    }
-    const defaultWeaknesses = [
-      {
-        id: "weak-1",
-        checklistItemId: "c2-chk-01",
-        category: "grammar",
-        titleFa: "\u0631\u06CC\u0634\u0647\u200C\u06A9\u0646\u06CC \u062D\u0631\u0648\u0641 \u0627\u0636\u0627\u0641\u0647 \u0627\u0634\u062A\u0628\u0627\u0647 \u0646\u0627\u0634\u06CC \u0627\u0632 \u062A\u0631\u062C\u0645\u0647 \u0645\u0633\u062A\u0642\u06CC\u0645 \u0641\u0627\u0631\u0633\u06CC",
-        descriptionFa: "\u062F\u0631 \u0641\u0627\u0631\u0633\u06CC \u0645\u06CC\u200C\u06AF\u0648\u06CC\u06CC\u0645 \xAB\u0628\u0647 \u0645\u0648\u0633\u06CC\u0642\u06CC \u06AF\u0648\u0634 \u062F\u0627\u062F\u0646\xBB \u0627\u0645\u0627 \u062F\u0631 \u0627\u0646\u06AF\u0644\u06CC\u0633\u06CC listen \u0628\u0627 to \u0645\u06CC\u200C\u0622\u06CC\u062F\u061B \u06CC\u0627 \xAB\u0639\u0644\u0627\u0642\u0647\u200C\u0645\u0646\u062F \u0628\u0647\xBB \u06A9\u0647 interested in \u0627\u0633\u062A \u0646\u0647 interested to. \u062A\u0633\u0644\u0637 \u0628\u0631 \u062D\u0631\u0648\u0641 \u0627\u0636\u0627\u0641\u0647 \u0647\u0645\u0646\u0634\u06CC\u0646.",
-        severity: "high",
-        examples: ["interested to (\u0627\u0634\u062A\u0628\u0627\u0647) -> interested in (\u0635\u062D\u06CC\u062D)", "marry with (\u0627\u0634\u062A\u0628\u0627\u0647) -> marry (\u0635\u062D\u06CC\u062D)"]
-      },
-      {
-        id: "weak-2",
-        checklistItemId: "c2-chk-02",
-        category: "grammar",
-        titleFa: "\u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0635\u062D\u06CC\u062D \u0627\u0632 \u0627\u0641\u0639\u0627\u0644 \u062D\u0627\u0644\u062A\u06CC \u0648 \u0627\u0633\u0646\u0627\u062F\u06CC (\u062D\u0630\u0641 \u0633\u0627\u062E\u062A\u0627\u0631 \u0627\u0634\u062A\u0628\u0627\u0647 I am agree)",
-        descriptionFa: "\u06A9\u0644\u0645\u0647 agree \u062F\u0631 \u0627\u0646\u06AF\u0644\u06CC\u0633\u06CC \u0641\u0639\u0644 \u0627\u0633\u062A \u0648 \u0646\u0628\u0627\u06CC\u062F \u0628\u0627 to be \u0628\u06CC\u0627\u06CC\u062F (I agree \u0646\u0647 I am agree). \u0647\u0645\u0686\u0646\u06CC\u0646 \u0627\u0641\u0639\u0627\u0644\u06CC \u0646\u0638\u06CC\u0631 cost, weigh, belong.",
-        severity: "high",
-        examples: ["I am agree (\u0627\u0634\u062A\u0628\u0627\u0647) -> I agree (\u0635\u062D\u06CC\u062D)"]
-      },
-      {
-        id: "weak-3",
-        checklistItemId: "c2-chk-03",
-        category: "phonetics",
-        titleFa: "\u062A\u0644\u0641\u0638 \u0631\u0648\u0627\u0646 Flap T \u0627\u0645\u0631\u06CC\u06A9\u0646 \u0628\u06CC\u0646 \u062F\u0648 \u0648\u0627\u06A9\u0647",
-        descriptionFa: "\u062F\u0631 \u0644\u0647\u062C\u0647 \u0627\u0645\u0631\u06CC\u06A9\u0646 \u0648\u0642\u062A\u06CC T \u06CC\u0627 D \u0628\u06CC\u0646 \u062F\u0648 \u062D\u0631\u0641 \u0635\u062F\u0627\u062F\u0627\u0631 \u0642\u0631\u0627\u0631 \u0645\u06CC\u200C\u06AF\u06CC\u0631\u062F (\u0645\u0627\u0646\u0646\u062F water, city, better, meeting) \u0628\u0647 \u0635\u062F\u0627\u06CC \u0646\u0631\u0645 \u062A\u067E/\u0641\u0644\u067E [\u027E] \u062A\u0628\u062F\u06CC\u0644 \u0645\u06CC\u200C\u0634\u0648\u062F \u0646\u0647 T \u0627\u0646\u0641\u062C\u0627\u0631\u06CC \u062E\u0634\u06A9.",
-        severity: "high",
-        examples: ["water -> /\u02C8w\u0251\u02D0.t\u0259r/ \u0628\u0647 \u062C\u0627\u06CC /\u02C8w\u0251\u02D0.d\u0259r/", "better -> /\u02C8bet.t\u0259r/ \u0628\u0647 \u062C\u0627\u06CC /\u02C8bed.\u0259r/"]
-      },
-      {
-        id: "weak-4",
-        checklistItemId: "c2-chk-04",
-        category: "phonetics",
-        titleFa: "\u06A9\u0627\u0647\u0634 \u0622\u0648\u0627\u06CC\u06CC \u0634\u0648\u0622 [\u0259] \u062F\u0631 \u06A9\u0644\u0645\u0627\u062A \u06AF\u0631\u0627\u0645\u0631\u06CC \u0648 \u062A\u0627\u0628\u0639\u06CC",
-        descriptionFa: "\u062F\u0631 \u06AF\u0641\u062A\u0627\u0631 \u0646\u06CC\u062A\u06CC\u0648 \u0627\u0645\u0631\u06CC\u06A9\u0646\u060C \u06A9\u0644\u0645\u0627\u062A\u06CC \u0645\u0627\u0646\u0646\u062F to, for, can, and, of \u0628\u0627 \u0648\u0627\u06A9\u0647 \u06A9\u0627\u0645\u0644 \u062A\u0644\u0641\u0638 \u0646\u0645\u06CC\u200C\u0634\u0648\u0646\u062F \u0628\u0644\u06A9\u0647 \u0628\u0647 \u0635\u062F\u0627\u06CC \u0634\u0648\u0622 \u06A9\u0627\u0647\u0634 \u0645\u06CC\u200C\u06CC\u0627\u0628\u0646\u062F \u062A\u0627 \u0631\u06CC\u062A\u0645 \u0627\u0633\u062A\u0631\u0633-\u062A\u0627\u06CC\u0645\u062F \u0634\u06A9\u0644 \u0628\u06AF\u06CC\u0631\u062F.",
-        severity: "high",
-        examples: ["I can /k\u0259n/ go to /t\u0259/ the store for /f\u0259r/ some bread."]
-      },
-      {
-        id: "weak-5",
-        checklistItemId: "c2-chk-05",
-        category: "grammar",
-        titleFa: "\u062A\u0633\u0644\u0637 \u0628\u0631 \u0648\u062C\u0648\u0647 \u0632\u0645\u0627\u0646\u06CC \u06AF\u0630\u0634\u062A\u0647 \u062F\u0631 \u0631\u0648\u0627\u06CC\u062A \u062F\u0627\u0633\u062A\u0627\u0646 (Past Narrative)",
-        descriptionFa: "\u062A\u0641\u06A9\u06CC\u06A9 \u062F\u0642\u06CC\u0642 \u06AF\u0630\u0634\u062A\u0647 \u0633\u0627\u062F\u0647 \u0628\u0631\u0627\u06CC \u0631\u062E\u062F\u0627\u062F\u0647\u0627\u06CC \u0632\u0646\u062C\u06CC\u0631\u0647\u200C\u0627\u06CC\u060C \u06AF\u0630\u0634\u062A\u0647 \u0627\u0633\u062A\u0645\u0631\u0627\u0631\u06CC \u0628\u0631\u0627\u06CC \u067E\u0633\u200C\u0632\u0645\u06CC\u0646\u0647\u060C \u0648 \u06AF\u0630\u0634\u062A\u0647 \u06A9\u0627\u0645\u0644 \u0628\u0631\u0627\u06CC \u0648\u0642\u0627\u06CC\u0639 \u067E\u06CC\u0634\u06CC\u0646 \u0628\u062F\u0648\u0646 \u067E\u0631\u0634 \u063A\u06CC\u0631\u0637\u0628\u06CC\u0639\u06CC \u0628\u0647 \u0632\u0645\u0627\u0646 \u062D\u0627\u0644.",
-        severity: "medium",
-        examples: ["When I drive home, it was rain (\u0627\u0634\u062A\u0628\u0627\u0647) -> While I was driving home, it started pouring (\u0635\u062D\u06CC\u062D)"]
-      },
-      {
-        id: "weak-6",
-        checklistItemId: "c2-chk-06",
-        category: "grammar",
-        titleFa: "\u062D\u0630\u0641 \u0633\u0627\u062E\u062A\u0627\u0631 \u0646\u0627\u062F\u0631\u0633\u062A Go to shopping \u0648 \u06A9\u0627\u0631\u0628\u0631\u062F \u0635\u062D\u06CC\u062D \u0641\u0631\u0645\u200C\u0647\u0627\u06CC \u062A\u0641\u0631\u06CC\u062D\u06CC",
-        descriptionFa: "\u0627\u0641\u0639\u0627\u0644 \u0641\u0639\u0627\u0644\u06CC\u062A\u06CC \u0628\u0639\u062F \u0627\u0632 go \u0628\u062F\u0648\u0646 \u062D\u0631\u0641 \u0627\u0636\u0627\u0641\u0647 to \u0648 \u0628\u0627 \u0641\u0631\u0645 ing \u0645\u06CC\u200C\u0622\u06CC\u0646\u062F: go shopping, go swimming, go hiking.",
-        severity: "medium",
-        examples: ["We went to shopping (\u0627\u0634\u062A\u0628\u0627\u0647) -> We went shopping (\u0635\u062D\u06CC\u062D)"]
-      },
-      {
-        id: "weak-7",
-        checklistItemId: "c2-chk-07",
-        category: "pragmatics",
-        titleFa: "\u067E\u0631\u0633\u0634\u06AF\u0631\u06CC \u063A\u06CC\u0631\u0645\u0633\u062A\u0642\u06CC\u0645 \u0648 \u0645\u0648\u0642\u0631 \u062F\u0631 \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u0631\u0648\u0632\u0645\u0631\u0647",
-        descriptionFa: "\u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0627\u0632 \u0633\u0627\u062E\u062A\u0627\u0631\u0647\u0627\u06CC \u0645\u0624\u062F\u0628\u0627\u0646\u0647 \u0628\u0647 \u062C\u0627\u06CC \u0633\u0648\u0627\u0644 \u0645\u0633\u062A\u0642\u06CC\u0645 \u062E\u0634\u06A9: Could you tell me..., Do you happen to know..., I was wondering if...",
-        severity: "medium",
-        examples: ["Where is room? (\u062E\u0634\u06A9) -> Do you happen to know where the room is? (\u0646\u06CC\u062A\u06CC\u0648 \u0648 \u0645\u0648\u0642\u0631)"]
-      },
-      {
-        id: "weak-8",
-        checklistItemId: "c2-chk-08",
-        category: "phonetics",
-        titleFa: "\u0627\u062F\u0627\u06CC \u0635\u062F\u0627\u06CC R \u0627\u0645\u0631\u06CC\u06A9\u0646 \u0628\u062F\u0648\u0646 \u0644\u0631\u0632\u0634 \u0646\u0648\u06A9 \u0632\u0628\u0627\u0646 (Rhotic R)",
-        descriptionFa: "\u062F\u0631 \u0641\u0627\u0631\u0633\u06CC R \u0644\u0631\u0632\u0634\u06CC \u0628\u0627 \u0646\u0648\u06A9 \u0632\u0628\u0627\u0646 \u0627\u0633\u062A\u061B \u062F\u0631 \u0627\u0645\u0631\u06CC\u06A9\u0646 \u0646\u0648\u06A9 \u0632\u0628\u0627\u0646 \u0647\u0631\u06AF\u0632 \u0628\u0647 \u0633\u0642\u0641 \u062F\u0647\u0627\u0646 \u0646\u0645\u06CC\u200C\u062E\u0648\u0631\u062F \u0648 \u0628\u062F\u0646\u0647 \u0632\u0628\u0627\u0646 \u0628\u0647 \u0639\u0642\u0628 \u062C\u0645\u0639 \u0645\u06CC\u200C\u0634\u0648\u062F.",
-        severity: "high",
-        examples: ["hard work early in the morning (\u0628\u0627 R \u0627\u0645\u0631\u06CC\u06A9\u0646 \u0628\u062F\u0648\u0646 \u0644\u0631\u0632\u0634)"]
-      },
-      {
-        id: "weak-9",
-        checklistItemId: "c2-chk-09",
-        category: "discourse",
-        titleFa: "\u0645\u062F\u06CC\u0631\u06CC\u062A \u0645\u06A9\u062B\u200C\u0647\u0627 \u0628\u0627 \u0641\u06CC\u0644\u0631\u0647\u0627\u06CC \u0637\u0628\u06CC\u0639\u06CC \u0645\u06A9\u0627\u0644\u0645\u0647 (Well, Actually, You know)",
-        descriptionFa: "\u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0627\u0632 \u06A9\u0644\u0645\u0627\u062A \u0645\u06A9\u062B \u0637\u0628\u06CC\u0639\u06CC \u0628\u0647 \u062C\u0627\u06CC \u06AF\u0641\u062A\u0646 \xAB\u0627\u0627\u0627\u0627\u0627\u0645\xBB \u06CC\u0627 \u0633\u06A9\u0648\u062A \u0637\u0648\u0644\u0627\u0646\u06CC \u062F\u0631 \u0647\u0646\u06AF\u0627\u0645 \u062A\u0641\u06A9\u0631 \u0628\u0631\u0627\u06CC \u062D\u0641\u0638 \u067E\u06CC\u0648\u0633\u062A\u06AF\u06CC \u062C\u0631\u06CC\u0627\u0646 \u06A9\u0644\u0627\u0645.",
-        severity: "medium",
-        examples: ["Well, to be perfectly honest, I haven't really looked into that yet."]
-      },
-      {
-        id: "weak-10",
-        checklistItemId: "c2-chk-10",
-        category: "idioms",
-        titleFa: "\u06A9\u0644\u06CC\u0634\u0647\u200C\u0647\u0627\u06CC \u0627\u0635\u0644\u06CC \u0645\u062D\u0627\u0648\u0631\u0647 \u0631\u0648\u0632\u0645\u0631\u0647 \u0622\u0645\u0631\u06CC\u06A9\u0627\u06CC\u06CC (Play it by ear, Touch base)",
-        descriptionFa: "\u06A9\u0627\u0631\u0628\u0631\u062F \u0631\u0648\u0627\u0646 \u0627\u0635\u0637\u0644\u0627\u062D\u0627\u062A \u067E\u0631\u06A9\u0627\u0631\u0628\u0631\u062F \u0645\u062B\u0644 play it by ear, touch base, cut to the chase \u062F\u0631 \u0628\u0627\u0641\u062A \u0645\u0646\u0627\u0633\u0628 \u0628\u0627 \u0644\u062D\u0646 \u0637\u0628\u06CC\u0639\u06CC.",
-        severity: "medium",
-        examples: ["Traffic is unpredictable, let's play it by ear."]
-      }
-    ];
-    const defaultCalendarScenarios = [
-      {
-        id: "cal-1",
-        dayIndex: 1,
-        targetLevel: cefrLevel,
-        phaseTitleFa: "\u0641\u0627\u0632 \u06F1: \u063A\u0644\u0628\u0647 \u0628\u0631 \u062A\u0644\u0647\u200C\u0647\u0627\u06CC \u062A\u0631\u062C\u0645\u0647 \u0641\u0627\u0631\u0633\u06CC \u0648 \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u0631\u0648\u0632\u0645\u0631\u0647",
-        title: "Ordering at a Fast-Paced Downtown Coffee Shop",
-        titleFa: "\u0633\u0646\u0627\u0631\u06CC\u0648\u06CC \u06F1: \u0633\u0641\u0627\u0631\u0634 \u0633\u0631\u06CC\u0639 \u0642\u0647\u0648\u0647 \u062F\u0631 \u06A9\u0627\u0641\u0647 \u0634\u0644\u0648\u063A \u0628\u0627 \u0628\u0627\u0631\u06CC\u0633\u062A\u0627\u06CC \u0646\u06CC\u062A\u06CC\u0648",
-        category: "daily",
-        context: "Downtown Specialty Coffee Roaster",
-        relationship: "Barista / Customer",
-        userRole: "Customer on Morning Commute",
-        aiRole: "Busy American Barista",
-        icon: "\u2615",
-        starter: "Morning! What can I get started for you today? For here or to-go?",
-        starterFa: "\u0635\u0628\u062D \u0628\u062E\u06CC\u0631! \u0627\u0645\u0631\u0648\u0632 \u0628\u0631\u0627\u062A \u0686\u06CC \u0622\u0645\u0627\u062F\u0647 \u06A9\u0646\u0645\u061F \u0627\u06CC\u0646\u062C\u0627 \u0645\u06CC\u0644 \u0645\u06CC\u200C\u06A9\u0646\u06CC \u06CC\u0627 \u0628\u06CC\u0631\u0648\u0646\u200C\u0628\u0631\u0647\u061F",
-        targetGrammar: "Natural modal requests & omission of literal prepositions (Can I get / I'll do a...)",
-        targetGrammarFa: "\u062A\u0633\u0644\u0637 \u0628\u0631 \u0641\u0631\u0645\u200C\u0647\u0627\u06CC \u0631\u0648\u0627\u0646 \u062F\u0631\u062E\u0648\u0627\u0633\u062A \u0628\u062F\u0648\u0646 \u062D\u0631\u0648\u0641 \u0627\u0636\u0627\u0641\u0647 \u0627\u0634\u062A\u0628\u0627\u0647 (Interested in / Listen to)",
-        targetCliches: ["on the run (\u062F\u0631 \u062D\u0627\u0644 \u0639\u062C\u0644\u0647 \u0648 \u062D\u0631\u06A9\u062A)", "for here or to-go (\u062F\u0627\u062E\u0644 \u06CC\u0627 \u0628\u06CC\u0631\u0648\u0646\u200C\u0628\u0631)"],
-        targetVocabulary: ["drip coffee (\u0642\u0647\u0648\u0647 \u062F\u0645\u06CC)", "splash of milk (\u06A9\u0645\u06CC \u0634\u06CC\u0631)", "keep the change (\u0628\u0627\u0642\u06CC \u067E\u0648\u0644 \u0645\u0627\u0644 \u062E\u0648\u062F\u062A)"],
-        targetPronunciation: "\u062A\u0644\u0641\u0638 Flap T \u062F\u0631 \u06A9\u0644\u0645\u0627\u062A water \u0648 better \u0648 \u0627\u062A\u0635\u0627\u0644 \u06A9\u0644\u0645\u0627\u062A Can I get",
-        activeWeaknessesInjected: ["\u0631\u06CC\u0634\u0647\u200C\u06A9\u0646\u06CC \u062D\u0631\u0648\u0641 \u0627\u0636\u0627\u0641\u0647 \u0627\u0634\u062A\u0628\u0627\u0647 \u0646\u0627\u0634\u06CC \u0627\u0632 \u062A\u0631\u062C\u0645\u0647 \u0645\u0633\u062A\u0642\u06CC\u0645 \u0641\u0627\u0631\u0633\u06CC"],
-        status: "current"
-      },
-      {
-        id: "cal-2",
-        dayIndex: 2,
-        targetLevel: cefrLevel,
-        phaseTitleFa: "\u0641\u0627\u0632 \u06F1: \u063A\u0644\u0628\u0647 \u0628\u0631 \u062A\u0644\u0647\u200C\u0647\u0627\u06CC \u062A\u0631\u062C\u0645\u0647 \u0641\u0627\u0631\u0633\u06CC \u0648 \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u0631\u0648\u0632\u0645\u0631\u0647",
-        title: "Debating Four-Day Work Weeks with Team Lead",
-        titleFa: "\u0633\u0646\u0627\u0631\u06CC\u0648\u06CC \u06F2: \u0627\u0638\u0647\u0627\u0631\u0646\u0638\u0631 \u0648 \u062A\u0648\u0627\u0641\u0642 \u06A9\u0627\u0631\u06CC (\u062D\u0630\u0641 \u0633\u0627\u062E\u062A\u0627\u0631 I am agree)",
-        category: "work",
-        context: "Team Lounge Discussion",
-        relationship: "Team Lead / Colleague",
-        userRole: "Team Member",
-        aiRole: "Engineering Lead (Alex)",
-        icon: "\u{1F4A1}",
-        starter: "I'm thinking of proposing a four-day work week for our engineering team. What's your take\u2014do you agree?",
-        starterFa: "\u062F\u0627\u0631\u0645 \u0628\u0647 \u067E\u06CC\u0634\u0646\u0647\u0627\u062F \u0647\u0641\u062A\u0647 \u06A9\u0627\u0631\u06CC \u06F4 \u0631\u0648\u0632\u0647 \u0628\u0631\u0627\u06CC \u062A\u06CC\u0645 \u0641\u0646\u06CC \u0641\u06A9\u0631 \u0645\u06CC\u200C\u06A9\u0646\u0645. \u0646\u0638\u0631\u062A \u0686\u06CC\u0647\u2014\u0622\u06CC\u0627 \u0645\u0648\u0627\u0641\u0642\u06CC\u061F",
-        targetGrammar: "Stative verb predicate accuracy (I completely agree / I respectfully disagree)",
-        targetGrammarFa: "\u06A9\u0627\u0631\u0628\u0631\u062F \u0627\u0641\u0639\u0627\u0644 \u0627\u0633\u0646\u0627\u062F\u06CC agree, disagree, depend \u0628\u062F\u0648\u0646 \u0633\u0627\u062E\u062A\u0627\u0631\u0647\u0627\u06CC \u0646\u0627\u062F\u0631\u0633\u062A \u06A9\u0645\u06A9\u06CC \u0641\u0627\u0631\u0633\u06CC",
-        targetCliches: ["on the same page (\u0647\u0645\u200C\u0646\u0638\u0631 \u0628\u0648\u062F\u0646)", "see eye to eye (\u062A\u0648\u0627\u0641\u0642 \u0646\u0638\u0631 \u062F\u0627\u0634\u062A\u0646)"],
-        targetVocabulary: ["productivity (\u0628\u0627\u0632\u062F\u0647\u06CC)", "morale (\u0631\u0648\u062D\u06CC\u0647 \u062A\u06CC\u0645\u06CC)", "trade-off (\u0628\u062F\u0647\u200C\u0628\u0633\u062A\u0627\u0646)"],
-        targetPronunciation: "\u062A\u0644\u0641\u0638 \u062F\u0631\u0633\u062A \u0645\u0635\u0648\u062A \u06A9\u0634\u06CC\u062F\u0647 \u062F\u0631 agree \u0648 \u0627\u062F\u0627\u06CC \u0631\u0648\u0627\u0646 I agree",
-        activeWeaknessesInjected: ["\u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0635\u062D\u06CC\u062D \u0627\u0632 \u0627\u0641\u0639\u0627\u0644 \u062D\u0627\u0644\u062A\u06CC \u0648 \u0627\u0633\u0646\u0627\u062F\u06CC (\u062D\u0630\u0641 \u0633\u0627\u062E\u062A\u0627\u0631 \u0627\u0634\u062A\u0628\u0627\u0647 I am agree)"],
-        status: "upcoming"
-      },
-      {
-        id: "cal-3",
-        dayIndex: 3,
-        targetLevel: cefrLevel,
-        phaseTitleFa: "\u0641\u0627\u0632 \u06F1: \u063A\u0644\u0628\u0647 \u0628\u0631 \u062A\u0644\u0647\u200C\u0647\u0627\u06CC \u062A\u0631\u062C\u0645\u0647 \u0641\u0627\u0631\u0633\u06CC \u0648 \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u0631\u0648\u0632\u0645\u0631\u0647",
-        title: "At the Downtown Juice Bar & Cafe",
-        titleFa: "\u0633\u0646\u0627\u0631\u06CC\u0648\u06CC \u06F3: \u0633\u0641\u0627\u0631\u0634 \u0622\u0628\u0645\u06CC\u0648\u0647 \u062A\u0627\u0632\u0647 (\u062A\u0645\u0631\u06A9\u0632 \u0628\u0631 Flap T \u0627\u0645\u0631\u06CC\u06A9\u0646)",
-        category: "daily",
-        context: "Summer Juice Stand",
-        relationship: "Barista / Customer",
-        userRole: "Customer",
-        aiRole: "Barista",
-        icon: "\u{1F964}",
-        starter: "Welcome to Green Oasis! Would you like a bottle of cold-pressed water or our special better-berry smoothie today?",
-        starterFa: "\u0628\u0647 \u06AF\u0631\u06CC\u0646 \u0627\u0648\u06CC\u0633\u06CC\u0633 \u062E\u0648\u0634 \u0627\u0648\u0645\u062F\u06CC\u062F! \u0627\u0645\u0631\u0648\u0632 \u06CC\u0647 \u0628\u0637\u0631\u06CC \u0622\u0628 \u062A\u0627\u0632\u0647 \u0645\u06CC\u0644 \u062F\u0627\u0631\u06CC\u062F \u06CC\u0627 \u0627\u0633\u0645\u0648\u062A\u06CC \u0645\u062E\u0635\u0648\u0635 \u062A\u0645\u0634\u06A9 \u0645\u0627\u061F",
-        targetGrammar: "Polite modal requests (Can I get / Could I have a bottle of water...)",
-        targetGrammarFa: "\u0641\u0631\u0645\u0648\u0644\u200C\u0628\u0646\u062F\u06CC \u062F\u0631\u062E\u0648\u0627\u0633\u062A\u200C\u0647\u0627\u06CC \u0645\u062D\u062A\u0631\u0645\u0627\u0646\u0647 \u062F\u0631 \u0633\u0641\u0627\u0631\u0634\u200C\u0647\u0627\u06CC \u0631\u0648\u0632\u0645\u0631\u0647",
-        targetCliches: ["hit the spot (\u0686\u0633\u0628\u06CC\u062F\u0646 \u0648 \u062D\u0627\u0644 \u0622\u0648\u0631\u062F\u0646)", "quench my thirst (\u0631\u0641\u0639 \u0639\u0637\u0634)"],
-        targetVocabulary: ["bottle of water", "better berry", "city smoothie"],
-        targetPronunciation: "\u062A\u0644\u0641\u0638 Flap T \u0627\u0645\u0631\u06CC\u06A9\u0646 [\u027E] \u062F\u0631 \u06A9\u0644\u0645\u0627\u062A water, bottle, better, city",
-        activeWeaknessesInjected: ["\u062A\u0644\u0641\u0638 \u0631\u0648\u0627\u0646 Flap T \u0627\u0645\u0631\u06CC\u06A9\u0646 \u0628\u06CC\u0646 \u062F\u0648 \u0648\u0627\u06A9\u0647"],
-        status: "upcoming"
-      },
-      {
-        id: "cal-4",
-        dayIndex: 4,
-        targetLevel: cefrLevel,
-        phaseTitleFa: "\u0641\u0627\u0632 \u06F1: \u063A\u0644\u0628\u0647 \u0628\u0631 \u062A\u0644\u0647\u200C\u0647\u0627\u06CC \u062A\u0631\u062C\u0645\u0647 \u0641\u0627\u0631\u0633\u06CC \u0648 \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u0631\u0648\u0632\u0645\u0631\u0647",
-        title: "Quick Grocery Run with Roommate",
-        titleFa: "\u0633\u0646\u0627\u0631\u06CC\u0648\u06CC \u06F4: \u062E\u0631\u06CC\u062F \u0633\u0631\u06CC\u0639 \u0628\u0627 \u0647\u0645\u200C\u0627\u062A\u0627\u0642\u06CC (\u06A9\u0627\u0647\u0634 \u0648\u0627\u06A9\u0647\u200C\u0647\u0627 \u0648 \u0635\u062F\u0627\u06CC Schwa)",
-        category: "daily",
-        context: "Supermarket Aisle",
-        relationship: "Roommate",
-        userRole: "Roommate",
-        aiRole: "Roommate (Chris)",
-        icon: "\u{1F6D2}",
-        starter: "I can run to the grocery store for some bread and milk. Do you want to come along?",
-        starterFa: "\u0645\u06CC\u200C\u062A\u0648\u0646\u0645 \u06CC\u0647 \u0633\u0631 \u0628\u0631\u0645 \u0633\u0648\u067E\u0631\u0645\u0627\u0631\u06A9\u062A \u0628\u0631\u0627\u06CC \u06A9\u0645\u06CC \u0646\u0648\u0646 \u0648 \u0634\u06CC\u0631. \u0645\u06CC\u200C\u062E\u0648\u0627\u06CC \u0647\u0645\u0631\u0627\u0647\u0645 \u0628\u06CC\u0627\u06CC\u061F",
-        targetGrammar: "Rhythmic sentence stress with reduced function words",
-        targetGrammarFa: "\u06A9\u0627\u0647\u0634 \u06A9\u0644\u0645\u0627\u062A \u062A\u0627\u0628\u0639\u06CC to, for, can, and \u0628\u0647 \u0635\u062F\u0627\u06CC \u0634\u0648\u0622 \u0628\u0631\u0627\u06CC \u0627\u06CC\u062C\u0627\u062F \u0631\u06CC\u062A\u0645 \u0627\u0633\u062A\u0631\u0633\u200C\u062A\u0627\u06CC\u0645\u062F",
-        targetCliches: ["grab a bite (\u0686\u06CC\u0632\u06CC \u0633\u0631\u067E\u0627\u06CC\u06CC \u062E\u0648\u0631\u062F\u0646)", "on the way (\u062F\u0631 \u0645\u0633\u06CC\u0631 \u0631\u0627\u0647)"],
-        targetVocabulary: ["essentials", "grocery list", "quick errand"],
-        targetPronunciation: "\u06A9\u0627\u0647\u0634 \u0648\u0627\u06A9\u0647\u200C\u0647\u0627\u06CC \u06A9\u0648\u062A\u0627\u0647 \u0634\u0648\u0622 /k\u0259n/, /t\u0259/, /f\u0259r/",
-        activeWeaknessesInjected: ["\u06A9\u0627\u0647\u0634 \u0622\u0648\u0627\u06CC\u06CC \u0634\u0648\u0622 [\u0259] \u062F\u0631 \u06A9\u0644\u0645\u0627\u062A \u06AF\u0631\u0627\u0645\u0631\u06CC \u0648 \u062A\u0627\u0628\u0639\u06CC"],
-        status: "upcoming"
-      },
-      {
-        id: "cal-5",
-        dayIndex: 5,
-        targetLevel: "B1",
-        phaseTitleFa: "\u0641\u0627\u0632 \u06F1: \u063A\u0644\u0628\u0647 \u0628\u0631 \u062A\u0644\u0647\u200C\u0647\u0627\u06CC \u062A\u0631\u062C\u0645\u0647 \u0641\u0627\u0631\u0633\u06CC \u0648 \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u0631\u0648\u0632\u0645\u0631\u0647",
-        title: "Tackling Past Narratives: Road Trip Memories",
-        titleFa: "\u0633\u0646\u0627\u0631\u06CC\u0648\u06CC \u06F5: \u0631\u0648\u0627\u06CC\u062A \u062E\u0627\u0637\u0631\u0627\u062A \u0633\u0641\u0631 \u062C\u0627\u062F\u0647\u200C\u0627\u06CC (\u062A\u0645\u0627\u06CC\u0632 \u0648\u062C\u0648\u0647 \u06AF\u0630\u0634\u062A\u0647)",
-        category: "social",
-        context: "Coffee Break Reminiscing",
-        relationship: "Travel Buddy / Friend",
-        userRole: "Friend",
-        aiRole: "Friend (Sarah)",
-        icon: "\u{1F697}",
-        starter: "We were just talking about crazy road trips. Tell me about a past vacation where something completely unexpected happened!",
-        starterFa: "\u062F\u0627\u0634\u062A\u06CC\u0645 \u062E\u0627\u0637\u0631\u0627\u062A \u0633\u0641\u0631\u0647\u0627\u06CC \u062C\u0627\u062F\u0647\u200C\u0627\u06CC \u0639\u062C\u06CC\u0628 \u0631\u0648 \u0645\u0631\u0648\u0631 \u0645\u06CC\u200C\u06A9\u0631\u062F\u06CC\u0645. \u0627\u0632 \u06CC\u0647 \u0645\u0633\u0627\u0641\u0631\u062A \u06AF\u0630\u0634\u062A\u0647\u200C\u062A \u0628\u06AF\u0648 \u06A9\u0647 \u0648\u0633\u0637 \u0631\u0627\u0647 \u06CC\u0647 \u0627\u062A\u0641\u0627\u0642 \u06A9\u0627\u0645\u0644\u0627\u064B \u063A\u06CC\u0631\u0645\u0646\u062A\u0638\u0631\u0647 \u0627\u0641\u062A\u0627\u062F!",
-        targetGrammar: "Past Narrative: Past Simple vs Continuous vs Past Perfect",
-        targetGrammarFa: "\u062A\u0641\u06A9\u06CC\u06A9 \u062F\u0642\u06CC\u0642 \u0631\u062E\u062F\u0627\u062F\u0647\u0627\u06CC \u0632\u0646\u062C\u06CC\u0631\u0647\u200C\u0627\u06CC (Past Simple) \u0627\u0632 \u067E\u0633\u200C\u0632\u0645\u06CC\u0646\u0647 (Past Continuous) \u0648 \u0648\u0642\u0627\u06CC\u0639 \u067E\u06CC\u0634\u06CC\u0646 (Past Perfect)",
-        targetCliches: ["brings back memories (\u062E\u0627\u0637\u0631\u0627\u062A \u0631\u0627 \u0632\u0646\u062F\u0647 \u06A9\u0631\u062F\u0646)", "hit the road (\u0632\u062F\u0646 \u0628\u0647 \u062F\u0644 \u062C\u0627\u062F\u0647)"],
-        targetVocabulary: ["flat tire", "scenic route", "unforgettable milestone"],
-        targetPronunciation: "\u062A\u0644\u0641\u0638 \u067E\u0633\u0648\u0646\u062F\u0647\u0627\u06CC ed \u062F\u0631 \u0627\u0641\u0639\u0627\u0644 \u06AF\u0630\u0634\u062A\u0647 \u0628\u062F\u0648\u0646 \u0627\u0641\u0632\u0648\u062F\u0646 \u0647\u062C\u0627\u06CC \u0627\u0636\u0627\u0641\u0647",
-        activeWeaknessesInjected: ["\u062A\u0633\u0644\u0637 \u0628\u0631 \u0648\u062C\u0648\u0647 \u0632\u0645\u0627\u0646\u06CC \u06AF\u0630\u0634\u062A\u0647 \u062F\u0631 \u0631\u0648\u0627\u06CC\u062A \u062F\u0627\u0633\u062A\u0627\u0646 (Past Narrative)"],
-        status: "upcoming"
-      },
-      {
-        id: "cal-6",
-        dayIndex: 6,
-        targetLevel: "B1",
-        phaseTitleFa: "\u0641\u0627\u0632 \u06F1: \u063A\u0644\u0628\u0647 \u0628\u0631 \u062A\u0644\u0647\u200C\u0647\u0627\u06CC \u062A\u0631\u062C\u0645\u0647 \u0641\u0627\u0631\u0633\u06CC \u0648 \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u0631\u0648\u0632\u0645\u0631\u0647",
-        title: "Planning a Weekend Activity with Friends",
-        titleFa: "\u0633\u0646\u0627\u0631\u06CC\u0648\u06CC \u06F6: \u0628\u0631\u0646\u0627\u0645\u0647\u200C\u0631\u06CC\u0632\u06CC \u062A\u0641\u0631\u06CC\u062D \u0622\u062E\u0631 \u0647\u0641\u062A\u0647 (\u062D\u0630\u0641 go to shopping)",
-        category: "social",
-        context: "Weekend Planning Chat",
-        relationship: "Close Friend",
-        userRole: "Friend",
-        aiRole: "Friend (Jordan)",
-        icon: "\u{1F6CD}\uFE0F",
-        starter: "Hey! The weather is gorgeous this weekend. Do you want to go shopping downtown or maybe go hiking in the hills?",
-        starterFa: "\u0633\u0644\u0627\u0645! \u0647\u0648\u0627\u06CC \u0627\u06CC\u0646 \u0622\u062E\u0631 \u0647\u0641\u062A\u0647 \u0645\u062D\u0634\u0631\u0647. \u0645\u06CC\u200C\u062E\u0648\u0627\u06CC \u0628\u0631\u06CC\u0645 \u0645\u0631\u06A9\u0632 \u0634\u0647\u0631 \u062E\u0631\u06CC\u062F \u06CC\u0627 \u0634\u0627\u06CC\u062F \u0628\u0631\u06CC\u0645 \u06A9\u0648\u0647\u200C\u067E\u06CC\u0645\u0627\u06CC\u06CC \u062F\u0631 \u062A\u067E\u0647\u200C\u0647\u0627\u061F",
-        targetGrammar: "Gerund activity verbs after GO (go shopping, go swimming, go hiking)",
-        targetGrammarFa: "\u0628\u0647 \u06A9\u0627\u0631 \u0628\u0631\u062F\u0646 \u0627\u0641\u0639\u0627\u0644 \u062A\u0641\u0631\u06CC\u062D\u06CC \u0628\u062F\u0648\u0646 \u062D\u0631\u0641 \u0627\u0636\u0627\u0641\u0647 to \u0648 \u0628\u0647 \u0634\u06A9\u0644 Gerund",
-        targetCliches: ["count me in (\u0631\u0648\u06CC \u0645\u0646 \u062D\u0633\u0627\u0628 \u06A9\u0646)", "window shopping (\u0648\u06CC\u062A\u0631\u06CC\u0646\u200C\u06AF\u0631\u062F\u06CC)"],
-        targetVocabulary: ["go hiking", "go shopping", "outdoor recreation"],
-        targetPronunciation: "\u062A\u0644\u0641\u0638 \u0631\u0648\u0627\u0646 \u0627\u062A\u0635\u0627\u0644 go shopping \u0628\u062F\u0648\u0646 \u0645\u06A9\u062B \u0648 \u062A\u067E\u0642",
-        activeWeaknessesInjected: ["\u062D\u0630\u0641 \u0633\u0627\u062E\u062A\u0627\u0631 \u0646\u0627\u062F\u0631\u0633\u062A Go to shopping \u0648 \u06A9\u0627\u0631\u0628\u0631\u062F \u0635\u062D\u06CC\u062D \u0641\u0631\u0645\u200C\u0647\u0627\u06CC \u062A\u0641\u0631\u06CC\u062D\u06CC"],
-        status: "upcoming"
-      },
-      {
-        id: "cal-7",
-        dayIndex: 7,
-        targetLevel: "B1",
-        phaseTitleFa: "\u0641\u0627\u0632 \u06F1: \u063A\u0644\u0628\u0647 \u0628\u0631 \u062A\u0644\u0647\u200C\u0647\u0627\u06CC \u062A\u0631\u062C\u0645\u0647 \u0641\u0627\u0631\u0633\u06CC \u0648 \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u0631\u0648\u0632\u0645\u0631\u0647",
-        title: "Asking for Directions in a Massive Conference Center",
-        titleFa: "\u0633\u0646\u0627\u0631\u06CC\u0648\u06CC \u06F7: \u067E\u0631\u0633\u0634\u06AF\u0631\u06CC \u0645\u0624\u062F\u0628\u0627\u0646\u0647 \u0648 \u063A\u06CC\u0631\u0645\u0633\u062A\u0642\u06CC\u0645 \u062F\u0631 \u0633\u0627\u0644\u0646 \u0647\u0645\u0627\u06CC\u0634",
-        category: "work",
-        context: "Conference Hallway",
-        relationship: "Conference Organizer / Attendee",
-        userRole: "Attendee",
-        aiRole: "Event Coordinator",
-        icon: "\u{1F3E2}",
-        starter: "Excuse me, I notice you're looking around. Are you trying to locate one of the keynote breakout sessions?",
-        starterFa: "\u0628\u0628\u062E\u0634\u06CC\u062F\u060C \u0645\u062A\u0648\u062C\u0647 \u0634\u062F\u0645 \u062F\u0627\u0631\u06CC\u062F \u0627\u0637\u0631\u0627\u0641 \u0631\u0648 \u0646\u06AF\u0627\u0647 \u0645\u06CC\u200C\u06A9\u0646\u06CC\u062F. \u062F\u0646\u0628\u0627\u0644 \u0633\u0627\u0644\u0646 \u062C\u0644\u0633\u0627\u062A \u06A9\u0644\u06CC\u062F\u06CC \u0645\u06CC\u200C\u06AF\u0631\u062F\u06CC\u062F\u061F",
-        targetGrammar: "Indirect questions (Do you happen to know where... / Could you tell me if...)",
-        targetGrammarFa: "\u062A\u0628\u062F\u06CC\u0644 \u0633\u0648\u0627\u0644\u0627\u062A \u0645\u0633\u062A\u0642\u06CC\u0645 \u062E\u0634\u06A9 \u0628\u0647 \u0642\u0627\u0644\u0628\u200C\u0647\u0627\u06CC \u0645\u0648\u0642\u0631 \u0648 \u0627\u062A\u06CC\u06A9\u062A\u200C\u0645\u062D\u0648\u0631 \u0628\u06CC\u0646\u200C\u0627\u0644\u0645\u0644\u0644\u06CC",
-        targetCliches: ["turn around (\u0631\u0627\u0633\u062A \u0648 \u0631\u06CC\u0633\u062A \u0634\u062F\u0646)", "point me in the right direction (\u0631\u0627\u0647\u0646\u0645\u0627\u06CC\u06CC \u062C\u0647\u062A \u0645\u0633\u06CC\u0631)"],
-        targetVocabulary: ["keynote hall", "registration booth", "corridor"],
-        targetPronunciation: "\u0622\u0647\u0646\u06AF \u0635\u0639\u0648\u062F\u06CC \u0648 \u0645\u0644\u0627\u06CC\u0645 \u062F\u0631 \u0633\u0648\u0627\u0644\u0627\u062A \u063A\u06CC\u0631\u0645\u0633\u062A\u0642\u06CC\u0645",
-        activeWeaknessesInjected: ["\u067E\u0631\u0633\u0634\u06AF\u0631\u06CC \u063A\u06CC\u0631\u0645\u0633\u062A\u0642\u06CC\u0645 \u0648 \u0645\u0648\u0642\u0631 \u062F\u0631 \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u0631\u0648\u0632\u0645\u0631\u0647"],
-        status: "upcoming"
-      },
-      {
-        id: "cal-8",
-        dayIndex: 8,
-        targetLevel: "B2",
-        phaseTitleFa: "\u0641\u0627\u0632 \u06F2: \u0627\u0631\u062A\u0642\u0627 \u0628\u0647 \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u062D\u0631\u0641\u0647\u200C\u0627\u06CC \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644 \u062F\u0631 \u06A9\u0627\u0631",
-        title: "Reviewing Early Morning Project Deliverables",
-        titleFa: "\u0633\u0646\u0627\u0631\u06CC\u0648\u06CC \u06F8: \u0628\u0631\u0631\u0633\u06CC \u067E\u06CC\u0634\u0631\u0641\u062A \u067E\u0631\u0648\u0698\u0647 \u0635\u0628\u062D\u06AF\u0627\u0647\u06CC (\u0635\u062F\u0627\u06CC Rhotic R \u0627\u0645\u0631\u06CC\u06A9\u0646)",
-        category: "work",
-        context: "Morning Office Check-in",
-        relationship: "Co-worker",
-        userRole: "Team Member",
-        aiRole: "Senior Colleague (Mark)",
-        icon: "\u{1F4BC}",
-        starter: "Good morning! Your hard work early this morning really paid off. Are we ready to present the report?",
-        starterFa: "\u0635\u0628\u062D \u0628\u062E\u06CC\u0631! \u062A\u0644\u0627\u0634 \u0633\u062E\u062A\u062A \u0627\u0648\u0644 \u0635\u0628\u062D \u0648\u0627\u0642\u0639\u0627\u064B \u0646\u062A\u06CC\u062C\u0647 \u062F\u0627\u062F. \u0622\u0645\u0627\u062F\u0647\u200C\u0627\u06CC\u0645 \u06AF\u0632\u0627\u0631\u0634 \u0631\u0648 \u0627\u0631\u0627\u0626\u0647 \u06A9\u0646\u06CC\u0645\u061F",
-        targetGrammar: "Compound complex professional status updates",
-        targetGrammarFa: "\u06AF\u0632\u0627\u0631\u0634 \u0648\u0636\u0639\u06CC\u062A \u06A9\u0627\u0631 \u0648 \u0627\u0631\u0627\u0626\u0647 \u0628\u0627\u0632\u062E\u0648\u0631\u062F \u062D\u0631\u0641\u0647\u200C\u0627\u06CC \u0628\u0627 \u0633\u0627\u062E\u062A\u0627\u0631\u0647\u0627\u06CC \u0631\u0648\u0627\u0646",
-        targetCliches: ["hit the ground running (\u0634\u0631\u0648\u0639 \u0628\u0627 \u0642\u062F\u0631\u062A \u0648 \u0627\u0646\u0631\u0698\u06CC)", "touch base (\u0647\u0645\u0627\u0647\u0646\u06AF \u0634\u062F\u0646 \u0645\u0642\u0637\u0639\u06CC)"],
-        targetVocabulary: ["hard work", "morning report", "first quarter"],
-        targetPronunciation: "\u0627\u062F\u0627\u06CC \u0639\u0645\u06CC\u0642 \u0635\u062F\u0627\u06CC R \u0627\u0645\u0631\u06CC\u06A9\u0646 \u062F\u0631 hard, work, early, morning \u0628\u062F\u0648\u0646 \u0644\u0631\u0632\u0634 \u0646\u0648\u06A9 \u0632\u0628\u0627\u0646",
-        activeWeaknessesInjected: ["\u0627\u062F\u0627\u06CC \u0635\u062F\u0627\u06CC R \u0627\u0645\u0631\u06CC\u06A9\u0646 \u0628\u062F\u0648\u0646 \u0644\u0631\u0632\u0634 \u0646\u0648\u06A9 \u0632\u0628\u0627\u0646 (Rhotic R)"],
-        status: "upcoming"
-      },
-      {
-        id: "cal-9",
-        dayIndex: 9,
-        targetLevel: "B2",
-        phaseTitleFa: "\u0641\u0627\u0632 \u06F2: \u0627\u0631\u062A\u0642\u0627 \u0628\u0647 \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u062D\u0631\u0641\u0647\u200C\u0627\u06CC \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644 \u062F\u0631 \u06A9\u0627\u0631",
-        title: "Spontaneous Brainstorming & Handling Unfamiliar Questions",
-        titleFa: "\u0633\u0646\u0627\u0631\u06CC\u0648\u06CC \u06F9: \u0637\u0648\u0641\u0627\u0646 \u0641\u06A9\u0631\u06CC \u0648 \u0645\u062F\u06CC\u0631\u06CC\u062A \u0645\u06A9\u062B \u0628\u0627 \u0641\u06CC\u0644\u0631\u0647\u0627\u06CC \u0646\u06CC\u062A\u06CC\u0648",
-        category: "social",
-        context: "Team Strategy Brainstorm",
-        relationship: "Colleague",
-        userRole: "Contributor",
-        aiRole: "Product Lead",
-        icon: "\u{1F9E0}",
-        starter: "We're brainstorming new ways to boost customer retention. It's a tricky question\u2014what pops into your head first?",
-        starterFa: "\u062F\u0627\u0631\u06CC\u0645 \u0627\u06CC\u062F\u0647\u200C\u067E\u0631\u062F\u0627\u0632\u06CC \u0645\u06CC\u200C\u06A9\u0646\u06CC\u0645 \u0686\u0637\u0648\u0631 \u0646\u06AF\u0647\u200C\u062F\u0627\u0634\u062A \u0645\u0634\u062A\u0631\u06CC \u0631\u0648 \u0628\u0627\u0644\u0627 \u0628\u0628\u0631\u06CC\u0645. \u0633\u0648\u0627\u0644 \u0633\u062E\u062A\u06CC\u0647\u2014\u0627\u0648\u0644\u06CC\u0646 \u0686\u06CC\u0632\u06CC \u06A9\u0647 \u0628\u0647 \u0630\u0647\u0646\u062A \u0645\u06CC\u0627\u062F \u0686\u06CC\u0647\u061F",
-        targetGrammar: "Spoken discourse markers and conversational pausing",
-        targetGrammarFa: "\u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0627\u0632 \u0639\u0628\u0627\u0631\u0627\u062A Well, To be honest, Actually \u0628\u0647 \u062C\u0627\u06CC \u0633\u06A9\u0648\u062A\u200C\u0647\u0627\u06CC \u0637\u0648\u0644\u0627\u0646\u06CC",
-        targetCliches: ["think outside the box (\u062E\u0644\u0627\u0642\u0627\u0646\u0647 \u0648 \u0646\u0648\u0622\u0648\u0631\u0627\u0646\u0647 \u0641\u06A9\u0631 \u06A9\u0631\u062F\u0646)", "food for thought (\u0645\u0648\u0636\u0648\u0639 \u0642\u0627\u0628\u0644 \u062A\u0623\u0645\u0644)"],
-        targetVocabulary: ["retention", "engagement", "friction point"],
-        targetPronunciation: "\u0631\u06CC\u062A\u0645 \u06CC\u06A9\u0646\u0648\u0627\u062E\u062A \u0648 \u067E\u06CC\u0648\u0633\u062A\u0647 \u0628\u062F\u0648\u0646 \u0642\u0637\u0639 \u0646\u0627\u06AF\u0647\u0627\u0646\u06CC \u06A9\u0644\u0627\u0645",
-        activeWeaknessesInjected: ["\u0645\u062F\u06CC\u0631\u06CC\u062A \u0645\u06A9\u062B\u200C\u0647\u0627 \u0628\u0627 \u0641\u06CC\u0644\u0631\u0647\u0627\u06CC \u0637\u0628\u06CC\u0639\u06CC \u0645\u06A9\u0627\u0644\u0645\u0647 (Well, Actually, You know)"],
-        status: "upcoming"
-      },
-      {
-        id: "cal-10",
-        dayIndex: 10,
-        targetLevel: "B2",
-        phaseTitleFa: "\u0641\u0627\u0632 \u06F2: \u0627\u0631\u062A\u0642\u0627 \u0628\u0647 \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u062D\u0631\u0641\u0647\u200C\u0627\u06CC \u0648 \u0627\u0633\u062A\u062F\u0644\u0627\u0644 \u062F\u0631 \u06A9\u0627\u0631",
-        title: "Navigating Unpredictable Weekend Traffic & Dinner Timing",
-        titleFa: "\u0633\u0646\u0627\u0631\u06CC\u0648\u06CC \u06F1\u06F0: \u0647\u0645\u0627\u0647\u0646\u06AF\u06CC \u062A\u0641\u0631\u06CC\u062D \u0648 \u0631\u0633\u062A\u0648\u0631\u0627\u0646 (\u06A9\u0644\u06CC\u0634\u0647\u200C\u0647\u0627\u06CC \u0627\u0635\u06CC\u0644 \u0627\u0645\u0631\u06CC\u06A9\u0646)",
-        category: "social",
-        context: "Evening Dinner Planning",
-        relationship: "Close Friend",
-        userRole: "Friend",
-        aiRole: "Friend (Taylor)",
-        icon: "\u{1F355}",
-        starter: "Downtown traffic looks pretty wild tonight, but I'm starving. Should we lock in reservations or just play it by ear?",
-        starterFa: "\u062A\u0631\u0627\u0641\u06CC\u06A9 \u0645\u0631\u06A9\u0632 \u0634\u0647\u0631 \u0627\u0645\u0634\u0628 \u062E\u06CC\u0644\u06CC \u0634\u0644\u0648\u063A \u0628\u0647 \u0646\u0638\u0631 \u0645\u06CC\u0627\u062F \u0627\u0645\u0627 \u0645\u0646 \u0627\u0632 \u06AF\u0631\u0633\u0646\u06AF\u06CC \u0636\u0639\u0641 \u06A9\u0631\u062F\u0645. \u0648\u0642\u062A \u0631\u0632\u0631\u0648 \u0642\u0637\u0639\u06CC \u06A9\u0646\u06CC\u0645 \u06CC\u0627 \u0634\u0631\u0627\u06CC\u0637\u06CC \u067E\u06CC\u0634 \u0628\u0631\u06CC\u0645\u061F",
-        targetGrammar: "Idiomatic chunks and pragmatic agreements",
-        targetGrammarFa: "\u06A9\u0627\u0631\u0628\u0631\u062F \u0627\u0635\u0637\u0644\u0627\u062D\u0627\u062A play it by ear, call it a day, touch base \u062F\u0631 \u0645\u0648\u0642\u0639\u06CC\u062A \u0632\u0646\u062F\u0647",
-        targetCliches: ["play it by ear (\u0628\u0631 \u0627\u0633\u0627\u0633 \u0634\u0631\u0627\u06CC\u0637 \u067E\u06CC\u0634 \u0631\u0641\u062A\u0646)", "cut to the chase (\u06CC\u06A9\u200C\u0631\u0627\u0633\u062A \u0633\u0631 \u0627\u0635\u0644 \u0645\u0637\u0644\u0628 \u0631\u0641\u062A\u0646)"],
-        targetVocabulary: ["rush hour", "reservation", "flexible timing"],
-        targetPronunciation: "\u0644\u0647\u062C\u0647 \u0637\u0628\u06CC\u0639\u06CC \u0648 \u062E\u0648\u062F\u0645\u0627\u0646\u06CC \u062F\u0648\u0633\u062A\u0627\u0646\u0647 General American",
-        activeWeaknessesInjected: ["\u06A9\u0644\u06CC\u0634\u0647\u200C\u0647\u0627\u06CC \u0627\u0635\u0644\u06CC \u0645\u062D\u0627\u0648\u0631\u0647 \u0631\u0648\u0632\u0645\u0631\u0647 \u0622\u0645\u0631\u06CC\u06A9\u0627\u06CC\u06CC (Play it by ear, Touch base)"],
-        status: "upcoming"
-      }
-    ];
-    res.json({
-      cefrLevel,
-      levelDescriptionFa: levelDesc,
-      grammarScore,
-      fluencyScore,
-      pronunciationScore,
-      vocabularyScore,
-      accentScore,
-      wpm,
-      usedFallback: true,
-      analyzedFromAudio: false,
-      acousticFeedback: {
-        flapT: "\u0635\u062F\u0627\u06CC T \u062F\u0631 \u06A9\u0644\u0645\u0627\u062A \u0645\u06CC\u0627\u0646\u06CC \u0646\u06CC\u0627\u0632 \u0628\u0647 \u0646\u0631\u0645\u200C\u062A\u0631 \u0634\u062F\u0646 \u0648 \u062A\u0628\u062F\u06CC\u0644 \u0628\u0647 \u0636\u0631\u0628\u0647 \u0646\u0648\u06A9 \u0632\u0628\u0627\u0646 (Flap T) \u062F\u0627\u0631\u062F.",
-        rhoticR: "\u0635\u062F\u0627\u06CC R \u0627\u0645\u0631\u06CC\u06A9\u0646 \u062F\u0631 \u0627\u0646\u062A\u0647\u0627\u06CC \u06A9\u0644\u0645\u0627\u062A \u0646\u06CC\u0627\u0632\u0645\u0646\u062F \u0639\u0642\u0628 \u06A9\u0634\u06CC\u062F\u0646 \u0628\u06CC\u0634\u062A\u0631 \u0632\u0628\u0627\u0646 \u0628\u0631\u0627\u06CC \u0631\u0633\u06CC\u062F\u0646 \u0628\u0647 \u0631\u0632\u0648\u0646\u0627\u0646\u0633 \u0646\u06CC\u062A\u06CC\u0648 \u0627\u0633\u062A.",
-        vowelReduction: "\u0647\u062C\u0627\u0647\u0627\u06CC \u0628\u062F\u0648\u0646 \u062A\u06A9\u06CC\u0647 \u0628\u0647 \u0627\u0646\u062F\u0627\u0632\u0647 \u06A9\u0627\u0641\u06CC \u06A9\u0627\u0647\u0634 \u0646\u06CC\u0627\u0641\u062A\u0647 \u0648 \u0628\u06CC\u0634 \u0627\u0632 \u062D\u062F \u06A9\u0627\u0645\u0644 \u0627\u062F\u0627 \u0645\u06CC\u200C\u0634\u0648\u0646\u062F.",
-        rhythm: "\u0631\u06CC\u062A\u0645 \u06AF\u0641\u062A\u0627\u0631 \u0646\u06CC\u0627\u0632\u0645\u0646\u062F \u062D\u0631\u06A9\u062A \u0627\u0632 \u0633\u06CC\u0633\u062A\u0645 \u0647\u062C\u0627\u0628\u0646\u06CC\u0627\u0646 \u0641\u0627\u0631\u0633\u06CC \u0628\u0647 \u0633\u06CC\u0633\u062A\u0645 \u062A\u06A9\u06CC\u0647\u200C\u0628\u0646\u06CC\u0627\u0646 \u0627\u0646\u06AF\u0644\u06CC\u0633\u06CC \u0627\u0633\u062A.",
-        summaryFa: "\u067E\u062A\u0627\u0646\u0633\u06CC\u0644 \u0628\u0627\u0644\u0627\u06CC\u06CC \u062F\u0631 \u062F\u0631\u06A9 \u06AF\u0641\u062A\u0627\u0631 \u062F\u0627\u0631\u06CC\u062F\u061B \u0628\u0627 \u0627\u062C\u0631\u0627\u06CC \u0633\u0646\u0627\u0631\u06CC\u0648\u0647\u0627\u06CC \u0641\u0627\u0632 \u06F1 \u0648 \u06F2 \u062A\u0644\u0641\u0638 \u0648 \u067E\u06CC\u0648\u0633\u062A\u06AF\u06CC \u0634\u0645\u0627 \u0628\u0647 \u0633\u0631\u0639\u062A \u0635\u06CC\u0642\u0644 \u0645\u06CC\u200C\u062E\u0648\u0631\u062F."
-      },
-      initialWeaknesses: defaultWeaknesses,
-      totalRoadmapScenarios: 40,
-      targetMasteryLevel: "C2 Mastery (40 Scientific Checkpoints)",
-      calendarScenarios: defaultCalendarScenarios
-    });
-  } catch (err) {
-    console.error("Error in /api/initial-assessment:", err);
-    res.status(500).json({ error: "Assessment failed", details: err.message });
-  }
-});
-app.post("/api/summarize-scenario", async (req, res) => {
-  try {
-    const {
-      scenarioTitle = "Speaking Scenario",
-      messages = [],
-      targetCliches = [],
-      targetGrammar = "",
-      activeWeaknesses = []
-    } = req.body;
-    const conversationText = messages.map((m) => `${m.role === "user" ? "Student" : "Coach"}: ${m.text}`).join("\n");
-    const ai = getAiClient(req);
-    if (ai && conversationText.trim()) {
-      try {
-        const summaryPrompt = `
-You are a senior American English Speaking Examiner and Pedagogical Coach.
-Analyze the complete student-coach conversation that just finished:
-- Scenario Title: "${scenarioTitle}"
-- Target Grammar: "${targetGrammar || "Natural speech grammar"}"
-- Target Clich\xE9s: ${(targetCliches || []).join(", ") || "American idioms"}
-- Student Active Weaknesses: ${(activeWeaknesses || []).join(", ") || "Persian direct translation"}
-
-COMPLETE CONVERSATION:
-${conversationText}
-
-TASK:
-1. Synthesize student performance:
-   - overallScore (0-100) based on confidence, grammar, accent attempts, and conversational engagement.
-   - strengths: 2-3 specific communicative successes demonstrated in this conversation.
-   - keyErrors: Up to 3 real mistakes made by the student during this dialogue with:
-     - original: exact phrase student said
-     - corrected: authentic American native alternative
-     - explanationFa: clear pedagogical explanation in Persian
-   - clichesLearned: 2-3 American idioms/clich\xE9s from this scenario with English and Persian translation.
-   - pronunciationNotes: 2 actionable phonetic accent tips (Flap T, Rhotic R, Connected speech).
-   - newWeaknessesAdded: Array of new weaknesses titles (in Persian) that should be logged into the student's weaknesses database.
-   - weaknessesImproved: Array of weaknesses from active weaknesses list that the student successfully practiced or improved.
-   - futureRemediationPlanFa: Persian roadmap advice explaining what the student should focus on in their next scenario.
-
-Return ONLY valid JSON:
-{
-  "scenarioTitle": "${scenarioTitle}",
-  "overallScore": 86,
-  "strengths": ["\u0646\u0642\u0637\u0647 \u0642\u0648\u062A \u06F1", "\u0646\u0642\u0637\u0647 \u0642\u0648\u062A \u06F2"],
-  "keyErrors": [
-    {
-      "original": "\u062C\u0645\u0644\u0647 \u0627\u0634\u062A\u0628\u0627\u0647 \u062F\u0627\u0646\u0634\u200C\u0622\u0645\u0648\u0632",
-      "corrected": "\u062C\u0645\u0644\u0647 \u0635\u062D\u06CC\u062D \u0646\u06CC\u062A\u06CC\u0648",
-      "explanationFa": "\u062A\u0648\u0636\u06CC\u062D \u0641\u0627\u0631\u0633\u06CC \u0627\u06CC\u0631\u0627\u062F"
-    }
-  ],
-  "clichesLearned": [
-    {
-      "english": "idiom 1",
-      "persian": "\u0645\u0639\u0646\u06CC \u0641\u0627\u0631\u0633\u06CC \u06F1"
-    }
-  ],
-  "pronunciationNotes": ["\u0646\u06A9\u062A\u0647 \u062A\u0644\u0641\u0638 \u06F1", "\u0646\u06A9\u062A\u0647 \u062A\u0644\u0641\u0638 \u06F2"],
-  "newWeaknessesAdded": ["\u0639\u0646\u0648\u0627\u0646 \u0636\u0639\u0641 \u062C\u062F\u06CC\u062F \u062F\u0631 \u0635\u0648\u0631\u062A \u0648\u062C\u0648\u062F"],
-  "weaknessesImproved": ["\u0639\u0646\u0648\u0627\u0646 \u0636\u0639\u0641\u06CC \u06A9\u0647 \u062F\u0631 \u0627\u06CC\u0646 \u0633\u0646\u0627\u0631\u06CC\u0648 \u0628\u0647\u062A\u0631 \u0634\u062F"],
-  "futureRemediationPlanFa": "\u0628\u0631\u0646\u0627\u0645\u0647 \u067E\u06CC\u0634\u0646\u0647\u0627\u062F\u06CC \u0628\u0631\u0627\u06CC \u0633\u0646\u0627\u0631\u06CC\u0648\u06CC \u0628\u0639\u062F..."
-}
-`;
-        const candidateModels = CANDIDATE_GEMINI_MODELS;
-        for (const model of candidateModels) {
-          try {
-            const response = await ai.models.generateContent({
-              model,
-              contents: summaryPrompt,
-              config: { responseMimeType: "application/json", temperature: 0.3 }
-            });
-            const parsed = safeJsonParse(response.text);
-            if (parsed && parsed.overallScore && parsed.strengths) {
-              return res.json(parsed);
-            }
-          } catch (modelErr) {
-            console.warn(`Summary model ${model} error:`, modelErr.message);
-          }
-        }
-      } catch (err) {
-        console.warn("AI summary failed, using intelligent fallback:", err.message);
-      }
-    }
-    res.json({
-      scenarioTitle,
-      overallScore: 84,
-      strengths: [
-        "\u0627\u062F\u0627\u0645\u0647 \u0641\u0639\u0627\u0644 \u0645\u06A9\u0627\u0644\u0645\u0647 \u0648 \u062A\u0644\u0627\u0634 \u0628\u0631\u0627\u06CC \u0628\u06CC\u0627\u0646 \u0645\u0646\u0638\u0648\u0631 \u0628\u062F\u0648\u0646 \u062A\u0648\u0642\u0641\u200C\u0647\u0627\u06CC \u0637\u0648\u0644\u0627\u0646\u06CC",
-        "\u067E\u0627\u0633\u062E\u200C\u06AF\u0648\u06CC\u06CC \u0645\u062A\u0646\u0627\u0633\u0628 \u0628\u0627 \u0646\u0642\u0634 \u062A\u0639\u06CC\u06CC\u0646\u200C\u0634\u062F\u0647 \u0648 \u062D\u0641\u0638 \u067E\u06CC\u0648\u0633\u062A\u06AF\u06CC \u06A9\u0644\u0627\u0645"
-      ],
-      keyErrors: [
-        {
-          original: "I want to go to shopping",
-          corrected: "I want to go shopping",
-          explanationFa: "\u0628\u0639\u062F \u0627\u0632 \u0641\u0639\u0644 go \u062F\u0631 \u0641\u0639\u0627\u0644\u06CC\u062A\u200C\u0647\u0627\u06CC \u062A\u0641\u0631\u06CC\u062D\u06CC\u060C \u062D\u0631\u0641 \u0627\u0636\u0627\u0641\u0647 to \u0628\u0647 \u06A9\u0627\u0631 \u0646\u0645\u06CC\u200C\u0631\u0648\u062F."
-        }
-      ],
-      clichesLearned: [
-        {
-          english: targetCliches[0] || "on the same page",
-          persian: "\u0647\u0645\u200C\u0646\u0638\u0631 \u0648 \u0647\u0645\u0627\u0647\u0646\u06AF \u0628\u0648\u062F\u0646"
-        },
-        {
-          english: targetCliches[1] || "cut corners",
-          persian: "\u0633\u0645\u0628\u0644 \u06A9\u0631\u062F\u0646 \u0648 \u0627\u0632 \u0633\u0631 \u0648\u0627 \u06A9\u0631\u062F\u0646 \u06A9\u0627\u0631"
-        }
-      ],
-      pronunciationNotes: [
-        "\u062A\u0648\u062C\u0647 \u0628\u0647 \u0627\u062C\u0631\u0627\u06CC Flap T \u062F\u0631 \u06A9\u0644\u0645\u0627\u062A \u067E\u0631\u06A9\u0627\u0631\u0628\u0631\u062F \u0628\u0627 \u062D\u0631\u0641 T \u0645\u06CC\u0627\u0646 \u062F\u0648 \u0645\u0635\u0648\u062A",
-        "\u0627\u062A\u0635\u0627\u0644 \u062D\u0631\u0641 \u0628\u06CC\u200C\u0635\u062F\u0627\u06CC \u0627\u0646\u062A\u0647\u0627\u06CC \u06A9\u0644\u0645\u0647 \u0628\u0647 \u062D\u0631\u0641 \u0635\u062F\u0627\u062F\u0627\u0631 \u0622\u063A\u0627\u0632 \u06A9\u0644\u0645\u0647 \u0628\u0639\u062F (Connected Speech)"
-      ],
-      newWeaknessesAdded: [],
-      weaknessesImproved: activeWeaknesses.length > 0 ? [activeWeaknesses[0]] : ["\u062A\u062F\u0627\u062E\u0644 \u062A\u0631\u062C\u0645\u0647 \u062A\u062D\u062A\u200C\u0627\u0644\u0644\u0641\u0638\u06CC \u0641\u0627\u0631\u0633\u06CC \u0628\u0647 \u0627\u0646\u06AF\u0644\u06CC\u0633\u06CC (L1 Transfer)"],
-      futureRemediationPlanFa: "\u062F\u0631 \u0633\u0646\u0627\u0631\u06CC\u0648\u06CC \u0628\u0639\u062F\u06CC \u062A\u0642\u0648\u06CC\u0645\u060C \u062A\u0645\u0631\u06A9\u0632 \u0631\u0648\u06CC \u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0627\u0632 \u0627\u0641\u0639\u0627\u0644 \u062F\u0648\u06A9\u0644\u0645\u0647\u200C\u0627\u06CC \u0648 \u0627\u0641\u0632\u0627\u06CC\u0634 \u0633\u0631\u0639\u062A \u06A9\u0644\u0627\u0645 \u062E\u0648\u0627\u0647\u062F \u0628\u0648\u062F."
-    });
-  } catch (err) {
-    console.error("Error in /api/summarize-scenario:", err);
-    res.status(500).json({ error: "Summary failed", details: err.message });
-  }
-});
-app.post("/api/transcribe", async (req, res) => {
-  try {
-    const { audioBase64, mimeType = "audio/webm", language = "en" } = req.body || {};
-    if (!audioBase64) {
-      return res.status(400).json({ error: "audioBase64 required", text: "", engine: "none" });
-    }
-    const result = await transcribeAudioBuffer(req, audioBase64, mimeType, language);
-    return res.json({ text: result.text, engine: result.engine, language });
-  } catch (err) {
-    console.error("transcribe error:", err);
-    return res.status(500).json({ error: err.message, text: "", engine: "error" });
-  }
-});
-app.post("/api/tts", async (req, res) => {
-  try {
-    const { text, voice = "nova", speed = 1 } = req.body || {};
-    const clean = String(text || "").trim().slice(0, 4e3);
-    if (!clean) {
-      return res.status(400).json({ error: "text required" });
-    }
-    if (isGapgptConfigured()) {
-      const gap = await gapgptSynthesizeSpeech(clean, voice === "nova" ? "en-male-1" : String(voice));
-      if (gap) {
-        res.setHeader("Content-Type", gap.mimeType);
-        res.setHeader("Cache-Control", "no-store");
-        res.setHeader("X-TTS-Engine", gap.engine);
-        return res.send(gap.buffer);
-      }
-    }
-    const openaiKey = getOpenAiApiKey(req);
-    if (openaiKey) {
-      try {
-        const allowed = /* @__PURE__ */ new Set(["alloy", "echo", "fable", "onyx", "nova", "shimmer"]);
-        const ttsVoice = allowed.has(String(voice)) ? String(voice) : "nova";
-        const ttsRes = await fetch("https://api.openai.com/v1/audio/speech", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${openaiKey}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            model: "tts-1",
-            voice: ttsVoice,
-            input: clean,
-            response_format: "mp3",
-            speed: Math.min(1.25, Math.max(0.75, Number(speed) || 1))
-          })
-        });
-        if (ttsRes.ok) {
-          const buf = Buffer.from(await ttsRes.arrayBuffer());
-          res.setHeader("Content-Type", "audio/mpeg");
-          res.setHeader("Cache-Control", "no-store");
-          res.setHeader("X-TTS-Engine", "openai-tts-1");
-          return res.send(buf);
-        }
-        const errText = await ttsRes.text().catch(() => "");
-        console.warn("OpenAI TTS failed:", ttsRes.status, errText.slice(0, 200));
-      } catch (ttsErr) {
-        console.warn("OpenAI TTS exception:", ttsErr);
-      }
-    }
-    const ai = getAiClient(req);
-    if (ai) {
-      const ttsModels = ["gemini-2.5-flash-preview-tts", "gemini-2.5-pro-preview-tts"];
-      for (const modelName of ttsModels) {
-        try {
-          const response = await ai.models.generateContent({
-            model: modelName,
-            contents: [{ text: `Say in a clear natural General American accent:
-${clean}` }],
-            config: {
-              responseModalities: ["AUDIO"],
-              speechConfig: {
-                voiceConfig: {
-                  prebuiltVoiceConfig: { voiceName: "Kore" }
-                }
-              }
-            }
-          });
-          const parts = response?.candidates?.[0]?.content?.parts || [];
-          const audioPart = parts.find((p) => p?.inlineData?.data);
-          if (audioPart?.inlineData?.data) {
-            return res.json({
-              audioBase64: audioPart.inlineData.data,
-              mimeType: audioPart.inlineData.mimeType || "audio/wav",
-              engine: `gemini:${modelName}`
-            });
-          }
-        } catch (e) {
-          console.warn(`Gemini TTS ${modelName} unavailable:`, e);
-        }
-      }
-    }
-    return res.status(503).json({
-      error: "No server TTS available \u2014 client should use browser en-US voice",
-      engine: "unavailable"
-    });
-  } catch (err) {
-    console.error("tts error:", err);
-    return res.status(500).json({ error: err.message });
-  }
-});
-app.post("/api/lookup-word", async (req, res) => {
-  try {
-    const { word = "", context = "" } = req.body;
-    const clean = String(word || "").trim();
-    if (!clean) {
-      return res.status(400).json({ error: "word is required" });
-    }
-    const ai = getAiClient(req);
-    if (ai) {
-      try {
-        const prompt = `You are a bilingual lexicographer and elite American English coach for Persian speakers.
-Analyze this English word or expression to create an accurate Leitner flashcard:
-Term to analyze: "${clean}"
-${context ? `DIALOGUE CONTEXT WHERE THIS WORD WAS ENCOUNTERED: "${context}"` : ""}
-
-${context ? `CRITICAL CONTEXTUAL MEANING RULE:
-The word "${clean}" has multiple distinct definitions in English. You MUST translate and explain ONLY the specific meaning intended in the provided dialogue context above!
-DO NOT list unrelated generic dictionary meanings!
-For example:
-- If "${clean}" is "spring" and the dialogue context is about drinking clean water or natural resources, the meaning MUST be "\u0686\u0634\u0645\u0647 / \u0633\u0631\u0686\u0634\u0645\u0647 \u0622\u0628" and NEVER "\u0628\u0647\u0627\u0631" or "\u0641\u0646\u0631".
-- If "${clean}" is "plant" and the context is an industrial facility, the meaning MUST be "\u06A9\u0627\u0631\u062E\u0627\u0646\u0647 / \u0648\u0627\u062D\u062F \u062A\u0648\u0644\u06CC\u062F\u06CC" and NEVER "\u06AF\u06CC\u0627\u0647".
-- If "${clean}" is "bank" and the context is near water, the meaning MUST be "\u0633\u0627\u062D\u0644 \u0631\u0648\u062F\u062E\u0627\u0646\u0647" and NEVER "\u0628\u0627\u0646\u06A9 \u0645\u0627\u0644\u06CC".
-The "persianMeaning" and "sampleSentences" must strictly adhere to this exact contextual meaning.` : ""}
-
-Provide an accurate, idiomatic Persian translation, American phonetic pronunciation (IPA), and an authentic, natural American example sentence with Persian translation.
-
-Respond with ONLY a JSON object (no markdown, no backticks):
-{
-  "word": "${clean}",
-  "phonetic": "/IPA transcription/",
-  "partOfSpeech": "exact part of speech in this context (e.g. noun, verb, idiom, phrasal verb)",
-  "persianMeaning": "\u0645\u0639\u0646\u06CC \u062F\u0642\u06CC\u0642 \u0648 \u0631\u0648\u0627\u0646 \u0627\u06CC\u0646 \u0648\u0627\u0698\u0647 \u062F\u0631 \u0647\u0645\u06CC\u0646 \u0628\u0627\u0641\u062A \u062C\u0645\u0644\u0647 \u0628\u0647 \u0641\u0627\u0631\u0633\u06CC (\u0646\u0647 \u0645\u0639\u0627\u0646\u06CC \u0628\u06CC\u200C\u0631\u0628\u0637 \u062F\u06CC\u06AF\u0631)",
-  "persianNuance": "\u062A\u0648\u0636\u06CC\u062D \u06A9\u0648\u062A\u0627\u0647 \u06A9\u0627\u0631\u0628\u0631\u062F \u0648 \u062A\u0641\u0627\u0648\u062A \u0638\u0631\u06CC\u0641 \u0645\u0639\u0646\u0627\u06CC\u06CC \u062F\u0631 \u0627\u06CC\u0646 \u06A9\u0627\u0631\u0628\u0631\u062F \u062E\u0627\u0635",
-  "americanUsageNote": "\u0646\u06A9\u062A\u0647 \u06A9\u0627\u0631\u0628\u0631\u062F\u06CC \u0646\u062D\u0648\u0647 \u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u062A\u0648\u0633\u0637 \u06AF\u0648\u06CC\u0634\u0648\u0631\u0627\u0646 \u0622\u0645\u0631\u06CC\u06A9\u0627\u06CC\u06CC",
-  "collocations": ["collocation 1", "collocation 2"],
-  "sampleSentences": [
-    {
-      "english": "Authentic natural American sentence using the word with this exact contextual meaning.",
-      "persian": "\u062A\u0631\u062C\u0645\u0647 \u0631\u0648\u0627\u0646 \u0648 \u0637\u0628\u06CC\u0639\u06CC \u0627\u06CC\u0646 \u062C\u0645\u0644\u0647 \u0628\u0647 \u0641\u0627\u0631\u0633\u06CC"
-    }
-  ],
-  "pronunciationTipFa": "\u0646\u06A9\u062A\u0647 \u062A\u0644\u0641\u0638 \u0622\u0645\u0631\u06CC\u06A9\u0627\u06CC\u06CC \u06CC\u0627 \u0648\u0635\u0644 \u062D\u0631\u0648\u0641 \u0628\u0647 \u0641\u0627\u0631\u0633\u06CC"
-}`;
-        for (const modelName of CANDIDATE_GEMINI_MODELS) {
-          try {
-            const resp = await ai.models.generateContent({
-              model: modelName,
-              contents: [{ text: prompt }],
-              config: {
-                temperature: 0.2,
-                responseMimeType: "application/json"
-              }
-            });
-            const text = (resp.text || "").trim();
-            const cleanJson = text.replace(/^```json/i, "").replace(/```$/i, "").trim();
-            const parsed = JSON.parse(cleanJson);
-            if (parsed && (parsed.persianMeaning || parsed.sampleSentences)) {
-              return res.json({
-                word: parsed.word || clean,
-                phonetic: parsed.phonetic || `/${clean}/`,
-                partOfSpeech: parsed.partOfSpeech || "expression",
-                persianMeaning: parsed.persianMeaning || clean,
-                persianNuance: parsed.persianNuance || "",
-                americanUsageNote: parsed.americanUsageNote || "",
-                collocations: Array.isArray(parsed.collocations) ? parsed.collocations : [],
-                sampleSentences: Array.isArray(parsed.sampleSentences) && parsed.sampleSentences.length > 0 ? parsed.sampleSentences : [{ english: context || `I usually use "${clean}" in conversation.`, persian: `\u0645\u062B\u0627\u0644 \u06A9\u0627\u0631\u0628\u0631\u062F\u06CC \u0628\u0631\u0627\u06CC ${clean}` }],
-                pronunciationTipFa: parsed.pronunciationTipFa || "\u062A\u0644\u0641\u0638 \u0628\u0627 \u0627\u0633\u062A\u0631\u0633 \u0637\u0628\u06CC\u0639\u06CC \u06A9\u0644\u0645\u0627\u062A"
-              });
-            }
-          } catch (modelErr) {
-            console.warn(`Model ${modelName} failed for lookup-word:`, modelErr);
-          }
-        }
-      } catch (geminiErr) {
-        console.warn("Gemini lookup failed, falling back to linguistic engine:", geminiErr);
-      }
-    }
-    const fallbackSentence = context || `I usually ${clean} whenever I get the chance.`;
-    return res.json({
-      word: clean,
-      phonetic: `/${clean}/`,
-      partOfSpeech: "expression",
-      persianMeaning: `\u0627\u0635\u0637\u0644\u0627\u062D \u06A9\u0627\u0631\u0628\u0631\u062F\u06CC: ${clean}`,
-      persianNuance: "\u0627\u0635\u0637\u0644\u0627\u062D \u0631\u0627\u06CC\u062C \u062F\u0631 \u0645\u06A9\u0627\u0644\u0645\u0627\u062A \u0645\u062D\u0627\u0648\u0631\u0647\u200C\u0627\u06CC \u0631\u0648\u0632\u0645\u0631\u0647 \u0622\u0645\u0631\u06CC\u06A9\u0627\u06CC\u06CC",
-      americanUsageNote: "\u06A9\u0627\u0631\u0628\u0631\u062F \u0628\u0633\u06CC\u0627\u0631 \u0645\u062A\u062F\u0627\u0648\u0644 \u062F\u0631 \u0645\u062D\u06CC\u0637\u200C\u0647\u0627\u06CC \u06A9\u0627\u0631\u06CC \u0648 \u062F\u0648\u0633\u062A\u0627\u0646\u0647 \u0646\u06CC\u062A\u06CC\u0648",
-      collocations: [`use ${clean}`, `always ${clean}`],
-      sampleSentences: [
-        {
-          english: fallbackSentence,
-          persian: `\u0645\u062B\u0627\u0644 \u06A9\u0627\u0631\u0628\u0631\u062F\u06CC \u0628\u0631\u0627\u06CC \u0639\u0628\u0627\u0631\u062A "${clean}" \u062F\u0631 \u0645\u06A9\u0627\u0644\u0645\u0647`
-        }
-      ],
-      pronunciationTipFa: "\u062A\u0644\u0641\u0638 \u0628\u0627 \u0631\u06CC\u062A\u0645 \u067E\u06CC\u0648\u0633\u062A\u0647 \u0628\u062F\u0648\u0646 \u0645\u06A9\u062B \u0628\u06CC\u0646 \u06A9\u0644\u0645\u0627\u062A"
-    });
-  } catch (err) {
-    res.status(500).json({ error: "Lookup failed", details: err.message });
-  }
-});
-var PORT = Number(process.env.PORT) || 3e3;
-async function startServer() {
-  const isProduction = process.env.NODE_ENV === "production";
-  if (!isProduction) {
-    const { createServer: createViteServer } = await import("vite");
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa"
-    });
-    app.use(vite.middlewares);
-  } else {
-    app.use(express.static(path.resolve(__dirname, "dist")));
-    app.get("*", (_req, res) => {
-      res.sendFile(path.resolve(__dirname, "dist", "index.html"));
-    });
-  }
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`NativeSpeak Server listening on port ${PORT}`);
-  });
-}
-startServer();
+export {
+  C2_SCIENTIFIC_CHECKLIST,
+  GAPGPT_BASE_URL,
+  GAPGPT_CHAT_MODELS,
+  GAPGPT_COMPATIBILITY,
+  GAPGPT_TTS_URL,
+  KNOWN_PRACTICE_SITUATIONS,
+  PHONETICS_MIN_SCORE_SOFT,
+  PHONETICS_MIN_SCORE_WITH_AUDIO,
+  PHONETICS_OVERALL_CAP_IF_WEAK,
+  REAL_LIFE_SITUATIONS,
+  SCENARIO_BLUEPRINTS,
+  buildScenarioForChecklistItem,
+  convertCalendarToScenario,
+  countPhonemeIssues,
+  enforcePhoneticsStrictness,
+  evaluatePracticeResponseLocally,
+  evaluateSpeakingTextLocally,
+  formatChecklistItemsAsWeaknesses,
+  gapgptChatCompletion,
+  gapgptSynthesizeSpeech,
+  generate10ScenariosFromChecklistItems,
+  generateAdaptiveScenarioFromWeaknesses,
+  generateSituationForCliche,
+  generateTenScenariosForUntickedCohort,
+  getC2CohortForWeaknesses,
+  getGapgptApiKey,
+  getNextUntickedC2Cohort,
+  inferTargetPhoneticsFeatures,
+  isGapgptConfigured,
+  matchWeaknessToC2ChecklistItem,
+  passesPhoneticsGate,
+  phoneticsHintsFromAnalysis,
+  trackConversationDriftAndRotateSubtopic
+};

@@ -1029,8 +1029,8 @@ export const SpeakingScreen: React.FC<Props> = ({
             }`}
           >
             <div className="px-3 py-2 bg-slate-900 border-b border-slate-800 space-y-2">
-            {/* Top row: Prev/Next buttons + Current Scenario Title + End Lesson/Progress */}
-            <div className="flex items-center justify-between gap-2">
+            {/* Top row: Prev/Next buttons + Current Scenario Title + Info "i" Objectives button */}
+            <div className="flex items-center gap-2">
               {/* Prev / Next Quick Step Buttons */}
               <div className="flex items-center gap-1 shrink-0">
                 <button
@@ -1092,24 +1092,20 @@ export const SpeakingScreen: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setInfoModalScenario(activeScenario)}
-                className="p-2 rounded-xl bg-cyan-600/15 hover:bg-cyan-600/30 text-cyan-400 hover:text-cyan-300 border border-cyan-500/40 transition active:scale-95 shrink-0 flex items-center justify-center shadow-sm"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 hover:text-white border border-cyan-500/40 transition active:scale-95 shrink-0 shadow-sm"
                 title="مشاهده اهداف جامع آموزشی این درس"
               >
-                <Info className="w-4 h-4 stroke-[2.5]" />
+                <Info className="w-4 h-4 text-cyan-400 stroke-[2.5]" />
+                <span className="text-[11px] font-bold hidden xs:inline">اهداف</span>
               </button>
+            </div>
 
-              {/* Progress & 80% Mastery Action */}
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setShowResetConfirm(true)}
-                  className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition active:scale-95"
-                  title="ریست پیش‌نویس این سناریو و شروع مجدد مکالمه"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                </button>
+            {/* Second row: Progress metrics & Quick actions (Reset, Rate, End lesson) */}
+            <div className="flex items-center justify-between gap-1.5 pt-0.5">
+              {/* Progress & Mastery Evidence Badge */}
+              <div className="flex items-center gap-1.5 min-w-0">
                 <span
-                  className={`px-2 py-1 rounded-xl text-[10.5px] font-bold font-en border ${
+                  className={`px-2.5 py-1 rounded-xl text-[11px] font-bold font-en border ${
                     progressPercentage >= 80
                       ? 'bg-emerald-950 text-emerald-300 border-emerald-500/40'
                       : progressPercentage >= 60
@@ -1120,6 +1116,29 @@ export const SpeakingScreen: React.FC<Props> = ({
                 >
                   {progressPercentage}% · {masteryEvidence.strongTurns}/{MASTERY_MIN_STRONG_TURNS} · 🎙️{masteryEvidence.phoneticsStrongTurns || 0}/{MASTERY_MIN_PHONETICS_STRONG_TURNS}
                 </span>
+
+                <button
+                  type="button"
+                  onClick={() => setShowResetConfirm(true)}
+                  className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition active:scale-95"
+                  title="ریست پیش‌نویس این سناریو و شروع مجدد مکالمه"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Right side controls: Speech rate & Finish / End Lesson */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  onClick={() => {
+                    const nextRate = speechRate === 1.0 ? 0.85 : speechRate === 0.85 ? 1.15 : 1.0;
+                    setSpeechRate(nextRate);
+                  }}
+                  className="px-2 py-1 rounded-xl bg-slate-800 border border-slate-700 text-[10.5px] text-slate-300 font-en font-bold hover:bg-slate-700 active:scale-95"
+                  title="تغییر سرعت پخش صدا"
+                >
+                  {speechRate}x
+                </button>
 
                 {isGoalSatisfied ? (
                   <button
@@ -1148,17 +1167,6 @@ export const SpeakingScreen: React.FC<Props> = ({
                     <span>{isSummarizing ? '...' : 'پایان'}</span>
                   </button>
                 ) : null}
-
-                <button
-                  onClick={() => {
-                    const nextRate = speechRate === 1.0 ? 0.85 : speechRate === 0.85 ? 1.15 : 1.0;
-                    setSpeechRate(nextRate);
-                  }}
-                  className="px-2 py-1 rounded-xl bg-slate-800 border border-slate-700 text-[10px] text-slate-300 font-en font-bold hover:bg-slate-700"
-                  title="تغییر سرعت پخش صدا"
-                >
-                  {speechRate}x
-                </button>
               </div>
             </div>
 
